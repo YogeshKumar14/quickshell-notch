@@ -15,7 +15,7 @@ Item {
         id: track
         anchors.fill: parent
         radius: 13
-        color: root.checked ? Style.success : "#3A3A3C"
+        color: root.checked ? Style.accent : "#3A3A3C"
 
         Behavior on color {
             ColorAnimation { duration: 180 }

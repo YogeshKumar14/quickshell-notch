@@ -18,7 +18,7 @@ if os.path.isfile(file_path):
 key = '$KEY'
 val = '$VAL'
 
-if key in ['auto_close', 'compact_width', 'expanded_height', 'bottom_radius', 'app_columns', 'workspace_timeout', 'button_speed', 'visualizer_height', 'visualizer_timeout']:
+if key in ['auto_close', 'compact_width', 'expanded_height', 'bottom_radius', 'app_columns', 'workspace_timeout', 'button_speed', 'visualizer_height', 'visualizer_timeout', 'network_refresh']:
     data[key] = int(val)
 elif key in ['expand_tension', 'expand_damping', 'tab_tension', 'tab_damping', 'wall_duration']:
     data[key] = float(val)

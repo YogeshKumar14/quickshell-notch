@@ -10,11 +10,27 @@ def get_status():
         
         active_ssid = ""
         if is_on:
-            ssid_out = subprocess.check_output(["nmcli", "-t", "-f", "active,ssid", "dev", "wifi"], stderr=subprocess.DEVNULL).decode()
-            for line in ssid_out.splitlines():
-                if line.startswith("yes:"):
-                    active_ssid = line.split(":", 1)[1]
-                    break
+            try:
+                active_out = subprocess.check_output(["nmcli", "-t", "-f", "name,type", "connection", "show", "--active"], stderr=subprocess.DEVNULL).decode()
+                for line in active_out.splitlines():
+                    parts = line.split(":")
+                    if len(parts) >= 2 and "wireless" in parts[1]:
+                        active_ssid = parts[0]
+                        break
+            except Exception:
+                pass
+        
+        # Retrieve saved connections
+        saved_ssids = set()
+        if is_on:
+            try:
+                conn_out = subprocess.check_output(["nmcli", "-t", "-f", "name,type", "connection", "show"], stderr=subprocess.DEVNULL).decode()
+                for line in conn_out.splitlines():
+                    parts = line.split(":")
+                    if len(parts) >= 2 and "wireless" in parts[1]:
+                        saved_ssids.add(parts[0])
+            except Exception:
+                pass
         
         networks = []
         if is_on:
@@ -26,12 +42,17 @@ def get_status():
                     ssid, signal, security, active = parts[0], parts[1], parts[2], parts[3]
                     if ssid and ssid not in seen_ssids:
                         seen_ssids.add(ssid)
+                        is_active = (active == "yes" or (active_ssid and ssid == active_ssid))
                         networks.append({
                             "ssid": ssid,
                             "signal": int(signal) if signal.isdigit() else 0,
                             "security": security,
-                            "active": (active == "yes")
+                            "active": is_active,
+                            "saved": (ssid in saved_ssids)
                         })
+            # Sort networks so the active one floats to the top
+            networks.sort(key=lambda x: not x["active"])
+            
         return {"power": is_on, "active": active_ssid, "networks": networks[:6]}
     except Exception:
         return {"power": False, "active": "", "networks": []}
@@ -45,5 +66,9 @@ if __name__ == "__main__":
             subprocess.run(["nmcli", "radio", "wifi", "off"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
         elif action == "connect" and len(sys.argv) > 2:
             ssid = sys.argv[2]
-            subprocess.run(["nmcli", "dev", "wifi", "connect", ssid], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            password = sys.argv[3] if len(sys.argv) > 3 else None
+            if password:
+                subprocess.Popen(["nmcli", "dev", "wifi", "connect", ssid, "password", password], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            else:
+                subprocess.Popen(["nmcli", "dev", "wifi", "connect", ssid], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
     print(json.dumps(get_status()))

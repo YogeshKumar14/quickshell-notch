@@ -86,6 +86,7 @@ PanelWindow {
     property int visualizerPauseDelayVal: 1000
 
     property int sysStatsIntervalVal: 2000
+    property int networkRefreshIntervalVal: 5000
 
     property string expandAnimType: "outback"
     property real expandSpringTension: 4.5
@@ -160,6 +161,7 @@ PanelWindow {
                     if (data.tab_tension !== undefined) root.tabSpringTension = data.tab_tension;
                     if (data.tab_damping !== undefined) root.tabSpringDamping = data.tab_damping;
                     if (data.stats_interval !== undefined) root.sysStatsIntervalVal = data.stats_interval;
+                    if (data.network_refresh !== undefined) root.networkRefreshIntervalVal = data.network_refresh;
                 } catch (e) {
                     console.log("Error parsing notch settings:", e);
                 }
@@ -249,7 +251,8 @@ PanelWindow {
                 "expand_damping": root.expandSpringDamping,
                 "tab_tension": root.tabSpringTension,
                 "tab_damping": root.tabSpringDamping,
-                "stats_interval": root.sysStatsIntervalVal
+                "stats_interval": root.sysStatsIntervalVal,
+                "network_refresh": root.networkRefreshIntervalVal
             }
         };
 
@@ -1136,6 +1139,20 @@ PanelWindow {
                                     CustomSlider {
                                         width: parent.width; from: 500; to: 5000; value: root.sysStatsIntervalVal; stepSize: 250
                                         onMoved: function(val) { root.sysStatsIntervalVal = Math.round(val); root.hasPendingChanges = true; }
+                                    }
+                                }
+
+                                Column {
+                                    width: parent.width; spacing: 6
+                                    RowLayout {
+                                        width: parent.width
+                                        Text { text: "Network Scan Refresh Interval"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeNormal; color: Style.textPrimary }
+                                        Item { Layout.fillWidth: true }
+                                        Text { text: (root.networkRefreshIntervalVal / 1000.0).toFixed(1) + " s"; font.family: Style.fontFamilyMono; font.pixelSize: Style.fontSizeSmall; color: Style.accent; font.weight: Font.Bold }
+                                    }
+                                    CustomSlider {
+                                        width: parent.width; from: 2000; to: 15000; value: root.networkRefreshIntervalVal; stepSize: 500
+                                        onMoved: function(val) { root.networkRefreshIntervalVal = Math.round(val); root.hasPendingChanges = true; }
                                     }
                                 }
                             }

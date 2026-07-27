@@ -15,7 +15,7 @@ Scope {
 
         WlrLayershell.layer: WlrLayer.Overlay
         WlrLayershell.exclusiveZone: 0
-        WlrLayershell.keyboardFocus: (notchComp.isExpanded || notchComp.isPowerMenuOpen) ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
+        WlrLayershell.keyboardFocus: (notchComp.isExpanded || notchComp.isPowerMenuOpen || notchComp.isWifiMenuOpen || notchComp.isBluetoothMenuOpen) ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
 
         anchors {
             top: true
@@ -37,7 +37,7 @@ Scope {
 
     HyprlandFocusGrab {
         id: focusGrab
-        active: notchComp.isExpanded || notchComp.isPowerMenuOpen
+        active: notchComp.isExpanded || notchComp.isPowerMenuOpen || notchComp.isWifiMenuOpen || notchComp.isBluetoothMenuOpen
         windows: [notchWindow]
     }
 

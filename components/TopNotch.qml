@@ -65,6 +65,11 @@ Item {
             if (appsLoader.item && typeof appsLoader.item.refresh === "function") {
                 appsLoader.item.refresh();
             }
+        } else {
+            root.isWifiMenuOpen = false;
+            root.isBluetoothMenuOpen = false;
+            root.isPowerMenuOpen = false;
+            root.isWifiPasswordPromptOpen = false;
         }
     }
 
@@ -75,6 +80,18 @@ Item {
             root.forceActiveFocus();
         } else if (isExpanded) {
             focusTabSearchTimer.restart();
+        }
+    }
+
+    onIsWifiMenuOpenChanged: {
+        if (isWifiMenuOpen) {
+            root.forceActiveFocus();
+        }
+    }
+
+    onIsBluetoothMenuOpenChanged: {
+        if (isBluetoothMenuOpen) {
+            root.forceActiveFocus();
         }
     }
 
@@ -131,15 +148,30 @@ Item {
     // Focus management for keyboard input
     focus: true
     Keys.onPressed: function(event) {
-        if (root.isPowerMenuOpen) {
-            if (event.key === Qt.Key_Escape) {
+        if (event.key === Qt.Key_Escape) {
+            if (root.isWifiMenuOpen) {
+                if (root.isWifiPasswordPromptOpen) {
+                    root.isWifiPasswordPromptOpen = false;
+                } else {
+                    root.isWifiMenuOpen = false;
+                }
+                event.accepted = true;
+            } else if (root.isBluetoothMenuOpen) {
+                root.isBluetoothMenuOpen = false;
+                event.accepted = true;
+            } else if (root.isPowerMenuOpen) {
                 if (root.isPowerConfirming) {
                     root.cancelPowerAction();
                 } else {
                     root.isPowerMenuOpen = false;
                 }
                 event.accepted = true;
-            } else if (root.isPowerConfirming) {
+            } else if (root.isExpanded) {
+                root.isExpanded = false;
+                event.accepted = true;
+            }
+        } else if (root.isPowerMenuOpen) {
+            if (root.isPowerConfirming) {
                 if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
                     root.executePendingPower();
                     event.accepted = true;
@@ -163,9 +195,6 @@ Item {
                     event.accepted = true;
                 }
             }
-        } else if (event.key === Qt.Key_Escape && root.isExpanded) {
-            root.isExpanded = false;
-            event.accepted = true;
         }
     }
 
@@ -521,6 +550,7 @@ Item {
                     if (data.tab_tension !== undefined) root.tabSpringTension = data.tab_tension;
                     if (data.tab_damping !== undefined) root.tabSpringDamping = data.tab_damping;
                     if (data.stats_interval !== undefined) root.sysStatsIntervalVal = data.stats_interval;
+                    if (data.network_refresh !== undefined) root.networkRefreshIntervalVal = data.network_refresh;
                 } catch (e) {
                     console.log("Error loading notch settings:", e);
                 }
@@ -685,6 +715,7 @@ Item {
     property int ramUsage: 0
     property int diskUsage: 0
     property int sysStatsIntervalVal: 2000
+    property int networkRefreshIntervalVal: 5000
 
     property var cpuHistory: []
     property var ramHistory: []
@@ -740,6 +771,11 @@ Item {
     property bool btPower: false
     property var btDevices: []
 
+    property bool isWifiPasswordPromptOpen: false
+    property string wifiPromptSsid: ""
+    property string wifiPasswordText: ""
+    property bool showWifiPassword: false
+
     Process {
         id: wifiScanner
         command: ["python3", "/home/yogesh/.config/quickshell/scripts/manage_wifi.py"]
@@ -771,15 +807,34 @@ Item {
 
     Process {
         id: wifiToggler
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    var data = JSON.parse(this.text);
+                    root.wifiPower = data.power;
+                    root.wifiActiveSsid = data.active;
+                    root.wifiNetworks = data.networks;
+                } catch(e) {}
+            }
+        }
     }
 
     Process {
         id: btToggler
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    var data = JSON.parse(this.text);
+                    root.btPower = data.power;
+                    root.btDevices = data.devices;
+                } catch(e) {}
+            }
+        }
     }
 
     Timer {
         id: wifiTimer
-        interval: 4000
+        interval: root.networkRefreshIntervalVal
         running: root.isWifiMenuOpen
         repeat: true
         onTriggered: wifiScanner.running = true
@@ -787,7 +842,7 @@ Item {
 
     Timer {
         id: btTimer
-        interval: 4000
+        interval: root.networkRefreshIntervalVal
         running: root.isBluetoothMenuOpen
         repeat: true
         onTriggered: btScanner.running = true
@@ -1269,7 +1324,7 @@ Item {
             anchors.top: parent.top
             anchors.horizontalCenter: parent.horizontalCenter
 
-            opacity: (root.isExpanded && !root.isPowerMenuOpen) ? 1.0 : 0.0
+            opacity: (root.isExpanded && !root.isPowerMenuOpen && !root.isWifiMenuOpen && !root.isBluetoothMenuOpen) ? 1.0 : 0.0
             visible: opacity > 0.01
 
             Behavior on opacity {
@@ -1362,7 +1417,7 @@ Item {
 
                         Text {
                             anchors.centerIn: parent
-                            text: root.wifiPower ? "󰤨" : "󰤭"
+                            text: root.wifiPower ? "󰖩" : "󰖪"
                             font.family: Style.fontFamilyMono
                             font.pixelSize: 13
                             color: root.isWifiMenuOpen ? "#000" : (root.wifiPower ? Style.accent : Style.textSecondary)
@@ -2083,12 +2138,12 @@ Item {
                                                     if (!hist || hist.length < 2) return;
 
                                                     var val = root.cpuUsage;
-                                                    var colorStr = "#2ec27e";
-                                                    if (val > 75) colorStr = "#ff4d4f";
-                                                    else if (val > 45) colorStr = "#e6a23c";
+                                                    var colorObj = Style.accent;
+                                                    if (val > 80) colorObj = Style.danger;
+                                                    else if (val > 60) colorObj = Style.warning;
 
-                                                    ctx.strokeStyle = colorStr;
-                                                    ctx.lineWidth = 1.8;
+                                                    ctx.strokeStyle = colorObj;
+                                                    ctx.lineWidth = 1.3;
                                                     ctx.beginPath();
 
                                                     var step = width / (hist.length - 1);
@@ -2104,8 +2159,8 @@ Item {
                                                     ctx.lineTo(0, height);
                                                     ctx.closePath();
                                                     var grad = ctx.createLinearGradient(0, 0, 0, height);
-                                                    grad.addColorStop(0, colorStr + "33");
-                                                    grad.addColorStop(1, colorStr + "00");
+                                                    grad.addColorStop(0, Qt.rgba(colorObj.r, colorObj.g, colorObj.b, 0.08));
+                                                    grad.addColorStop(1, Qt.rgba(colorObj.r, colorObj.g, colorObj.b, 0.0));
                                                     ctx.fillStyle = grad;
                                                     ctx.fill();
                                                 }
@@ -2145,12 +2200,12 @@ Item {
                                                     if (!hist || hist.length < 2) return;
 
                                                     var val = root.ramUsage;
-                                                    var colorStr = "#2ec27e";
-                                                    if (val > 75) colorStr = "#ff4d4f";
-                                                    else if (val > 45) colorStr = "#e6a23c";
+                                                    var colorObj = Style.accent;
+                                                    if (val > 80) colorObj = Style.danger;
+                                                    else if (val > 60) colorObj = Style.warning;
 
-                                                    ctx.strokeStyle = colorStr;
-                                                    ctx.lineWidth = 1.8;
+                                                    ctx.strokeStyle = colorObj;
+                                                    ctx.lineWidth = 1.3;
                                                     ctx.beginPath();
 
                                                     var step = width / (hist.length - 1);
@@ -2166,8 +2221,8 @@ Item {
                                                     ctx.lineTo(0, height);
                                                     ctx.closePath();
                                                     var grad = ctx.createLinearGradient(0, 0, 0, height);
-                                                    grad.addColorStop(0, colorStr + "33");
-                                                    grad.addColorStop(1, colorStr + "00");
+                                                    grad.addColorStop(0, Qt.rgba(colorObj.r, colorObj.g, colorObj.b, 0.08));
+                                                    grad.addColorStop(1, Qt.rgba(colorObj.r, colorObj.g, colorObj.b, 0.0));
                                                     ctx.fillStyle = grad;
                                                     ctx.fill();
                                                 }
@@ -2466,25 +2521,9 @@ Item {
                     Layout.fillWidth: true
                     spacing: 8
 
-                    Rectangle {
-                        width: 24; height: 24; radius: 12
-                        color: wifiBackM.containsMouse ? Style.cardBgHover : Style.cardBg
-                        border.color: Style.cardBorder
-                        Text {
-                            anchors.centerIn: parent
-                            text: "󰁍"
-                            font.family: Style.fontFamilyMono
-                            font.pixelSize: 11
-                            color: Style.textPrimary
-                        }
-                        MouseArea {
-                            id: wifiBackM; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
-                            onClicked: root.isWifiMenuOpen = false
-                        }
-                    }
 
                     Text {
-                        text: "Wi-Fi Network"
+                        text: root.isWifiPasswordPromptOpen ? "Enter Password" : "Wi-Fi Network"
                         font.family: Style.fontFamily
                         font.pixelSize: Style.fontSizeLarge
                         font.weight: Font.Bold
@@ -2493,9 +2532,41 @@ Item {
 
                     Item { Layout.fillWidth: true }
 
+                    // Manual Scan Refresh Button with rotation animation
+                    Rectangle {
+                        width: 24; height: 24; radius: 12
+                        color: wifiRefM.containsMouse ? Style.cardBgHover : Style.cardBg
+                        border.color: Style.cardBorder
+                        visible: !root.isWifiPasswordPromptOpen && root.wifiPower
+                        Text {
+                            id: wifiRefText
+                            anchors.centerIn: parent
+                            text: "󰑐"
+                            font.family: Style.fontFamilyMono
+                            font.pixelSize: 11
+                            color: Style.textPrimary
+
+                            transformOrigin: Item.Center
+                            RotationAnimation on rotation {
+                                running: wifiScanner.running || wifiToggler.running
+                                from: 0; to: 360; loops: Animation.Infinite; duration: 1000
+                            }
+                        }
+                        MouseArea {
+                            id: wifiRefM; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                wifiScanner.running = false;
+                                wifiScanner.running = true;
+                            }
+                        }
+                    }
+
                     CustomSwitch {
+                        visible: !root.isWifiPasswordPromptOpen
                         checked: root.wifiPower
                         onToggled: function(val) {
+                            root.wifiPower = val;
+                            wifiToggler.running = false;
                             wifiToggler.command = ["python3", "/home/yogesh/.config/quickshell/scripts/manage_wifi.py", val ? "on" : "off"];
                             wifiToggler.running = true;
                             wifiScanTimer.restart();
@@ -2503,100 +2574,280 @@ Item {
                     }
                 }
 
-                Rectangle {
-                    Layout.fillWidth: true
-                    height: 36
-                    radius: Style.radiusSmall
-                    color: "#161618"
-                    border.color: Style.cardBorder
-                    visible: root.wifiPower && root.wifiActiveSsid !== ""
-
-                    RowLayout {
-                        anchors.fill: parent
-                        anchors.leftMargin: 10; anchors.rightMargin: 10
-                        spacing: 8
-                        Text { text: "󰤨"; font.family: Style.fontFamilyMono; color: Style.accent; font.pixelSize: 13 }
-                        Text {
-                            text: "Connected to: " + root.wifiActiveSsid
-                            font.family: Style.fontFamily; font.pixelSize: Style.fontSizeNormal
-                            color: Style.textPrimary
-                            Layout.fillWidth: true
-                            elide: Text.ElideRight
-                        }
-                    }
-                }
-
-                Rectangle {
+                // Shared Container for transitioning scan lists and password text fields
+                Item {
                     Layout.fillWidth: true; Layout.fillHeight: true
-                    color: "transparent"
-                    visible: !root.wifiPower || root.wifiNetworks.length === 0
 
-                    Column {
-                        anchors.centerIn: parent
-                        spacing: 8
+                    // View A: Password Entry View (Native inside Notch)
+                    ColumnLayout {
+                        anchors.fill: parent
+                        spacing: 12
+                        opacity: root.isWifiPasswordPromptOpen ? 1.0 : 0.0
+                        scale: root.isWifiPasswordPromptOpen ? 1.0 : 0.92
+                        visible: opacity > 0.01
+
+                        Behavior on opacity { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
+                        Behavior on scale { NumberAnimation { duration: 250; easing.type: Easing.OutCubic } }
+
                         Text {
-                            anchors.horizontalCenter: parent.horizontalCenter
-                            text: !root.wifiPower ? "󰤭" : "󰑐"
-                            font.family: Style.fontFamilyMono; font.pixelSize: 32
-                            color: Style.textMuted
-                        }
-                        Text {
-                            anchors.horizontalCenter: parent.horizontalCenter
-                            text: !root.wifiPower ? "Wi-Fi is Powered Off" : "Scanning networks..."
-                            font.family: Style.fontFamily; font.pixelSize: Style.fontSizeNormal
+                            Layout.alignment: Qt.AlignLeft
+                            text: "Connecting to: " + root.wifiPromptSsid
+                            font.family: Style.fontFamily
+                            font.pixelSize: Style.fontSizeNormal
+                            font.weight: Font.DemiBold
                             color: Style.textSecondary
                         }
-                    }
-                }
 
-                ListView {
-                    id: wifiList
-                    Layout.fillWidth: true; Layout.fillHeight: true
-                    model: root.wifiPower ? root.wifiNetworks : []
-                    clip: true
-                    spacing: 4
-                    visible: root.wifiPower && root.wifiNetworks.length > 0
+                        Rectangle {
+                            Layout.fillWidth: true
+                            height: 40
+                            radius: Style.radiusSmall
+                            color: "#0E0E10"
+                            border.color: wifiPasswordInput.activeFocus ? Style.accent : "#222225"
+                            border.width: 1
 
-                    delegate: Rectangle {
-                        width: wifiList.width; height: 32; radius: Style.radiusSmall
-                        color: modelData.active ? "#1C1C1E" : (netM.containsMouse ? "#121214" : "#0A0A0C")
-                        border.color: modelData.active ? Style.accent : "transparent"
-                        border.width: 1
+                            RowLayout {
+                                anchors.fill: parent
+                                anchors.leftMargin: 10; anchors.rightMargin: 10
+                                spacing: 8
 
-                        RowLayout {
-                            anchors.fill: parent
-                            anchors.leftMargin: 8; anchors.rightMargin: 8
-                            spacing: 8
+                                Text {
+                                    text: "󰌾"
+                                    font.family: Style.fontFamilyMono
+                                    color: Style.textMuted
+                                    font.pixelSize: 13
+                                }
 
-                            Text {
-                                text: modelData.signal > 75 ? "󰤨" : (modelData.signal > 50 ? "󰤥" : (modelData.signal > 25 ? "󰤢" : "󰤟"))
-                                font.family: Style.fontFamilyMono
-                                color: modelData.active ? Style.accent : Style.textSecondary
-                                font.pixelSize: 11
-                            }
+                                TextInput {
+                                    id: wifiPasswordInput
+                                    Layout.fillWidth: true
+                                    Layout.fillHeight: true
+                                    font.family: Style.fontFamily
+                                    font.pixelSize: Style.fontSizeNormal
+                                    color: Style.textPrimary
+                                    selectByMouse: true
+                                    echoMode: root.showWifiPassword ? TextInput.Normal : TextInput.Password
+                                    text: root.wifiPasswordText
+                                    focus: root.isWifiPasswordPromptOpen
+                                    onTextChanged: root.wifiPasswordText = text
+                                    verticalAlignment: TextInput.AlignVCenter
 
-                            Text {
-                                text: modelData.ssid
-                                font.family: Style.fontFamily; font.pixelSize: Style.fontSizeSmall
-                                color: Style.textPrimary
-                                Layout.fillWidth: true
-                                elide: Text.ElideRight
-                            }
+                                    Keys.onPressed: function(event) {
+                                        if (event.key === Qt.Key_Escape) {
+                                            root.isWifiPasswordPromptOpen = false;
+                                            root.forceActiveFocus();
+                                            event.accepted = true;
+                                        }
+                                    }
 
-                            Text {
-                                text: modelData.security ? "󰌾" : ""
-                                font.family: Style.fontFamilyMono
-                                color: Style.textMuted
-                                font.pixelSize: 10
+                                    KeyNavigation.tab: wifiCancelBtn
+
+                                    onAccepted: {
+                                        wifiToggler.running = false;
+                                        wifiToggler.command = ["python3", "/home/yogesh/.config/quickshell/scripts/manage_wifi.py", "connect", root.wifiPromptSsid, root.wifiPasswordText];
+                                        wifiToggler.running = true;
+                                        root.isWifiPasswordPromptOpen = false;
+                                        wifiScanTimer.restart();
+                                    }
+                                }
+
+                                Rectangle {
+                                    width: 24; height: 24; radius: 12
+                                    color: "transparent"
+                                    Text {
+                                        anchors.centerIn: parent
+                                        text: root.showWifiPassword ? "󰈈" : "󰈉"
+                                        font.family: Style.fontFamilyMono
+                                        font.pixelSize: 12
+                                        color: wifiEyeM.containsMouse ? Style.textPrimary : Style.textMuted
+                                    }
+                                    MouseArea {
+                                        id: wifiEyeM; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
+                                        onClicked: root.showWifiPassword = !root.showWifiPassword
+                                    }
+                                }
                             }
                         }
 
-                        MouseArea {
-                            id: netM; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
-                            onClicked: {
-                                wifiToggler.command = ["python3", "/home/yogesh/.config/quickshell/scripts/manage_wifi.py", "connect", modelData.ssid];
-                                wifiToggler.running = true;
-                                wifiScanTimer.restart();
+                        RowLayout {
+                            Layout.fillWidth: true
+                            Layout.alignment: Qt.AlignRight
+                            spacing: 10
+
+                            Rectangle {
+                                id: wifiCancelBtn
+                                implicitWidth: 80; implicitHeight: 32; radius: 16
+                                color: wifiCancelM.containsMouse ? "#2C2C2E" : "#1C1C1E"
+                                border.color: "#3A3A3C"
+
+                                Text {
+                                    anchors.centerIn: parent
+                                    text: "Cancel"
+                                    font.family: Style.fontFamily; font.pixelSize: Style.fontSizeSmall; font.weight: Font.Bold
+                                    color: Style.textPrimary
+                                }
+                                MouseArea {
+                                    id: wifiCancelM; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
+                                    onClicked: {
+                                        root.isWifiPasswordPromptOpen = false;
+                                        root.forceActiveFocus();
+                                    }
+                                }
+                            }
+
+                            Rectangle {
+                                implicitWidth: 80; implicitHeight: 32; radius: 16
+                                color: Style.accent
+
+                                Text {
+                                    anchors.centerIn: parent
+                                    text: "Connect"
+                                    font.family: Style.fontFamily; font.pixelSize: Style.fontSizeSmall; font.weight: Font.Bold; color: "#000000"
+                                }
+                                MouseArea {
+                                    anchors.fill: parent; cursorShape: Qt.PointingHandCursor
+                                    onClicked: {
+                                        wifiToggler.running = false;
+                                        wifiToggler.command = ["python3", "/home/yogesh/.config/quickshell/scripts/manage_wifi.py", "connect", root.wifiPromptSsid, root.wifiPasswordText];
+                                        wifiToggler.running = true;
+                                        root.isWifiPasswordPromptOpen = false;
+                                        wifiScanTimer.restart();
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // View B: Standard Wifi List View
+                    ColumnLayout {
+                        anchors.fill: parent
+                        spacing: 6
+                        opacity: root.isWifiPasswordPromptOpen ? 0.0 : 1.0
+                        scale: root.isWifiPasswordPromptOpen ? 0.92 : 1.0
+                        visible: opacity > 0.01
+
+                        Behavior on opacity { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
+                        Behavior on scale { NumberAnimation { duration: 250; easing.type: Easing.OutCubic } }
+
+                        // Connected or Connecting Network indicator Card
+                        Rectangle {
+                            Layout.fillWidth: true
+                            height: 36
+                            radius: Style.radiusSmall
+                            color: "#0F0F12"
+                            border.color: Style.accent
+                            border.width: 1
+                            visible: root.wifiPower && (root.wifiActiveSsid !== "" || wifiToggler.running)
+
+                            RowLayout {
+                                anchors.fill: parent
+                                anchors.leftMargin: 10; anchors.rightMargin: 10
+                                spacing: 8
+                                Text {
+                                    id: wifiActiveIcon
+                                    text: wifiToggler.running ? "󰑐" : "󰖩"
+                                    font.family: Style.fontFamilyMono; color: Style.accent; font.pixelSize: 13
+                                    transformOrigin: Item.Center
+                                    RotationAnimation on rotation {
+                                        running: wifiToggler.running
+                                        from: 0; to: 360; loops: Animation.Infinite; duration: 1000
+                                    }
+                                }
+                                Text {
+                                    text: wifiToggler.running ? "Connecting to: " + root.wifiPromptSsid : "Connected: " + root.wifiActiveSsid
+                                    font.family: Style.fontFamily; font.pixelSize: Style.fontSizeNormal
+                                    font.weight: Font.Bold
+                                    color: Style.textPrimary
+                                    Layout.fillWidth: true
+                                    elide: Text.ElideRight
+                                }
+                                Text { text: wifiToggler.running ? "" : "󰄬"; font.family: Style.fontFamilyMono; color: Style.accent; font.pixelSize: 11 }
+                            }
+                        }
+
+                        Rectangle {
+                            Layout.fillWidth: true; Layout.fillHeight: true
+                            color: "transparent"
+                            visible: !root.wifiPower || root.wifiNetworks.length === 0
+
+                            Column {
+                                anchors.centerIn: parent
+                                spacing: 8
+                                Text {
+                                    anchors.horizontalCenter: parent.horizontalCenter
+                                    text: !root.wifiPower ? "󰖪" : "󰑐"
+                                    font.family: Style.fontFamilyMono; font.pixelSize: 32
+                                    color: Style.textMuted
+                                }
+                                Text {
+                                    anchors.horizontalCenter: parent.horizontalCenter
+                                    text: !root.wifiPower ? "Wi-Fi is Powered Off" : "Scanning networks..."
+                                    font.family: Style.fontFamily; font.pixelSize: Style.fontSizeNormal
+                                    color: Style.textSecondary
+                                }
+                            }
+                        }
+
+                        ListView {
+                            id: wifiList
+                            Layout.fillWidth: true; Layout.fillHeight: true
+                            model: root.wifiPower ? root.wifiNetworks : []
+                            clip: true
+                            spacing: 4
+                            visible: root.wifiPower && root.wifiNetworks.length > 0
+
+                            delegate: Rectangle {
+                                width: wifiList.width; height: 32; radius: Style.radiusSmall
+                                color: modelData.active ? "#1C1C1E" : (netM.containsMouse ? "#121214" : "#0A0A0C")
+                                border.color: modelData.active ? Style.accent : "#222225"
+                                border.width: 1
+
+                                RowLayout {
+                                    anchors.fill: parent
+                                    anchors.leftMargin: 8; anchors.rightMargin: 8
+                                    spacing: 8
+
+                                    Text {
+                                        text: "󰖩"
+                                        font.family: Style.fontFamilyMono
+                                        color: modelData.active ? Style.accent : Style.textSecondary
+                                        font.pixelSize: 11
+                                        opacity: modelData.signal > 75 ? 1.0 : (modelData.signal > 50 ? 0.75 : (modelData.signal > 25 ? 0.5 : 0.25))
+                                    }
+
+                                    Text {
+                                        text: modelData.ssid
+                                        font.family: Style.fontFamily; font.pixelSize: Style.fontSizeSmall
+                                        color: Style.textPrimary
+                                        Layout.fillWidth: true
+                                        elide: Text.ElideRight
+                                    }
+
+                                    Text {
+                                        text: modelData.active ? "󰄬" : (modelData.security ? "󰌾" : "")
+                                        font.family: Style.fontFamilyMono
+                                        color: modelData.active ? Style.accent : Style.textMuted
+                                        font.pixelSize: 10
+                                    }
+                                }
+
+                                MouseArea {
+                                    id: netM; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
+                                    onClicked: {
+                                        if (modelData.security && modelData.security !== "--" && !modelData.active && !modelData.saved) {
+                                            root.wifiPromptSsid = modelData.ssid;
+                                            root.wifiPasswordText = "";
+                                            root.showWifiPassword = false;
+                                            root.isWifiPasswordPromptOpen = true;
+                                            wifiPasswordInput.forceActiveFocus();
+                                        } else {
+                                            wifiToggler.running = false;
+                                            wifiToggler.command = ["python3", "/home/yogesh/.config/quickshell/scripts/manage_wifi.py", "connect", modelData.ssid];
+                                            wifiToggler.running = true;
+                                            wifiScanTimer.restart();
+                                        }
+                                    }
+                                }
                             }
                         }
                     }
@@ -2624,22 +2875,6 @@ Item {
                     Layout.fillWidth: true
                     spacing: 8
 
-                    Rectangle {
-                        width: 24; height: 24; radius: 12
-                        color: btBackM.containsMouse ? Style.cardBgHover : Style.cardBg
-                        border.color: Style.cardBorder
-                        Text {
-                            anchors.centerIn: parent
-                            text: "󰁍"
-                            font.family: Style.fontFamilyMono
-                            font.pixelSize: 11
-                            color: Style.textPrimary
-                        }
-                        MouseArea {
-                            id: btBackM; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
-                            onClicked: root.isBluetoothMenuOpen = false
-                        }
-                    }
 
                     Text {
                         text: "Bluetooth"
@@ -2651,12 +2886,77 @@ Item {
 
                     Item { Layout.fillWidth: true }
 
+                    // Manual Scan Refresh Button with rotation animation
+                    Rectangle {
+                        width: 24; height: 24; radius: 12
+                        color: btRefM.containsMouse ? Style.cardBgHover : Style.cardBg
+                        border.color: Style.cardBorder
+                        visible: root.btPower
+                        Text {
+                            id: btRefText
+                            anchors.centerIn: parent
+                            text: "󰑐"
+                            font.family: Style.fontFamilyMono
+                            font.pixelSize: 11
+                            color: Style.textPrimary
+
+                            transformOrigin: Item.Center
+                            RotationAnimation on rotation {
+                                running: btScanner.running || btToggler.running
+                                from: 0; to: 360; loops: Animation.Infinite; duration: 1000
+                            }
+                        }
+                        MouseArea {
+                            id: btRefM; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                btScanner.running = false;
+                                btScanner.running = true;
+                            }
+                        }
+                    }
+
                     CustomSwitch {
                         checked: root.btPower
                         onToggled: function(val) {
+                            root.btPower = val;
+                            btToggler.running = false;
                             btToggler.command = ["python3", "/home/yogesh/.config/quickshell/scripts/manage_bluetooth.py", val ? "on" : "off"];
                             btToggler.running = true;
                             btScanTimer.restart();
+                        }
+                    }
+                }
+
+                // Connecting Device Indicator Card
+                Rectangle {
+                    Layout.fillWidth: true
+                    height: 36
+                    radius: Style.radiusSmall
+                    color: "#0F0F12"
+                    border.color: Style.accent
+                    border.width: 1
+                    visible: root.btPower && btToggler.running
+
+                    RowLayout {
+                        anchors.fill: parent
+                        anchors.leftMargin: 10; anchors.rightMargin: 10
+                        spacing: 8
+                        Text {
+                            id: btActiveIcon
+                            text: "󰑐"
+                            font.family: Style.fontFamilyMono; color: Style.accent; font.pixelSize: 13
+                            transformOrigin: Item.Center
+                            RotationAnimation on rotation {
+                                running: btToggler.running
+                                from: 0; to: 360; loops: Animation.Infinite; duration: 1000
+                            }
+                        }
+                        Text {
+                            text: "Updating connection..."
+                            font.family: Style.fontFamily; font.pixelSize: Style.fontSizeNormal
+                            font.weight: Font.Bold
+                            color: Style.textPrimary
+                            Layout.fillWidth: true
                         }
                     }
                 }
@@ -2695,7 +2995,7 @@ Item {
                     delegate: Rectangle {
                         width: btList.width; height: 32; radius: Style.radiusSmall
                         color: modelData.connected ? "#1C1C1E" : (devM.containsMouse ? "#121214" : "#0A0A0C")
-                        border.color: modelData.connected ? Style.accent : "transparent"
+                        border.color: modelData.connected ? Style.accent : "#222225"
                         border.width: 1
 
                         RowLayout {
@@ -2719,15 +3019,17 @@ Item {
                             }
 
                             Text {
-                                text: modelData.connected ? "Connected" : "Disconnected"
-                                font.family: Style.fontFamily; font.pixelSize: 10
-                                color: modelData.connected ? Style.accent : Style.textMuted
+                                text: modelData.connected ? "󰄬" : ""
+                                font.family: Style.fontFamilyMono
+                                color: Style.accent
+                                font.pixelSize: 11
                             }
                         }
 
                         MouseArea {
                             id: devM; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
                             onClicked: {
+                                btToggler.running = false;
                                 btToggler.command = ["python3", "/home/yogesh/.config/quickshell/scripts/manage_bluetooth.py", "toggle_conn", modelData.mac];
                                 btToggler.running = true;
                                 btScanTimer.restart();
