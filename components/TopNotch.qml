@@ -535,6 +535,8 @@ Item {
     Component.onCompleted: {
         refreshNotchSettings();
         updateClock();
+        wifiScanner.running = true;
+        btScanner.running = true;
     }
 
     // Fixed root dimensions (624px width allows 32px padding for inverted ears)
@@ -728,6 +730,87 @@ Item {
         onTriggered: sysScanner.running = true
     }
 
+    property bool isWifiMenuOpen: false
+    property bool isBluetoothMenuOpen: false
+
+    property bool wifiPower: false
+    property string wifiActiveSsid: ""
+    property var wifiNetworks: []
+
+    property bool btPower: false
+    property var btDevices: []
+
+    Process {
+        id: wifiScanner
+        command: ["python3", "/home/yogesh/.config/quickshell/scripts/manage_wifi.py"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    var data = JSON.parse(this.text);
+                    root.wifiPower = data.power;
+                    root.wifiActiveSsid = data.active;
+                    root.wifiNetworks = data.networks;
+                } catch(e) {}
+            }
+        }
+    }
+
+    Process {
+        id: btScanner
+        command: ["python3", "/home/yogesh/.config/quickshell/scripts/manage_bluetooth.py"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    var data = JSON.parse(this.text);
+                    root.btPower = data.power;
+                    root.btDevices = data.devices;
+                } catch(e) {}
+            }
+        }
+    }
+
+    Process {
+        id: wifiToggler
+    }
+
+    Process {
+        id: btToggler
+    }
+
+    Timer {
+        id: wifiTimer
+        interval: 4000
+        running: root.isWifiMenuOpen
+        repeat: true
+        onTriggered: wifiScanner.running = true
+    }
+
+    Timer {
+        id: btTimer
+        interval: 4000
+        running: root.isBluetoothMenuOpen
+        repeat: true
+        onTriggered: btScanner.running = true
+    }
+
+    Timer {
+        id: wifiScanTimer
+        interval: 1000
+        running: false
+        repeat: false
+        onTriggered: wifiScanner.running = true
+    }
+
+    Timer {
+        id: btScanTimer
+        interval: 1000
+        running: false
+        repeat: false
+        onTriggered: btScanner.running = true
+    }
+
+
+
     property int volumeLevel: 50
 
     Process {
@@ -827,14 +910,14 @@ Item {
         anchors.top: parent.top
         anchors.horizontalCenter: parent.horizontalCenter
 
-        width: root.isPowerMenuOpen ? 320 : (root.isExpanded ? Style.notchWidthExpanded : (root.isWorkspaceActive ? 240 : (root.showVisualizer ? root.dynamicVisNotchWidth : root.compactWidthVal)))
-        height: root.isPowerMenuOpen ? 260 : (root.isExpanded ? root.expandedHeightVal : Style.notchHeightCompact)
+        width: (root.isPowerMenuOpen || root.isWifiMenuOpen || root.isBluetoothMenuOpen) ? 320 : (root.isExpanded ? Style.notchWidthExpanded : (root.isWorkspaceActive ? 240 : (root.showVisualizer ? root.dynamicVisNotchWidth : root.compactWidthVal)))
+        height: root.isPowerMenuOpen ? 260 : ((root.isWifiMenuOpen || root.isBluetoothMenuOpen) ? 320 : (root.isExpanded ? root.expandedHeightVal : Style.notchHeightCompact))
 
         color: "#000000"
         border.width: 0
 
-        bottomLeftRadius: root.isPowerMenuOpen ? Style.radiusLarge : root.notchRadiusVal
-        bottomRightRadius: root.isPowerMenuOpen ? Style.radiusLarge : root.notchRadiusVal
+        bottomLeftRadius: (root.isPowerMenuOpen || root.isWifiMenuOpen || root.isBluetoothMenuOpen) ? Style.radiusLarge : root.notchRadiusVal
+        bottomRightRadius: (root.isPowerMenuOpen || root.isWifiMenuOpen || root.isBluetoothMenuOpen) ? Style.radiusLarge : root.notchRadiusVal
         topLeftRadius: 0
         topRightRadius: 0
 
@@ -1266,6 +1349,72 @@ Item {
                     }
 
                     Item { Layout.fillWidth: true }
+
+                    // WiFi Status Button with Micro-Animations
+                    Rectangle {
+                        width: 28; height: 28; radius: 14
+                        color: root.isWifiMenuOpen ? Style.accent : (wifiM.containsMouse ? Style.cardBgHover : Style.cardBg)
+                        border.color: Style.cardBorder
+
+                        scale: (root.buttonAnimsVal && wifiM.pressed) ? 0.95 : ((root.buttonAnimsVal && wifiM.containsMouse) ? 1.08 : 1.0)
+                        Behavior on scale { enabled: root.buttonAnimsVal; NumberAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
+                        Behavior on color { ColorAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: root.wifiPower ? "󰤨" : "󰤭"
+                            font.family: Style.fontFamilyMono
+                            font.pixelSize: 13
+                            color: root.isWifiMenuOpen ? "#000" : (root.wifiPower ? Style.accent : Style.textSecondary)
+                            Behavior on color { ColorAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
+                        }
+
+                        MouseArea {
+                            id: wifiM
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                root.isWifiMenuOpen = !root.isWifiMenuOpen;
+                                root.isBluetoothMenuOpen = false;
+                                root.isPowerMenuOpen = false;
+                                if (root.isWifiMenuOpen) wifiScanner.running = true;
+                            }
+                        }
+                    }
+
+                    // Bluetooth Status Button with Micro-Animations
+                    Rectangle {
+                        width: 28; height: 28; radius: 14
+                        color: root.isBluetoothMenuOpen ? Style.accent : (btM.containsMouse ? Style.cardBgHover : Style.cardBg)
+                        border.color: Style.cardBorder
+
+                        scale: (root.buttonAnimsVal && btM.pressed) ? 0.95 : ((root.buttonAnimsVal && btM.containsMouse) ? 1.08 : 1.0)
+                        Behavior on scale { enabled: root.buttonAnimsVal; NumberAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
+                        Behavior on color { ColorAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
+
+                        Text {
+                            anchors.centerIn: parent
+                            text: root.btPower ? "󰂯" : "󰂲"
+                            font.family: Style.fontFamilyMono
+                            font.pixelSize: 13
+                            color: root.isBluetoothMenuOpen ? "#000" : (root.btPower ? Style.accent : Style.textSecondary)
+                            Behavior on color { ColorAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
+                        }
+
+                        MouseArea {
+                            id: btM
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                root.isBluetoothMenuOpen = !root.isBluetoothMenuOpen;
+                                root.isWifiMenuOpen = false;
+                                root.isPowerMenuOpen = false;
+                                if (root.isBluetoothMenuOpen) btScanner.running = true;
+                            }
+                        }
+                    }
 
                     // Power Button with Micro-Animations
                     Rectangle {
@@ -2290,6 +2439,298 @@ Item {
                                     cursorShape: Qt.PointingHandCursor
                                     onClicked: root.executePendingPower()
                                 }
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Integrated WiFi Menu View Overlay inside notchBox (Morphed State)
+        Item {
+            id: wifiMenuOverlay
+            anchors.fill: parent
+            z: 99
+
+            opacity: root.isWifiMenuOpen ? 1.0 : 0.0
+            visible: opacity > 0.01
+
+            Behavior on opacity { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
+
+            ColumnLayout {
+                anchors.fill: parent
+                anchors.margins: 14
+                spacing: 8
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 8
+
+                    Rectangle {
+                        width: 24; height: 24; radius: 12
+                        color: wifiBackM.containsMouse ? Style.cardBgHover : Style.cardBg
+                        border.color: Style.cardBorder
+                        Text {
+                            anchors.centerIn: parent
+                            text: "󰁍"
+                            font.family: Style.fontFamilyMono
+                            font.pixelSize: 11
+                            color: Style.textPrimary
+                        }
+                        MouseArea {
+                            id: wifiBackM; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
+                            onClicked: root.isWifiMenuOpen = false
+                        }
+                    }
+
+                    Text {
+                        text: "Wi-Fi Network"
+                        font.family: Style.fontFamily
+                        font.pixelSize: Style.fontSizeLarge
+                        font.weight: Font.Bold
+                        color: Style.textPrimary
+                    }
+
+                    Item { Layout.fillWidth: true }
+
+                    CustomSwitch {
+                        checked: root.wifiPower
+                        onToggled: function(val) {
+                            wifiToggler.command = ["python3", "/home/yogesh/.config/quickshell/scripts/manage_wifi.py", val ? "on" : "off"];
+                            wifiToggler.running = true;
+                            wifiScanTimer.restart();
+                        }
+                    }
+                }
+
+                Rectangle {
+                    Layout.fillWidth: true
+                    height: 36
+                    radius: Style.radiusSmall
+                    color: "#161618"
+                    border.color: Style.cardBorder
+                    visible: root.wifiPower && root.wifiActiveSsid !== ""
+
+                    RowLayout {
+                        anchors.fill: parent
+                        anchors.leftMargin: 10; anchors.rightMargin: 10
+                        spacing: 8
+                        Text { text: "󰤨"; font.family: Style.fontFamilyMono; color: Style.accent; font.pixelSize: 13 }
+                        Text {
+                            text: "Connected to: " + root.wifiActiveSsid
+                            font.family: Style.fontFamily; font.pixelSize: Style.fontSizeNormal
+                            color: Style.textPrimary
+                            Layout.fillWidth: true
+                            elide: Text.ElideRight
+                        }
+                    }
+                }
+
+                Rectangle {
+                    Layout.fillWidth: true; Layout.fillHeight: true
+                    color: "transparent"
+                    visible: !root.wifiPower || root.wifiNetworks.length === 0
+
+                    Column {
+                        anchors.centerIn: parent
+                        spacing: 8
+                        Text {
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            text: !root.wifiPower ? "󰤭" : "󰑐"
+                            font.family: Style.fontFamilyMono; font.pixelSize: 32
+                            color: Style.textMuted
+                        }
+                        Text {
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            text: !root.wifiPower ? "Wi-Fi is Powered Off" : "Scanning networks..."
+                            font.family: Style.fontFamily; font.pixelSize: Style.fontSizeNormal
+                            color: Style.textSecondary
+                        }
+                    }
+                }
+
+                ListView {
+                    id: wifiList
+                    Layout.fillWidth: true; Layout.fillHeight: true
+                    model: root.wifiPower ? root.wifiNetworks : []
+                    clip: true
+                    spacing: 4
+                    visible: root.wifiPower && root.wifiNetworks.length > 0
+
+                    delegate: Rectangle {
+                        width: wifiList.width; height: 32; radius: Style.radiusSmall
+                        color: modelData.active ? "#1C1C1E" : (netM.containsMouse ? "#121214" : "#0A0A0C")
+                        border.color: modelData.active ? Style.accent : "transparent"
+                        border.width: 1
+
+                        RowLayout {
+                            anchors.fill: parent
+                            anchors.leftMargin: 8; anchors.rightMargin: 8
+                            spacing: 8
+
+                            Text {
+                                text: modelData.signal > 75 ? "󰤨" : (modelData.signal > 50 ? "󰤥" : (modelData.signal > 25 ? "󰤢" : "󰤟"))
+                                font.family: Style.fontFamilyMono
+                                color: modelData.active ? Style.accent : Style.textSecondary
+                                font.pixelSize: 11
+                            }
+
+                            Text {
+                                text: modelData.ssid
+                                font.family: Style.fontFamily; font.pixelSize: Style.fontSizeSmall
+                                color: Style.textPrimary
+                                Layout.fillWidth: true
+                                elide: Text.ElideRight
+                            }
+
+                            Text {
+                                text: modelData.security ? "󰌾" : ""
+                                font.family: Style.fontFamilyMono
+                                color: Style.textMuted
+                                font.pixelSize: 10
+                            }
+                        }
+
+                        MouseArea {
+                            id: netM; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                wifiToggler.command = ["python3", "/home/yogesh/.config/quickshell/scripts/manage_wifi.py", "connect", modelData.ssid];
+                                wifiToggler.running = true;
+                                wifiScanTimer.restart();
+                            }
+                        }
+                    }
+                }
+            }
+        }
+
+        // Integrated Bluetooth Menu View Overlay inside notchBox (Morphed State)
+        Item {
+            id: bluetoothMenuOverlay
+            anchors.fill: parent
+            z: 99
+
+            opacity: root.isBluetoothMenuOpen ? 1.0 : 0.0
+            visible: opacity > 0.01
+
+            Behavior on opacity { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
+
+            ColumnLayout {
+                anchors.fill: parent
+                anchors.margins: 14
+                spacing: 8
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 8
+
+                    Rectangle {
+                        width: 24; height: 24; radius: 12
+                        color: btBackM.containsMouse ? Style.cardBgHover : Style.cardBg
+                        border.color: Style.cardBorder
+                        Text {
+                            anchors.centerIn: parent
+                            text: "󰁍"
+                            font.family: Style.fontFamilyMono
+                            font.pixelSize: 11
+                            color: Style.textPrimary
+                        }
+                        MouseArea {
+                            id: btBackM; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
+                            onClicked: root.isBluetoothMenuOpen = false
+                        }
+                    }
+
+                    Text {
+                        text: "Bluetooth"
+                        font.family: Style.fontFamily
+                        font.pixelSize: Style.fontSizeLarge
+                        font.weight: Font.Bold
+                        color: Style.textPrimary
+                    }
+
+                    Item { Layout.fillWidth: true }
+
+                    CustomSwitch {
+                        checked: root.btPower
+                        onToggled: function(val) {
+                            btToggler.command = ["python3", "/home/yogesh/.config/quickshell/scripts/manage_bluetooth.py", val ? "on" : "off"];
+                            btToggler.running = true;
+                            btScanTimer.restart();
+                        }
+                    }
+                }
+
+                Rectangle {
+                    Layout.fillWidth: true; Layout.fillHeight: true
+                    color: "transparent"
+                    visible: !root.btPower || root.btDevices.length === 0
+
+                    Column {
+                        anchors.centerIn: parent
+                        spacing: 8
+                        Text {
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            text: !root.btPower ? "󰂲" : "󰑐"
+                            font.family: Style.fontFamilyMono; font.pixelSize: 32
+                            color: Style.textMuted
+                        }
+                        Text {
+                            anchors.horizontalCenter: parent.horizontalCenter
+                            text: !root.btPower ? "Bluetooth is Powered Off" : "No devices found"
+                            font.family: Style.fontFamily; font.pixelSize: Style.fontSizeNormal
+                            color: Style.textSecondary
+                        }
+                    }
+                }
+
+                ListView {
+                    id: btList
+                    Layout.fillWidth: true; Layout.fillHeight: true
+                    model: root.btPower ? root.btDevices : []
+                    clip: true
+                    spacing: 4
+                    visible: root.btPower && root.btDevices.length > 0
+
+                    delegate: Rectangle {
+                        width: btList.width; height: 32; radius: Style.radiusSmall
+                        color: modelData.connected ? "#1C1C1E" : (devM.containsMouse ? "#121214" : "#0A0A0C")
+                        border.color: modelData.connected ? Style.accent : "transparent"
+                        border.width: 1
+
+                        RowLayout {
+                            anchors.fill: parent
+                            anchors.leftMargin: 8; anchors.rightMargin: 8
+                            spacing: 8
+
+                            Text {
+                                text: modelData.connected ? "󰂱" : "󰂯"
+                                font.family: Style.fontFamilyMono
+                                color: modelData.connected ? Style.accent : Style.textSecondary
+                                font.pixelSize: 11
+                            }
+
+                            Text {
+                                text: modelData.name
+                                font.family: Style.fontFamily; font.pixelSize: Style.fontSizeSmall
+                                color: Style.textPrimary
+                                Layout.fillWidth: true
+                                elide: Text.ElideRight
+                            }
+
+                            Text {
+                                text: modelData.connected ? "Connected" : "Disconnected"
+                                font.family: Style.fontFamily; font.pixelSize: 10
+                                color: modelData.connected ? Style.accent : Style.textMuted
+                            }
+                        }
+
+                        MouseArea {
+                            id: devM; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                btToggler.command = ["python3", "/home/yogesh/.config/quickshell/scripts/manage_bluetooth.py", "toggle_conn", modelData.mac];
+                                btToggler.running = true;
+                                btScanTimer.restart();
                             }
                         }
                     }
