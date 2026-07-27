@@ -12,7 +12,7 @@ Top Notch morphs dynamically between a compact top-center status pill and an exp
 - **Hardware Stats Dashboard**: Real-time graphs for CPU and RAM load utilizing custom HTML5 Canvas paths, alongside disk storage tracking. Polling interval is customizable in settings and sleeps when the tab is closed (0% idle overhead).
 - **MPRIS Media Controller**: Fully functional music controller displaying dynamic track album art, seek-enabled elapsed timeline slider, volume controls, and metadata.
 - **Fast App Launcher**: Desktop application scanner equipped with icon path matching and flatpak walk-pruning. Caches results and automatically re-scans when new packages are installed or removed.
-- **Wallpaper Selector**: Dynamic grid selector generating high-quality thumbnails in parallel across CPU cores. Sets the active desktop background via `swww` with Wallust palette transitions.
+- **Wallpaper Selector**: Dynamic grid selector generating high-quality thumbnails in parallel across CPU cores. Sets the active desktop background via `awww` with Wallust palette transitions.
 - **SwayNC Notification Panel**: Customized notification widget styled to align with the dark-card aesthetic of the notch.
 - **Settings Controller**: Comprehensive settings configuration manager to adjust animation physics, visualizer styles, and hardware stats polling rates.
 
@@ -51,7 +51,7 @@ Top Notch morphs dynamically between a compact top-center status pill and an exp
 Install the required packages from the Arch repositories and AUR:
 
 ```bash
-sudo pacman -S quickshell-git swaync swww python-pillow python-gobject CAVA
+sudo pacman -S quickshell-git swaync awww python-pillow python-gobject CAVA
 ```
 
 Make sure you have a Nerd Font installed for icon glyphs (e.g., `ttc-iosevka-nerd` or `otf-jetbrains-mono-nerd`):
