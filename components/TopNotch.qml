@@ -16,7 +16,7 @@ Item {
     property alias notchBoxItem: notchBox
 
     property int currentPage: 0
-    property int totalPages: 4
+    property int totalPages: 5
 
     // Keyboard selection index for grid tabs (-1 = no selection)
     property int selectedIndex: 0
@@ -68,14 +68,7 @@ Item {
         }
     }
 
-    onCurrentPageChanged: {
-        if (currentPage === 1 && wallsLoader.item && typeof wallsLoader.item.refresh === "function") {
-            wallsLoader.item.refresh();
-        }
-        if (currentPage === 2 && appsLoader.item && typeof appsLoader.item.refresh === "function") {
-            appsLoader.item.refresh();
-        }
-    }
+
 
     onIsPowerMenuOpenChanged: {
         if (isPowerMenuOpen) {
@@ -188,6 +181,9 @@ Item {
         if (currentPage === 1) {
             wallsTabAlive = true;
             wallsUnloadTimer.stop();
+            if (wallsLoader.item && typeof wallsLoader.item.refresh === "function") {
+                wallsLoader.item.refresh();
+            }
         } else {
             // Start 30s countdown to unload Walls tab
             if (wallsTabAlive) wallsUnloadTimer.restart();
@@ -195,8 +191,14 @@ Item {
         if (currentPage === 2) {
             appsTabAlive = true;
             appsUnloadTimer.stop();
+            if (appsLoader.item && typeof appsLoader.item.refresh === "function") {
+                appsLoader.item.refresh();
+            }
         } else {
             if (appsTabAlive) appsUnloadTimer.restart();
+        }
+        if (currentPage === 4) {
+            sysScanner.running = true;
         }
     }
 
@@ -676,6 +678,34 @@ Item {
         }
     }
 
+    property int cpuUsage: 0
+    property int ramUsage: 0
+    property int diskUsage: 0
+
+    Process {
+        id: sysScanner
+        command: ["python3", "/home/yogesh/.config/quickshell/scripts/get_system_info.py"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    var data = JSON.parse(this.text);
+                    root.cpuUsage = data.cpu;
+                    root.ramUsage = data.ram;
+                    root.diskUsage = data.disk;
+                } catch(e) {}
+            }
+        }
+    }
+
+    Timer {
+        id: sysTimer
+        interval: 2000
+        running: !root.isPowerMenuOpen
+        repeat: true
+        triggeredOnStart: true
+        onTriggered: sysScanner.running = true
+    }
+
     property int volumeLevel: 50
 
     Process {
@@ -854,20 +884,42 @@ Item {
 
                 RowLayout {
                     anchors.centerIn: parent
-                    spacing: 6
+                    spacing: 10
 
+                    // CPU Status (Left of clock)
+                    RowLayout {
+                        spacing: 3
+                        visible: !root.isExpanded && !root.isWorkspaceActive && !root.showVisualizer
+                        Text {
+                            text: "󰻠"
+                            font.family: Style.fontFamilyMono
+                            font.pixelSize: 11
+                            color: Style.accent
+                        }
+                        Text {
+                            text: root.cpuUsage + "%"
+                            font.family: Style.fontFamilyMono
+                            font.pixelSize: 11
+                            color: Style.textPrimary
+                        }
+                    }
+
+                    // Main Clock
                     Text {
                         text: root.timeStr
                         font.family: Style.fontFamilyMono
                         font.pixelSize: Style.fontSizeNormal
                         font.weight: Font.Bold
                         color: Style.textPrimary
+                        Layout.alignment: Qt.AlignVCenter
                     }
 
+                    // Notification Dot
                     Rectangle {
                         width: 14; height: 14; radius: 7
                         color: Style.accent
                         visible: root.notifCount > 0
+                        Layout.alignment: Qt.AlignVCenter
 
                         Text {
                             anchors.centerIn: parent
@@ -876,6 +928,24 @@ Item {
                             font.pixelSize: 8
                             font.weight: Font.Bold
                             color: "#000000"
+                        }
+                    }
+
+                    // RAM Status (Right of clock)
+                    RowLayout {
+                        spacing: 3
+                        visible: !root.isExpanded && !root.isWorkspaceActive && !root.showVisualizer
+                        Text {
+                            text: "󰍛"
+                            font.family: Style.fontFamilyMono
+                            font.pixelSize: 11
+                            color: Style.accent
+                        }
+                        Text {
+                            text: root.ramUsage + "%"
+                            font.family: Style.fontFamilyMono
+                            font.pixelSize: 11
+                            color: Style.textPrimary
                         }
                     }
                 }
@@ -1154,7 +1224,7 @@ Item {
                     RowLayout {
                         spacing: 6
                         Repeater {
-                            model: ["Media", "Walls", "Apps", "Notifs"]
+                            model: ["Media", "Walls", "Apps", "Notifs", "Stats"]
                             Rectangle {
                                 implicitWidth: tabRow.implicitWidth + 16
                                 implicitHeight: 28
@@ -1827,13 +1897,107 @@ Item {
                                 }
                             }
                         }
+
+                        // PAGE 4: Hardware Stats Dashboard
+                        Item {
+                            width: pageViewport.width
+                            height: pageViewport.height
+                            clip: true
+
+                            ColumnLayout {
+                                anchors.fill: parent
+                                spacing: 12
+
+                                Text {
+                                    text: "System Hardware Monitor"
+                                    font.family: Style.fontFamily
+                                    font.pixelSize: Style.fontSizeLarge
+                                    font.weight: Font.Bold
+                                    color: Style.accent
+                                }
+
+                                RowLayout {
+                                    Layout.fillWidth: true
+                                    spacing: 12
+
+                                    // CPU Usage Card
+                                    Rectangle {
+                                        Layout.fillWidth: true
+                                        implicitHeight: 110
+                                        radius: Style.radiusMedium
+                                        color: Style.cardBg
+                                        border.color: Style.cardBorder
+
+                                        ColumnLayout {
+                                            anchors.fill: parent
+                                            anchors.margins: 12
+                                            spacing: 4
+
+                                            Text { text: "󰻠 CPU Usage"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeNormal; font.weight: Font.Bold; color: Style.textPrimary }
+                                            Text { text: root.cpuUsage + "%"; font.family: Style.fontFamilyMono; font.pixelSize: 24; font.weight: Font.Bold; color: Style.accent }
+                                            Rectangle {
+                                                Layout.fillWidth: true; height: 6; radius: 3; color: Style.cardBgHover
+                                                Rectangle { height: parent.height; width: parent.width * (root.cpuUsage / 100.0); radius: 3; color: Style.accent }
+                                            }
+                                        }
+                                    }
+
+                                    // RAM Usage Card
+                                    Rectangle {
+                                        Layout.fillWidth: true
+                                        implicitHeight: 110
+                                        radius: Style.radiusMedium
+                                        color: Style.cardBg
+                                        border.color: Style.cardBorder
+
+                                        ColumnLayout {
+                                            anchors.fill: parent
+                                            anchors.margins: 12
+                                            spacing: 4
+
+                                            Text { text: "󰍛 RAM Memory"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeNormal; font.weight: Font.Bold; color: Style.textPrimary }
+                                            Text { text: root.ramUsage + "%"; font.family: Style.fontFamilyMono; font.pixelSize: 24; font.weight: Font.Bold; color: Style.accent }
+                                            Rectangle {
+                                                Layout.fillWidth: true; height: 6; radius: 3; color: Style.cardBgHover
+                                                Rectangle { height: parent.height; width: parent.width * (root.ramUsage / 100.0); radius: 3; color: Style.accent }
+                                            }
+                                        }
+                                    }
+                                }
+
+                                // Disk Storage Card
+                                Rectangle {
+                                    Layout.fillWidth: true
+                                    implicitHeight: 76
+                                    radius: Style.radiusMedium
+                                    color: Style.cardBg
+                                    border.color: Style.cardBorder
+
+                                    ColumnLayout {
+                                        anchors.fill: parent
+                                        anchors.margins: 12
+                                        spacing: 4
+
+                                        RowLayout {
+                                            Text { text: "󰋊 Disk Storage (Root)"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeNormal; font.weight: Font.Bold; color: Style.textPrimary }
+                                            Item { Layout.fillWidth: true }
+                                            Text { text: root.diskUsage + "%"; font.family: Style.fontFamilyMono; font.pixelSize: Style.fontSizeNormal; font.weight: Font.Bold; color: Style.accent }
+                                        }
+                                        Rectangle {
+                                            Layout.fillWidth: true; height: 6; radius: 3; color: Style.cardBgHover
+                                            Rectangle { height: parent.height; width: parent.width * (root.diskUsage / 100.0); radius: 3; color: Style.accent }
+                                        }
+                                    }
+                                }
+                            }
+                        }
                     }
                 }
 
-                // iOS-STYLE SLIDING PILL TAB INDICATOR (100% Pixel-Perfect Mathematical Centering for 4 Tabs)
+                // iOS-STYLE SLIDING PILL TAB INDICATOR
                 Item {
                     Layout.alignment: Qt.AlignHCenter
-                    implicitWidth: 84
+                    implicitWidth: 104
                     implicitHeight: 14
 
                     // Fixed Grey Background Dots
