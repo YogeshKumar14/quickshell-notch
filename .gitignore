@@ -1,0 +1,13 @@
+# Ignore local settings and cache files
+notch_settings.json
+current_wallpaper
+*.qslog
+nohup.out
+/tmp/
+
+# Ignore scratch / experimental test files
+scratch/
+scratch_*.qml
+test_*.qml
+*.save
+*.save.*
