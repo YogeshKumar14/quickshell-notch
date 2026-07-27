@@ -35,7 +35,8 @@ DEFAULTS = {
     "visualizer_wave_width": 2,
     "visualizer_dot_size": 4,
     "visualizer_pulsar_scale": 1.2,
-    "visualizer_pause_delay": 1000
+    "visualizer_pause_delay": 1000,
+    "stats_interval": 2000
 }
 
 def main():

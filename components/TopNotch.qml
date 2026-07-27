@@ -520,6 +520,7 @@ Item {
                     if (data.tab_anim_type !== undefined) root.tabAnimType = data.tab_anim_type;
                     if (data.tab_tension !== undefined) root.tabSpringTension = data.tab_tension;
                     if (data.tab_damping !== undefined) root.tabSpringDamping = data.tab_damping;
+                    if (data.stats_interval !== undefined) root.sysStatsIntervalVal = data.stats_interval;
                 } catch (e) {
                     console.log("Error loading notch settings:", e);
                 }
@@ -681,29 +682,10 @@ Item {
     property int cpuUsage: 0
     property int ramUsage: 0
     property int diskUsage: 0
+    property int sysStatsIntervalVal: 2000
 
     property var cpuHistory: []
     property var ramHistory: []
-
-    onCpuUsageChanged: {
-        var arr = [];
-        for (var i = 0; i < root.cpuHistory.length; i++) {
-            arr.push(root.cpuHistory[i]);
-        }
-        arr.push(root.cpuUsage);
-        if (arr.length > 20) arr.shift();
-        root.cpuHistory = arr;
-    }
-
-    onRamUsageChanged: {
-        var arr = [];
-        for (var i = 0; i < root.ramHistory.length; i++) {
-            arr.push(root.ramHistory[i]);
-        }
-        arr.push(root.ramUsage);
-        if (arr.length > 20) arr.shift();
-        root.ramHistory = arr;
-    }
 
     Process {
         id: sysScanner
@@ -715,6 +697,24 @@ Item {
                     root.cpuUsage = data.cpu;
                     root.ramUsage = data.ram;
                     root.diskUsage = data.disk;
+
+                    // Accumulate CPU History
+                    var cpuArr = [];
+                    for (var i = 0; i < root.cpuHistory.length; i++) {
+                        cpuArr.push(root.cpuHistory[i]);
+                    }
+                    cpuArr.push(data.cpu);
+                    if (cpuArr.length > 20) cpuArr.shift();
+                    root.cpuHistory = cpuArr;
+
+                    // Accumulate RAM History
+                    var ramArr = [];
+                    for (var i = 0; i < root.ramHistory.length; i++) {
+                        ramArr.push(root.ramHistory[i]);
+                    }
+                    ramArr.push(data.ram);
+                    if (ramArr.length > 20) ramArr.shift();
+                    root.ramHistory = ramArr;
                 } catch(e) {}
             }
         }
@@ -722,7 +722,7 @@ Item {
 
     Timer {
         id: sysTimer
-        interval: 2000
+        interval: root.sysStatsIntervalVal
         running: root.isExpanded && root.currentPage === 4
         repeat: true
         onTriggered: sysScanner.running = true

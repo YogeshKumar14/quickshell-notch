@@ -85,6 +85,8 @@ PanelWindow {
     property real visualizerPulsarScaleVal: 1.2
     property int visualizerPauseDelayVal: 1000
 
+    property int sysStatsIntervalVal: 2000
+
     property string expandAnimType: "outback"
     property real expandSpringTension: 4.5
     property real expandSpringDamping: 0.28
@@ -157,6 +159,7 @@ PanelWindow {
                     if (data.tab_anim_type !== undefined) root.tabAnimType = data.tab_anim_type;
                     if (data.tab_tension !== undefined) root.tabSpringTension = data.tab_tension;
                     if (data.tab_damping !== undefined) root.tabSpringDamping = data.tab_damping;
+                    if (data.stats_interval !== undefined) root.sysStatsIntervalVal = data.stats_interval;
                 } catch (e) {
                     console.log("Error parsing notch settings:", e);
                 }
@@ -245,7 +248,8 @@ PanelWindow {
                 "expand_tension": root.expandSpringTension,
                 "expand_damping": root.expandSpringDamping,
                 "tab_tension": root.tabSpringTension,
-                "tab_damping": root.tabSpringDamping
+                "tab_damping": root.tabSpringDamping,
+                "stats_interval": root.sysStatsIntervalVal
             }
         };
 
@@ -1100,6 +1104,38 @@ PanelWindow {
                                     CustomSlider {
                                         width: parent.width; from: 0.2; to: 2.0; value: root.wallDurationVal; stepSize: 0.1
                                         onMoved: function(val) { root.wallDurationVal = val; root.hasPendingChanges = true; }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // SECTION 5.5: SYSTEM MONITOR & POLLING RATE
+                    Column {
+                        width: parent.width; spacing: 8
+                        RowLayout {
+                            width: parent.width; spacing: 6
+                            Text { text: "󰻠"; font.family: Style.fontFamilyMono; font.pixelSize: 13; color: Style.accent }
+                            Text { text: "SYSTEM MONITOR & POLLING RATE"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeSmall; font.weight: Font.Bold; color: Style.textMuted }
+                        }
+
+                        Rectangle {
+                            width: parent.width; height: secnSysInner.height + 24; radius: Style.radiusMedium; color: Style.cardBg; border.color: Style.cardBorder
+                            Column {
+                                id: secnSysInner
+                                anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top; anchors.margins: 14; spacing: 14
+
+                                Column {
+                                    width: parent.width; spacing: 6
+                                    RowLayout {
+                                        width: parent.width
+                                        Text { text: "Hardware Stats Polling Rate"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeNormal; color: Style.textPrimary }
+                                        Item { Layout.fillWidth: true }
+                                        Text { text: (root.sysStatsIntervalVal / 1000.0).toFixed(1) + " s"; font.family: Style.fontFamilyMono; font.pixelSize: Style.fontSizeSmall; color: Style.accent; font.weight: Font.Bold }
+                                    }
+                                    CustomSlider {
+                                        width: parent.width; from: 500; to: 5000; value: root.sysStatsIntervalVal; stepSize: 250
+                                        onMoved: function(val) { root.sysStatsIntervalVal = Math.round(val); root.hasPendingChanges = true; }
                                     }
                                 }
                             }
