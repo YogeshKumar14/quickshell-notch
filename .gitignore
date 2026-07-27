@@ -5,6 +5,11 @@ current_wallpaper
 nohup.out
 /tmp/
 
+# Ignore local developer files and guidelines
+AGENTS.md
+quickshell_notch_tutorial.md
+.gemini_rules.md
+
 # Ignore scratch / experimental test files
 scratch/
 scratch_*.qml
