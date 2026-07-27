@@ -682,6 +682,29 @@ Item {
     property int ramUsage: 0
     property int diskUsage: 0
 
+    property var cpuHistory: []
+    property var ramHistory: []
+
+    onCpuUsageChanged: {
+        var arr = [];
+        for (var i = 0; i < root.cpuHistory.length; i++) {
+            arr.push(root.cpuHistory[i]);
+        }
+        arr.push(root.cpuUsage);
+        if (arr.length > 20) arr.shift();
+        root.cpuHistory = arr;
+    }
+
+    onRamUsageChanged: {
+        var arr = [];
+        for (var i = 0; i < root.ramHistory.length; i++) {
+            arr.push(root.ramHistory[i]);
+        }
+        arr.push(root.ramUsage);
+        if (arr.length > 20) arr.shift();
+        root.ramHistory = arr;
+    }
+
     Process {
         id: sysScanner
         command: ["python3", "/home/yogesh/.config/quickshell/scripts/get_system_info.py"]
@@ -700,9 +723,8 @@ Item {
     Timer {
         id: sysTimer
         interval: 2000
-        running: !root.isPowerMenuOpen
+        running: root.isExpanded && root.currentPage === 4
         repeat: true
-        triggeredOnStart: true
         onTriggered: sysScanner.running = true
     }
 
@@ -884,42 +906,20 @@ Item {
 
                 RowLayout {
                     anchors.centerIn: parent
-                    spacing: 10
+                    spacing: 6
 
-                    // CPU Status (Left of clock)
-                    RowLayout {
-                        spacing: 3
-                        visible: !root.isExpanded && !root.isWorkspaceActive && !root.showVisualizer
-                        Text {
-                            text: "󰻠"
-                            font.family: Style.fontFamilyMono
-                            font.pixelSize: 11
-                            color: Style.accent
-                        }
-                        Text {
-                            text: root.cpuUsage + "%"
-                            font.family: Style.fontFamilyMono
-                            font.pixelSize: 11
-                            color: Style.textPrimary
-                        }
-                    }
-
-                    // Main Clock
                     Text {
                         text: root.timeStr
                         font.family: Style.fontFamilyMono
                         font.pixelSize: Style.fontSizeNormal
                         font.weight: Font.Bold
                         color: Style.textPrimary
-                        Layout.alignment: Qt.AlignVCenter
                     }
 
-                    // Notification Dot
                     Rectangle {
                         width: 14; height: 14; radius: 7
                         color: Style.accent
                         visible: root.notifCount > 0
-                        Layout.alignment: Qt.AlignVCenter
 
                         Text {
                             anchors.centerIn: parent
@@ -928,24 +928,6 @@ Item {
                             font.pixelSize: 8
                             font.weight: Font.Bold
                             color: "#000000"
-                        }
-                    }
-
-                    // RAM Status (Right of clock)
-                    RowLayout {
-                        spacing: 3
-                        visible: !root.isExpanded && !root.isWorkspaceActive && !root.showVisualizer
-                        Text {
-                            text: "󰍛"
-                            font.family: Style.fontFamilyMono
-                            font.pixelSize: 11
-                            color: Style.accent
-                        }
-                        Text {
-                            text: root.ramUsage + "%"
-                            font.family: Style.fontFamilyMono
-                            font.pixelSize: 11
-                            color: Style.textPrimary
                         }
                     }
                 }
@@ -1923,7 +1905,7 @@ Item {
                                     // CPU Usage Card
                                     Rectangle {
                                         Layout.fillWidth: true
-                                        implicitHeight: 110
+                                        implicitHeight: 134
                                         radius: Style.radiusMedium
                                         color: Style.cardBg
                                         border.color: Style.cardBorder
@@ -1933,11 +1915,51 @@ Item {
                                             anchors.margins: 12
                                             spacing: 4
 
-                                            Text { text: "󰻠 CPU Usage"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeNormal; font.weight: Font.Bold; color: Style.textPrimary }
-                                            Text { text: root.cpuUsage + "%"; font.family: Style.fontFamilyMono; font.pixelSize: 24; font.weight: Font.Bold; color: Style.accent }
-                                            Rectangle {
-                                                Layout.fillWidth: true; height: 6; radius: 3; color: Style.cardBgHover
-                                                Rectangle { height: parent.height; width: parent.width * (root.cpuUsage / 100.0); radius: 3; color: Style.accent }
+                                            RowLayout {
+                                                Text { text: "󰻠 CPU Usage"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeNormal; font.weight: Font.Bold; color: Style.textPrimary }
+                                                Item { Layout.fillWidth: true }
+                                                Text { text: root.cpuUsage + "%"; font.family: Style.fontFamilyMono; font.pixelSize: Style.fontSizeNormal; font.weight: Font.Bold; color: Style.accent }
+                                            }
+
+                                            Canvas {
+                                                id: cpuGraph
+                                                Layout.fillWidth: true
+                                                implicitHeight: 42
+                                                property var hist: root.cpuHistory
+                                                onHistChanged: requestPaint()
+
+                                                onPaint: {
+                                                    var ctx = getContext("2d");
+                                                    ctx.clearRect(0, 0, width, height);
+                                                    if (!hist || hist.length < 2) return;
+
+                                                    var val = root.cpuUsage;
+                                                    var colorStr = "#2ec27e";
+                                                    if (val > 75) colorStr = "#ff4d4f";
+                                                    else if (val > 45) colorStr = "#e6a23c";
+
+                                                    ctx.strokeStyle = colorStr;
+                                                    ctx.lineWidth = 1.8;
+                                                    ctx.beginPath();
+
+                                                    var step = width / (hist.length - 1);
+                                                    for (var i = 0; i < hist.length; i++) {
+                                                        var x = i * step;
+                                                        var y = height - (hist[i] / 100.0 * (height - 4)) - 2;
+                                                        if (i === 0) ctx.moveTo(x, y);
+                                                        else ctx.lineTo(x, y);
+                                                    }
+                                                    ctx.stroke();
+
+                                                    ctx.lineTo(width, height);
+                                                    ctx.lineTo(0, height);
+                                                    ctx.closePath();
+                                                    var grad = ctx.createLinearGradient(0, 0, 0, height);
+                                                    grad.addColorStop(0, colorStr + "33");
+                                                    grad.addColorStop(1, colorStr + "00");
+                                                    ctx.fillStyle = grad;
+                                                    ctx.fill();
+                                                }
                                             }
                                         }
                                     }
@@ -1945,7 +1967,7 @@ Item {
                                     // RAM Usage Card
                                     Rectangle {
                                         Layout.fillWidth: true
-                                        implicitHeight: 110
+                                        implicitHeight: 134
                                         radius: Style.radiusMedium
                                         color: Style.cardBg
                                         border.color: Style.cardBorder
@@ -1955,11 +1977,51 @@ Item {
                                             anchors.margins: 12
                                             spacing: 4
 
-                                            Text { text: "󰍛 RAM Memory"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeNormal; font.weight: Font.Bold; color: Style.textPrimary }
-                                            Text { text: root.ramUsage + "%"; font.family: Style.fontFamilyMono; font.pixelSize: 24; font.weight: Font.Bold; color: Style.accent }
-                                            Rectangle {
-                                                Layout.fillWidth: true; height: 6; radius: 3; color: Style.cardBgHover
-                                                Rectangle { height: parent.height; width: parent.width * (root.ramUsage / 100.0); radius: 3; color: Style.accent }
+                                            RowLayout {
+                                                Text { text: "󰍛 RAM Memory"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeNormal; font.weight: Font.Bold; color: Style.textPrimary }
+                                                Item { Layout.fillWidth: true }
+                                                Text { text: root.ramUsage + "%"; font.family: Style.fontFamilyMono; font.pixelSize: Style.fontSizeNormal; font.weight: Font.Bold; color: Style.accent }
+                                            }
+
+                                            Canvas {
+                                                id: ramGraph
+                                                Layout.fillWidth: true
+                                                implicitHeight: 42
+                                                property var hist: root.ramHistory
+                                                onHistChanged: requestPaint()
+
+                                                onPaint: {
+                                                    var ctx = getContext("2d");
+                                                    ctx.clearRect(0, 0, width, height);
+                                                    if (!hist || hist.length < 2) return;
+
+                                                    var val = root.ramUsage;
+                                                    var colorStr = "#2ec27e";
+                                                    if (val > 75) colorStr = "#ff4d4f";
+                                                    else if (val > 45) colorStr = "#e6a23c";
+
+                                                    ctx.strokeStyle = colorStr;
+                                                    ctx.lineWidth = 1.8;
+                                                    ctx.beginPath();
+
+                                                    var step = width / (hist.length - 1);
+                                                    for (var i = 0; i < hist.length; i++) {
+                                                        var x = i * step;
+                                                        var y = height - (hist[i] / 100.0 * (height - 4)) - 2;
+                                                        if (i === 0) ctx.moveTo(x, y);
+                                                        else ctx.lineTo(x, y);
+                                                    }
+                                                    ctx.stroke();
+
+                                                    ctx.lineTo(width, height);
+                                                    ctx.lineTo(0, height);
+                                                    ctx.closePath();
+                                                    var grad = ctx.createLinearGradient(0, 0, 0, height);
+                                                    grad.addColorStop(0, colorStr + "33");
+                                                    grad.addColorStop(1, colorStr + "00");
+                                                    ctx.fillStyle = grad;
+                                                    ctx.fill();
+                                                }
                                             }
                                         }
                                     }
