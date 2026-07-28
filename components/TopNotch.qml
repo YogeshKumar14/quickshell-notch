@@ -1993,6 +1993,90 @@ Item {
                                         }
                                     }
                                 }
+
+                                // Screen Brightness Card with CustomSlider
+                                Rectangle {
+                                    Layout.fillWidth: true
+                                    implicitHeight: 76
+                                    radius: Style.radiusMedium
+                                    color: Style.cardBg
+                                    border.color: Style.cardBorder
+
+                                    ColumnLayout {
+                                        anchors.fill: parent
+                                        anchors.margins: 14
+                                        spacing: 6
+
+                                        RowLayout {
+                                            Layout.fillWidth: true
+                                            Text { text: "󰃠  Screen Brightness"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeNormal; color: Style.textPrimary }
+                                            Item { Layout.fillWidth: true }
+                                            Text { text: root.brightnessLevel + "%"; font.family: Style.fontFamilyMono; font.pixelSize: Style.fontSizeSmall; font.weight: Font.Bold; color: Style.accent }
+                                        }
+
+                                        CustomSlider {
+                                            Layout.fillWidth: true
+                                            from: 0; to: 100
+                                            value: root.brightnessLevel
+                                            onMoved: function(val) {
+                                                root.brightnessLevel = Math.round(val);
+                                                if (!brightnessThrottleTimer.running) {
+                                                    brightnessThrottleTimer.start();
+                                                }
+                                            }
+                                            Timer {
+                                                id: brightnessThrottleTimer
+                                                interval: 50
+                                                onTriggered: {
+                                                    setBrightnessProc.command = ["brightnessctl", "s", root.brightnessLevel + "%"];
+                                                    setBrightnessProc.running = true;
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+
+                                // Microphone Card with CustomSlider
+                                Rectangle {
+                                    Layout.fillWidth: true
+                                    implicitHeight: 76
+                                    radius: Style.radiusMedium
+                                    color: Style.cardBg
+                                    border.color: Style.cardBorder
+
+                                    ColumnLayout {
+                                        anchors.fill: parent
+                                        anchors.margins: 14
+                                        spacing: 6
+
+                                        RowLayout {
+                                            Layout.fillWidth: true
+                                            Text { text: "󰍬  Microphone Input"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeNormal; color: Style.textPrimary }
+                                            Item { Layout.fillWidth: true }
+                                            Text { text: root.micLevel + "%"; font.family: Style.fontFamilyMono; font.pixelSize: Style.fontSizeSmall; font.weight: Font.Bold; color: Style.accent }
+                                        }
+
+                                        CustomSlider {
+                                            Layout.fillWidth: true
+                                            from: 0; to: 100
+                                            value: root.micLevel
+                                            onMoved: function(val) {
+                                                root.micLevel = Math.round(val);
+                                                if (!micThrottleTimer.running) {
+                                                    micThrottleTimer.start();
+                                                }
+                                            }
+                                            Timer {
+                                                id: micThrottleTimer
+                                                interval: 50
+                                                onTriggered: {
+                                                    setMicProc.command = ["wpctl", "set-volume", "@DEFAULT_AUDIO_SOURCE@", root.micLevel + "%"];
+                                                    setMicProc.running = true;
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
                             }
                         }
 
