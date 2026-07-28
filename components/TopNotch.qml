@@ -1562,23 +1562,48 @@ Item {
                             Behavior on width { SpringAnimation { spring: root.tabSpringTension; damping: root.tabSpringDamping } }
                         }
 
+                        // Sliding Hover Pill
+                        Rectangle {
+                            id: hoverPill
+                            height: 32
+                            radius: 16
+                            color: Style.cardBgHover
+                            z: 0
+
+                            property var hoveredItem: segRow.hoveredIndex >= 0 ? segRepeater.itemAt(segRow.hoveredIndex) : null
+                            x: hoveredItem ? hoveredItem.x : slidingPill.x
+                            width: hoveredItem ? hoveredItem.width : slidingPill.width
+                            opacity: segRow.hoveredIndex >= 0 && segRow.hoveredIndex !== root.currentPage ? 1 : 0
+
+                            Behavior on x { SpringAnimation { spring: root.tabSpringTension; damping: root.tabSpringDamping } }
+                            Behavior on width { SpringAnimation { spring: root.tabSpringTension; damping: root.tabSpringDamping } }
+                            Behavior on opacity { NumberAnimation { duration: root.buttonSpeedVal } }
+                        }
+
                         RowLayout {
                             id: segRow
                             anchors.fill: parent
                             spacing: 0
                             z: 1 // Keep tabs above the sliding pill
 
+                            property int hoveredIndex: {
+                                for (var i = 0; i < segRepeater.count; i++) {
+                                    var item = segRepeater.itemAt(i);
+                                    if (item && item.isHovered) return i;
+                                }
+                                return -1;
+                            }
+
                             Repeater {
                                 id: segRepeater
                                 model: ["Media", "Walls", "Apps", "Notifs", "Stats"]
                                 
                                 Rectangle {
+                                    property bool isHovered: segMouse.containsMouse
                                     Layout.preferredWidth: segInner.width + 24
                                     Layout.fillHeight: true
                                     radius: 16
-                                    color: (root.currentPage !== index && segMouse.containsMouse) ? Style.cardBgHover : "transparent"
-                                    
-                                    Behavior on color { ColorAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
+                                    color: "transparent"
 
                                     Row {
                                         id: segInner
