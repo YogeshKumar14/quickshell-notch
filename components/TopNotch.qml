@@ -1792,23 +1792,28 @@ Item {
                                     color: Style.accent
                                 }
 
-                                // MPRIS Track Card (Apple Music Style)
+                                // MPRIS Track Card (Dynamic Island Pill Style)
                                 Rectangle {
                                     Layout.fillWidth: true
-                                    implicitHeight: 330
-                                    radius: Style.radiusMedium
+                                    implicitHeight: 90
+                                    radius: 45 // Perfect pill curve
                                     color: Style.cardBg
                                     border.color: Style.cardBorder
 
-                                    ColumnLayout {
+                                    MouseArea {
+                                        id: mediaHoverArea
                                         anchors.fill: parent
-                                        anchors.margins: 20
+                                        hoverEnabled: true
+                                    }
+
+                                    RowLayout {
+                                        anchors.fill: parent
+                                        anchors.margins: 14
                                         spacing: 16
 
-                                        // Large Centered Album Art
+                                        // Left: Circular Album Art
                                         Rectangle {
-                                            Layout.alignment: Qt.AlignHCenter
-                                            width: 140; height: 140; radius: Style.radiusLarge
+                                            width: 62; height: 62; radius: 31
                                             color: Style.cardBgHover
                                             border.color: Style.cardBorder
                                             clip: true
@@ -1824,26 +1829,25 @@ Item {
                                                 anchors.centerIn: parent
                                                 text: "󰎆"
                                                 font.family: Style.fontFamilyMono
-                                                font.pixelSize: 48
+                                                font.pixelSize: 24
                                                 color: Style.accent
                                                 visible: !(root.activePlayer && root.activePlayer.trackArtUrl && root.activePlayer.trackArtUrl !== "")
                                             }
                                         }
 
-                                        // Centered Track Info
+                                        // Center: Track Info
                                         ColumnLayout {
                                             Layout.fillWidth: true
-                                            spacing: 4
+                                            spacing: 2
 
                                             Text {
                                                 text: root.trackTitle
                                                 font.family: Style.fontFamily
-                                                font.pixelSize: Style.fontSizeTitle + 2
+                                                font.pixelSize: Style.fontSizeLarge
                                                 font.weight: Font.Bold
                                                 font.letterSpacing: 0.5
                                                 color: Style.textPrimary
                                                 elide: Text.ElideRight
-                                                horizontalAlignment: Text.AlignHCenter
                                                 Layout.fillWidth: true
                                             }
 
@@ -1853,95 +1857,80 @@ Item {
                                                 font.pixelSize: Style.fontSizeNormal
                                                 color: Style.textSecondary
                                                 elide: Text.ElideRight
-                                                horizontalAlignment: Text.AlignHCenter
                                                 Layout.fillWidth: true
                                             }
                                         }
 
-                                        // Timeline
-                                        RowLayout {
-                                            Layout.fillWidth: true
-                                            spacing: 12
-                                            visible: root.activePlayer !== null
+                                        // Right: Dynamic Swap (Visualizer <-> Controls)
+                                        Item {
+                                            width: 140
+                                            height: 60
 
-                                            Text {
-                                                text: root.formatTime(root.trackPosition)
-                                                font.family: Style.fontFamilyMono
-                                                font.pixelSize: Style.fontSizeSmall
-                                                color: Style.textSecondary
-                                            }
+                                            // Live Visualizer (Visible when NOT hovered)
+                                            RowLayout {
+                                                anchors.fill: parent
+                                                spacing: 4
+                                                opacity: mediaHoverArea.containsMouse ? 0.0 : 1.0
+                                                Behavior on opacity { NumberAnimation { duration: 250; easing.type: Easing.InOutQuad } }
+                                                visible: opacity > 0.01
 
-                                            Rectangle {
-                                                Layout.fillWidth: true
-                                                height: 6
-                                                radius: 3
-                                                color: Style.cardBgHover
+                                                Item { Layout.fillWidth: true } // Push visualizer to right
 
-                                                Rectangle {
-                                                    height: parent.height
-                                                    width: parent.width * (root.trackLength > 0 ? Math.min(1.0, root.trackPosition / root.trackLength) : 0)
-                                                    radius: 3
-                                                    color: Style.accent
-                                                }
-
-                                                MouseArea {
-                                                    anchors.fill: parent
-                                                    cursorShape: Qt.PointingHandCursor
-                                                    onClicked: function(mouse) {
-                                                        if (root.activePlayer && root.trackLength > 0) {
-                                                            var clickRatio = mouse.x / width;
-                                                            var newPos = clickRatio * root.trackLength;
-                                                            root.activePlayer.position = newPos;
-                                                            root.trackPosition = newPos;
-                                                        }
+                                                Repeater {
+                                                    model: 10
+                                                    Rectangle {
+                                                        width: 4
+                                                        property real val: (root.visualizerBars && index < root.visualizerBars.length) ? root.visualizerBars[index] : 0
+                                                        height: Math.max(4, Math.min(30, (val / 100.0) * 30))
+                                                        radius: 2
+                                                        color: Style.accent
+                                                        anchors.verticalCenter: parent.verticalCenter
                                                     }
                                                 }
                                             }
 
-                                            Text {
-                                                text: root.formatTime(root.trackLength)
-                                                font.family: Style.fontFamilyMono
-                                                font.pixelSize: Style.fontSizeSmall
-                                                color: Style.textSecondary
-                                            }
-                                        }
+                                            // Playback Controls (Visible WHEN hovered)
+                                            RowLayout {
+                                                anchors.fill: parent
+                                                spacing: 12
+                                                opacity: mediaHoverArea.containsMouse ? 1.0 : 0.0
+                                                Behavior on opacity { NumberAnimation { duration: 250; easing.type: Easing.InOutQuad } }
+                                                visible: opacity > 0.01
 
-                                        // Centered Playback Controls
-                                        RowLayout {
-                                            Layout.alignment: Qt.AlignHCenter
-                                            spacing: 32
+                                                Item { Layout.fillWidth: true } // Push controls to right
+                                                
+                                                // Media Prev Button
+                                                Rectangle {
+                                                    width: 32; height: 32; radius: 16; color: Style.cardBgHover
+                                                    scale: (root.buttonAnimsVal && prevM.pressed) ? 0.92 : ((root.buttonAnimsVal && prevM.containsMouse) ? 1.08 : 1.0)
+                                                    Behavior on scale { enabled: root.buttonAnimsVal; NumberAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
+                                                    Behavior on color { ColorAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
 
-                                            // Media Prev Button
-                                            Rectangle {
-                                                width: 36; height: 36; radius: 18; color: Style.cardBgHover
-                                                scale: (root.buttonAnimsVal && prevM.pressed) ? 0.92 : ((root.buttonAnimsVal && prevM.containsMouse) ? 1.08 : 1.0)
-                                                Behavior on scale { enabled: root.buttonAnimsVal; NumberAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
-                                                Behavior on color { ColorAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
+                                                    Text { anchors.centerIn: parent; text: "󰒮"; font.family: Style.fontFamilyMono; color: Style.textPrimary; font.pixelSize: 14 }
+                                                    MouseArea { id: prevM; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: if (root.activePlayer) root.activePlayer.previous() }
+                                                }
 
-                                                Text { anchors.centerIn: parent; text: "󰒮"; font.family: Style.fontFamilyMono; color: Style.textPrimary; font.pixelSize: 16 }
-                                                MouseArea { id: prevM; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: if (root.activePlayer) root.activePlayer.previous() }
-                                            }
+                                                // Media Play/Pause Button
+                                                Rectangle {
+                                                    width: 40; height: 40; radius: 20; color: Style.accent
+                                                    scale: (root.buttonAnimsVal && playM.pressed) ? 0.92 : ((root.buttonAnimsVal && playM.containsMouse) ? 1.08 : 1.0)
+                                                    Behavior on scale { enabled: root.buttonAnimsVal; NumberAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
+                                                    Behavior on color { ColorAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
 
-                                            // Media Play/Pause Button
-                                            Rectangle {
-                                                width: 48; height: 48; radius: 24; color: Style.accent
-                                                scale: (root.buttonAnimsVal && playM.pressed) ? 0.92 : ((root.buttonAnimsVal && playM.containsMouse) ? 1.08 : 1.0)
-                                                Behavior on scale { enabled: root.buttonAnimsVal; NumberAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
-                                                Behavior on color { ColorAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
+                                                    Text { anchors.centerIn: parent; text: root.isPlaying ? "󰏤" : "󰐊"; font.family: Style.fontFamilyMono; color: "#000"; font.pixelSize: 18; font.weight: Font.Bold }
+                                                    MouseArea { id: playM; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: if (root.activePlayer) root.activePlayer.togglePlaying() }
+                                                }
 
-                                                Text { anchors.centerIn: parent; text: root.isPlaying ? "󰏤" : "󰐊"; font.family: Style.fontFamilyMono; color: "#000"; font.pixelSize: 22; font.weight: Font.Bold }
-                                                MouseArea { id: playM; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: if (root.activePlayer) root.activePlayer.togglePlaying() }
-                                            }
+                                                // Media Next Button
+                                                Rectangle {
+                                                    width: 32; height: 32; radius: 16; color: Style.cardBgHover
+                                                    scale: (root.buttonAnimsVal && nextM.pressed) ? 0.92 : ((root.buttonAnimsVal && nextM.containsMouse) ? 1.08 : 1.0)
+                                                    Behavior on scale { enabled: root.buttonAnimsVal; NumberAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
+                                                    Behavior on color { ColorAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
 
-                                            // Media Next Button
-                                            Rectangle {
-                                                width: 36; height: 36; radius: 18; color: Style.cardBgHover
-                                                scale: (root.buttonAnimsVal && nextM.pressed) ? 0.92 : ((root.buttonAnimsVal && nextM.containsMouse) ? 1.08 : 1.0)
-                                                Behavior on scale { enabled: root.buttonAnimsVal; NumberAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
-                                                Behavior on color { ColorAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
-
-                                                Text { anchors.centerIn: parent; text: "󰒭"; font.family: Style.fontFamilyMono; color: Style.textPrimary; font.pixelSize: 16 }
-                                                MouseArea { id: nextM; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: if (root.activePlayer) root.activePlayer.next() }
+                                                    Text { anchors.centerIn: parent; text: "󰒭"; font.family: Style.fontFamilyMono; color: Style.textPrimary; font.pixelSize: 14 }
+                                                    MouseArea { id: nextM; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: if (root.activePlayer) root.activePlayer.next() }
+                                                }
                                             }
                                         }
                                     }
