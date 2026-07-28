@@ -1537,63 +1537,78 @@ Item {
                     Layout.fillWidth: true
                     spacing: 8
 
-                    RowLayout {
-                        spacing: 6
-                        Repeater {
-                            model: ["Media", "Walls", "Apps", "Notifs", "Stats"]
-                            Rectangle {
-                                implicitWidth: tabRow.implicitWidth + 16
-                                implicitHeight: 28
-                                radius: 14
-                                color: root.currentPage === index ? Style.accent : Style.cardBg
-                                border.color: Style.cardBorder
+                    // Material 3 Expressive Segmented Button Container
+                    Rectangle {
+                        implicitHeight: 32
+                        implicitWidth: segRow.implicitWidth
+                        radius: 16
+                        color: Style.cardBg
+                        border.color: Style.cardBorder
+                        border.width: 1
 
-                                scale: (root.buttonAnimsVal && tabBtnM.pressed) ? 0.95 : ((root.buttonAnimsVal && tabBtnM.containsMouse) ? 1.05 : 1.0)
-                                Behavior on scale { enabled: root.buttonAnimsVal; NumberAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
-                                Behavior on color { ColorAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
+                        RowLayout {
+                            id: segRow
+                            anchors.fill: parent
+                            spacing: 0
 
-                                RowLayout {
-                                    id: tabRow
-                                    anchors.centerIn: parent
-                                    spacing: 4
+                            Repeater {
+                                model: ["Media", "Walls", "Apps", "Notifs", "Stats"]
+                                
+                                Rectangle {
+                                    Layout.preferredWidth: segInner.implicitWidth + 24
+                                    Layout.fillHeight: true
+                                    radius: 16
+                                    color: root.currentPage === index ? Style.accent : (segMouse.containsMouse ? Style.cardBgHover : "transparent")
+                                    
+                                    Behavior on color { ColorAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
 
-                                    Text {
-                                        id: tabTxt
-                                        text: modelData
-                                        font.family: Style.fontFamily
-                                        font.pixelSize: Style.fontSizeSmall
-                                        font.weight: Font.Bold
-                                        color: root.currentPage === index ? "#000" : Style.textSecondary
-
-                                        Behavior on color { ColorAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
-                                    }
-
-                                    Rectangle {
-                                        width: 12; height: 12; radius: 6
-                                        color: root.currentPage === index ? "#000000" : Style.accent
-                                        visible: index === 3 && root.notifCount > 0
-
-                                        Behavior on color { ColorAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
+                                    RowLayout {
+                                        id: segInner
+                                        anchors.centerIn: parent
+                                        spacing: 6
 
                                         Text {
-                                            anchors.centerIn: parent
-                                            text: root.notifCount > 9 ? "9+" : root.notifCount.toString()
+                                            text: modelData
                                             font.family: Style.fontFamily
-                                            font.pixelSize: 7
+                                            font.pixelSize: Style.fontSizeSmall
                                             font.weight: Font.Bold
-                                            color: root.currentPage === index ? Style.accent : "#000000"
-
+                                            color: root.currentPage === index ? "#000" : Style.textPrimary
                                             Behavior on color { ColorAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
                                         }
-                                    }
-                                }
 
-                                MouseArea {
-                                    id: tabBtnM
-                                    anchors.fill: parent
-                                    hoverEnabled: true
-                                    cursorShape: Qt.PointingHandCursor
-                                    onClicked: root.currentPage = index
+                                        Rectangle {
+                                            width: 14; height: 14; radius: 7
+                                            color: root.currentPage === index ? "#000" : Style.accent
+                                            visible: index === 3 && root.notifCount > 0
+                                            
+                                            Text {
+                                                anchors.centerIn: parent
+                                                text: root.notifCount > 9 ? "9+" : root.notifCount.toString()
+                                                font.family: Style.fontFamily
+                                                font.pixelSize: 8
+                                                font.weight: Font.Bold
+                                                color: root.currentPage === index ? Style.accent : "#000"
+                                            }
+                                        }
+                                    }
+
+                                    MouseArea {
+                                        id: segMouse
+                                        anchors.fill: parent
+                                        hoverEnabled: true
+                                        cursorShape: Qt.PointingHandCursor
+                                        onClicked: root.currentPage = index
+                                    }
+
+                                    // Dynamic M3 Divider
+                                    Rectangle {
+                                        anchors.right: parent.right
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        width: 1
+                                        height: 16
+                                        color: Style.cardBorder
+                                        visible: index < 4 && root.currentPage !== index && root.currentPage !== index + 1
+                                    }
                                 }
                             }
                         }
