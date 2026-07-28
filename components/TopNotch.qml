@@ -1793,11 +1793,12 @@ Item {
                                     color: Style.accent
                                 }
 
-                                // MPRIS Track Card (Dynamic Island Pill Style)
+                                // MPRIS Track Card (Dynamic Island Card Style)
                                 Rectangle {
                                     Layout.fillWidth: true
                                     implicitHeight: 90
-                                    radius: 45 // Perfect pill curve
+                                    radius: Style.radiusMedium // Matches the volume and mic cards
+
                                     color: Style.cardBg
                                     border.color: Style.cardBorder
 
