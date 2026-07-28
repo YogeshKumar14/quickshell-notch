@@ -48,25 +48,32 @@ Top Notch morphs dynamically between a compact top-center status pill and an exp
 ## Installation (Arch Linux)
 
 ### 1. Install System Dependencies
-Install the required packages from the Arch repositories and AUR:
+The notch relies on a suite of modern Wayland tools, Python libraries, and audio/color parsers. Install them via your package manager and AUR helper (e.g., `paru` or `yay`):
 
 ```bash
-sudo pacman -S quickshell-git swaync awww python-pillow python-gobject CAVA
+# Core Wayland & UI dependencies
+sudo pacman -S swaync playerctl socat dbus
+yay -S quickshell-git awww wallust-bin cava
+
+# Python backend dependencies
+sudo pacman -S python-pillow python-gobject
+
+# Fonts (Required for UI Glyphs and Clock formatting)
+sudo pacman -S ttf-jetbrains-mono-nerd ttf-ubuntu-font-family
 ```
 
-Make sure you have a Nerd Font installed for icon glyphs (e.g., `ttc-iosevka-nerd` or `otf-jetbrains-mono-nerd`):
-```bash
-sudo pacman -S ttf-jetbrains-mono-nerd
-```
+### 2. Wallust Configuration (Color Themes)
+This notch dynamically themes itself based on your wallpaper using `wallust`. It expects a valid Wallust configuration that generates `colors.sh`.
+- Ensure your `~/.config/wallust/wallust.toml` is configured to export the `shell-colors` template to `~/.cache/wal/colors.sh`.
 
-### 2. Clone the Configuration
+### 3. Clone the Configuration
 Clone this repository directly into your configuration directory:
 
 ```bash
 git clone https://github.com/YogeshKumar14/quickshell-notch.git ~/.config/quickshell
 ```
 
-### 3. Integrate with Hyprland
+### 4. Integrate with Hyprland
 To load Top Notch automatically when Hyprland starts, add the launcher script to your startup configuration.
 
 For **Lua configurations** (`hyprland.lua`):
