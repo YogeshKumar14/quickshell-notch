@@ -24,10 +24,15 @@ PanelWindow {
     }
 
     visible: isOpen
-    implicitWidth: 680
-    implicitHeight: 640
+    implicitWidth: 780
+    implicitHeight: 720
 
     color: "transparent"
+
+    Shortcut {
+        sequence: "Escape"
+        onActivated: root.isOpen = false
+    }
 
     WlrLayershell.layer: WlrLayer.Overlay
     WlrLayershell.keyboardFocus: root.isOpen ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
@@ -56,8 +61,15 @@ PanelWindow {
     property real activeOpacityVal: 1.0
     property real inactiveOpacityVal: 1.0
     property bool shadowEnabledVal: true
+    property int shadowRangeVal: 4
     property bool dimInactiveVal: false
     property real masterRatioVal: 0.55
+    property int blurSizeVal: 8
+    property int blurPassesVal: 3
+
+    property real inputSensitivityVal: 0.0
+    property bool inputTapToClickVal: false
+    property bool inputNaturalScrollVal: false
 
     // --- TOP NOTCH DRAFT & APPLIED OPTIONS ---
     property int notchAutoClose: 5000
@@ -88,6 +100,11 @@ PanelWindow {
     property int sysStatsIntervalVal: 2000
     property int networkRefreshIntervalVal: 5000
 
+    property int osdTimeoutVal: 2000
+    property string clockFormatVal: "h:mm A"
+    property int clockFontSizeVal: 14
+    property int batteryWarningThresholdVal: 20
+
     property string expandAnimType: "outback"
     property real expandSpringTension: 4.5
     property real expandSpringDamping: 0.28
@@ -98,7 +115,7 @@ PanelWindow {
 
     Process {
         id: getOptionsProc
-        command: ["python3", "/home/yogesh/.config/quickshell/scripts/get_hypr_options.py"]
+        command: ["python3", "/home/yogesh/.config/quickshell/scripts/hyprland/get_hypr_options.py"]
         stdout: StdioCollector {
             onStreamFinished: {
                 try {
@@ -115,8 +132,14 @@ PanelWindow {
                     if (data.active_opacity !== undefined) root.activeOpacityVal = data.active_opacity;
                     if (data.inactive_opacity !== undefined) root.inactiveOpacityVal = data.inactive_opacity;
                     if (data.shadow_enabled !== undefined) root.shadowEnabledVal = data.shadow_enabled;
+                    if (data.shadow_range !== undefined) root.shadowRangeVal = data.shadow_range;
                     if (data.dim_inactive !== undefined) root.dimInactiveVal = data.dim_inactive;
                     if (data.master_ratio !== undefined) root.masterRatioVal = data.master_ratio;
+                    if (data.blur_size !== undefined) root.blurSizeVal = data.blur_size;
+                    if (data.blur_passes !== undefined) root.blurPassesVal = data.blur_passes;
+                    if (data.input_sensitivity !== undefined) root.inputSensitivityVal = data.input_sensitivity;
+                    if (data.input_tap_to_click !== undefined) root.inputTapToClickVal = data.input_tap_to_click;
+                    if (data.input_natural_scroll !== undefined) root.inputNaturalScrollVal = data.input_natural_scroll;
                 } catch (e) {
                     console.log("Error parsing hypr options:", e);
                 }
@@ -126,7 +149,7 @@ PanelWindow {
 
     Process {
         id: getNotchProc
-        command: ["python3", "/home/yogesh/.config/quickshell/scripts/get_notch_settings.py"]
+        command: ["python3", "/home/yogesh/.config/quickshell/scripts/notch/get_notch_settings.py"]
         stdout: StdioCollector {
             onStreamFinished: {
                 try {
@@ -162,6 +185,10 @@ PanelWindow {
                     if (data.tab_damping !== undefined) root.tabSpringDamping = data.tab_damping;
                     if (data.stats_interval !== undefined) root.sysStatsIntervalVal = data.stats_interval;
                     if (data.network_refresh !== undefined) root.networkRefreshIntervalVal = data.network_refresh;
+                    if (data.osd_timeout !== undefined) root.osdTimeoutVal = data.osd_timeout;
+                    if (data.clock_format !== undefined) root.clockFormatVal = data.clock_format;
+                    if (data.clock_font_size !== undefined) root.clockFontSizeVal = data.clock_font_size;
+                    if (data.battery_warning_threshold !== undefined) root.batteryWarningThresholdVal = data.battery_warning_threshold;
                 } catch (e) {
                     console.log("Error parsing notch settings:", e);
                 }
@@ -221,7 +248,13 @@ PanelWindow {
                 "dim_inactive": root.dimInactiveVal,
                 "master_ratio": root.masterRatioVal,
                 "active_border": root.activeBorderVal,
-                "inactive_border": root.inactiveBorderVal
+                "inactive_border": root.inactiveBorderVal,
+                "shadow_range": root.shadowRangeVal,
+                "blur_size": root.blurSizeVal,
+                "blur_passes": root.blurPassesVal,
+                "input_sensitivity": root.inputSensitivityVal,
+                "input_tap_to_click": root.inputTapToClickVal,
+                "input_natural_scroll": root.inputNaturalScrollVal
             },
             "notch": {
                 "auto_close": root.notchAutoClose,
@@ -252,11 +285,15 @@ PanelWindow {
                 "tab_tension": root.tabSpringTension,
                 "tab_damping": root.tabSpringDamping,
                 "stats_interval": root.sysStatsIntervalVal,
-                "network_refresh": root.networkRefreshIntervalVal
+                "network_refresh": root.networkRefreshIntervalVal,
+                "osd_timeout": root.osdTimeoutVal,
+                "clock_format": root.clockFormatVal,
+                "clock_font_size": root.clockFontSizeVal,
+                "battery_warning_threshold": root.batteryWarningThresholdVal
             }
         };
 
-        applyAllProc.command = ["python3", "/home/yogesh/.config/quickshell/scripts/apply_all_settings.py", JSON.stringify(payload)];
+        applyAllProc.command = ["python3", "/home/yogesh/.config/quickshell/scripts/hyprland/apply_all_settings.py", JSON.stringify(payload)];
         applyAllProc.running = true;
     }
 
@@ -279,7 +316,8 @@ PanelWindow {
 
                 // Segmented Tab Switcher Control
                 Rectangle {
-                    implicitWidth: 250
+                    Layout.fillWidth: true
+                    Layout.maximumWidth: 700
                     implicitHeight: 34
                     radius: 17
                     color: "#1C1C1E"
@@ -290,47 +328,28 @@ PanelWindow {
                         anchors.margins: 3
                         spacing: 0
 
-                        Rectangle {
-                            Layout.fillWidth: true
-                            Layout.fillHeight: true
-                            radius: 14
-                            color: root.currentTab === 0 ? Style.accent : "transparent"
+                        Repeater {
+                            model: ["General", "Input", "Looks", "System"]
+                            delegate: Rectangle {
+                                Layout.fillWidth: true
+                                Layout.fillHeight: true
+                                radius: 14
+                                color: root.currentTab === index ? Style.accent : "transparent"
 
-                            Behavior on color { ColorAnimation { duration: 150 } }
+                                Behavior on color { ColorAnimation { duration: 150 } }
 
-                            RowLayout {
-                                anchors.centerIn: parent
-                                spacing: 6
-                                Text { text: "󰍹"; font.family: Style.fontFamilyMono; color: root.currentTab === 0 ? "#000" : Style.textSecondary; font.pixelSize: 13 }
-                                Text { text: "Hyprland"; font.family: Style.fontFamily; color: root.currentTab === 0 ? "#000" : Style.textSecondary; font.pixelSize: 12; font.weight: Font.Bold }
-                            }
+                                RowLayout {
+                                    anchors.centerIn: parent
+                                    spacing: 6
+                                    Text { text: index < 2 ? "󰍹" : "󰒓"; font.family: Style.fontFamilyMono; color: root.currentTab === index ? "#000" : Style.textSecondary; font.pixelSize: 13 }
+                                    Text { text: modelData; font.family: Style.fontFamily; color: root.currentTab === index ? "#000" : Style.textSecondary; font.pixelSize: 12; font.weight: Font.Bold }
+                                }
 
-                            MouseArea {
-                                anchors.fill: parent
-                                cursorShape: Qt.PointingHandCursor
-                                onClicked: root.currentTab = 0
-                            }
-                        }
-
-                        Rectangle {
-                            Layout.fillWidth: true
-                            Layout.fillHeight: true
-                            radius: 14
-                            color: root.currentTab === 1 ? Style.accent : "transparent"
-
-                            Behavior on color { ColorAnimation { duration: 150 } }
-
-                            RowLayout {
-                                anchors.centerIn: parent
-                                spacing: 6
-                                Text { text: "󰍹"; font.family: Style.fontFamilyMono; color: root.currentTab === 1 ? "#000" : Style.textSecondary; font.pixelSize: 13 }
-                                Text { text: "Top Notch Bar"; font.family: Style.fontFamily; color: root.currentTab === 1 ? "#000" : Style.textSecondary; font.pixelSize: 12; font.weight: Font.Bold }
-                            }
-
-                            MouseArea {
-                                anchors.fill: parent
-                                cursorShape: Qt.PointingHandCursor
-                                onClicked: root.currentTab = 1
+                                MouseArea {
+                                    anchors.fill: parent
+                                    cursorShape: Qt.PointingHandCursor
+                                    onClicked: root.currentTab = index
+                                }
                             }
                         }
                     }
@@ -338,78 +357,7 @@ PanelWindow {
 
                 Item { Layout.fillWidth: true }
 
-                // APPLY CHANGES BUTTON (Highlights when changes exist, gives 2s "Applied ✓" feedback)
-                Rectangle {
-                    implicitWidth: applyRow.implicitWidth + 20
-                    implicitHeight: 34
-                    radius: 17
-                    color: root.isAppliedSuccess ? Style.success : (root.hasPendingChanges ? Style.accent : (applyM.containsMouse ? Style.cardBgHover : Style.cardBg))
-                    border.color: root.hasPendingChanges ? Style.accent : Style.cardBorder
 
-                    scale: (root.buttonAnimsVal && applyM.pressed) ? 0.95 : ((root.buttonAnimsVal && applyM.containsMouse) ? 1.05 : 1.0)
-                    Behavior on scale { enabled: root.buttonAnimsVal; NumberAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
-                    Behavior on color { ColorAnimation { duration: 180 } }
-
-                    RowLayout {
-                        id: applyRow
-                        anchors.centerIn: parent
-                        spacing: 6
-
-                        Text {
-                            text: root.isAppliedSuccess ? "󰄬" : (root.hasPendingChanges ? "󰄲" : "󰄬")
-                            font.family: Style.fontFamilyMono
-                            color: root.isAppliedSuccess ? "#FFFFFF" : (root.hasPendingChanges ? "#000000" : Style.textSecondary)
-                            font.pixelSize: 13
-                        }
-
-                        Text {
-                            text: root.isAppliedSuccess ? "Applied ✓" : (root.hasPendingChanges ? "Apply Changes *" : "Apply Changes")
-                            font.family: Style.fontFamily
-                            font.pixelSize: Style.fontSizeSmall
-                            color: root.isAppliedSuccess ? "#FFFFFF" : (root.hasPendingChanges ? "#000000" : Style.textPrimary)
-                            font.weight: Font.Bold
-                        }
-                    }
-
-                    MouseArea {
-                        id: applyM
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: root.applyAllSettings()
-                    }
-                }
-
-                // Reset Defaults Button
-                Rectangle {
-                    implicitWidth: resetRow.implicitWidth + 14
-                    implicitHeight: 34
-                    radius: 17
-                    color: resetM.containsMouse ? Style.cardBgHover : Style.cardBg
-                    border.color: Style.cardBorder
-
-                    scale: (root.buttonAnimsVal && resetM.pressed) ? 0.95 : ((root.buttonAnimsVal && resetM.containsMouse) ? 1.05 : 1.0)
-                    Behavior on scale { enabled: root.buttonAnimsVal; NumberAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
-
-                    RowLayout {
-                        id: resetRow
-                        anchors.centerIn: parent
-                        spacing: 6
-                        Text { text: "󰑐"; font.family: Style.fontFamilyMono; color: Style.accent; font.pixelSize: 13 }
-                        Text { text: "Reset"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeSmall; color: Style.textPrimary; font.weight: Font.Bold }
-                    }
-
-                    MouseArea {
-                        id: resetM
-                        anchors.fill: parent
-                        hoverEnabled: true
-                        cursorShape: Qt.PointingHandCursor
-                        onClicked: {
-                            resetDefaultsProc.command = ["bash", "/home/yogesh/.config/quickshell/scripts/set_hypr_option.sh", "reset_defaults", ""];
-                            resetDefaultsProc.running = true;
-                        }
-                    }
-                }
 
                 // Close Button
                 Rectangle {
@@ -443,7 +391,13 @@ PanelWindow {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 contentWidth: width
-                contentHeight: root.currentTab === 0 ? hyprCol.height + 24 : notchCol.height + 24
+                contentHeight: {
+                    if (root.currentTab === 0) return hyprCol.height + 24;
+                    if (root.currentTab === 1) return inputCol.height + 24;
+                    if (root.currentTab === 2) return notchCol.height + 24;
+                    if (root.currentTab === 3) return notchSysCol.height + 24;
+                    return 0;
+                }
                 clip: true
 
                 // TAB 0: HYPRLAND OPTIONS
@@ -608,6 +562,21 @@ PanelWindow {
                                     Item { Layout.fillWidth: true }
                                     CustomSwitch { Layout.alignment: Qt.AlignVCenter; checked: root.shadowEnabledVal; onToggled: function(val) { root.shadowEnabledVal = val; root.hasPendingChanges = true; } }
                                 }
+
+                                Column {
+                                    width: parent.width; spacing: 6
+                                    visible: root.shadowEnabledVal
+                                    RowLayout {
+                                        width: parent.width
+                                        Text { text: "Shadow Spread Range"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeNormal; color: Style.textPrimary }
+                                        Item { Layout.fillWidth: true }
+                                        Text { text: root.shadowRangeVal + " px"; font.family: Style.fontFamilyMono; font.pixelSize: Style.fontSizeSmall; color: Style.accent; font.weight: Font.Bold }
+                                    }
+                                    CustomSlider {
+                                        width: parent.width; from: 1; to: 40; value: root.shadowRangeVal; stepSize: 1
+                                        onMoved: function(val) { root.shadowRangeVal = Math.round(val); root.hasPendingChanges = true; }
+                                    }
+                                }
                             }
                         }
                     }
@@ -666,6 +635,36 @@ PanelWindow {
                                     CustomSwitch { Layout.alignment: Qt.AlignVCenter; checked: root.blurEnabledVal; onToggled: function(val) { root.blurEnabledVal = val; root.hasPendingChanges = true; } }
                                 }
 
+                                Column {
+                                    width: parent.width; spacing: 6
+                                    visible: root.blurEnabledVal
+                                    RowLayout {
+                                        width: parent.width
+                                        Text { text: "Blur Size"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeNormal; color: Style.textPrimary }
+                                        Item { Layout.fillWidth: true }
+                                        Text { text: root.blurSizeVal; font.family: Style.fontFamilyMono; font.pixelSize: Style.fontSizeSmall; color: Style.accent; font.weight: Font.Bold }
+                                    }
+                                    CustomSlider {
+                                        width: parent.width; from: 1; to: 16; value: root.blurSizeVal; stepSize: 1
+                                        onMoved: function(val) { root.blurSizeVal = Math.round(val); root.hasPendingChanges = true; }
+                                    }
+                                }
+
+                                Column {
+                                    width: parent.width; spacing: 6
+                                    visible: root.blurEnabledVal
+                                    RowLayout {
+                                        width: parent.width
+                                        Text { text: "Blur Passes"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeNormal; color: Style.textPrimary }
+                                        Item { Layout.fillWidth: true }
+                                        Text { text: root.blurPassesVal; font.family: Style.fontFamilyMono; font.pixelSize: Style.fontSizeSmall; color: Style.accent; font.weight: Font.Bold }
+                                    }
+                                    CustomSlider {
+                                        width: parent.width; from: 1; to: 6; value: root.blurPassesVal; stepSize: 1
+                                        onMoved: function(val) { root.blurPassesVal = Math.round(val); root.hasPendingChanges = true; }
+                                    }
+                                }
+
                                 Rectangle { width: parent.width; height: 1; color: "#2A2A2D" }
 
                                 RowLayout {
@@ -679,12 +678,69 @@ PanelWindow {
                     }
                 }
 
-                // TAB 1: TOP NOTCH BAR OPTIONS
+                // TAB 1: HYPRLAND INPUT
+                Column {
+                    id: inputCol
+                    width: parent.width - 6
+                    spacing: 20
+                    visible: root.currentTab === 1
+
+                    Column {
+                        width: parent.width; spacing: 8
+                        RowLayout {
+                            width: parent.width; spacing: 6
+                            Text { text: "󰍽"; font.family: Style.fontFamilyMono; font.pixelSize: 13; color: Style.accent }
+                            Text { text: "MOUSE & TOUCHPAD INPUT"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeSmall; font.weight: Font.Bold; color: Style.textMuted }
+                        }
+
+                        Rectangle {
+                            width: parent.width; height: secInpInner.height + 24; radius: Style.radiusMedium; color: Style.cardBg; border.color: Style.cardBorder
+                            Column {
+                                id: secInpInner
+                                anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top; anchors.margins: 14; spacing: 14
+
+                                Column {
+                                    width: parent.width; spacing: 6
+                                    RowLayout {
+                                        width: parent.width
+                                        Text { text: "Pointer Sensitivity"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeNormal; color: Style.textPrimary }
+                                        Item { Layout.fillWidth: true }
+                                        Text { text: root.inputSensitivityVal.toFixed(2); font.family: Style.fontFamilyMono; font.pixelSize: Style.fontSizeSmall; color: Style.accent; font.weight: Font.Bold }
+                                    }
+                                    CustomSlider {
+                                        width: parent.width; from: -1.0; to: 1.0; value: root.inputSensitivityVal; stepSize: 0.1
+                                        onMoved: function(val) { root.inputSensitivityVal = val; root.hasPendingChanges = true; }
+                                    }
+                                }
+
+                                Rectangle { width: parent.width; height: 1; color: "#2A2A2D" }
+
+                                RowLayout {
+                                    width: parent.width; height: 32
+                                    Text { text: "Touchpad Tap-to-Click"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeNormal; color: Style.textPrimary; Layout.alignment: Qt.AlignVCenter }
+                                    Item { Layout.fillWidth: true }
+                                    CustomSwitch { Layout.alignment: Qt.AlignVCenter; checked: root.inputTapToClickVal; onToggled: function(val) { root.inputTapToClickVal = val; root.hasPendingChanges = true; } }
+                                }
+
+                                Rectangle { width: parent.width; height: 1; color: "#2A2A2D" }
+
+                                RowLayout {
+                                    width: parent.width; height: 32
+                                    Text { text: "Touchpad Natural Scrolling"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeNormal; color: Style.textPrimary; Layout.alignment: Qt.AlignVCenter }
+                                    Item { Layout.fillWidth: true }
+                                    CustomSwitch { Layout.alignment: Qt.AlignVCenter; checked: root.inputNaturalScrollVal; onToggled: function(val) { root.inputNaturalScrollVal = val; root.hasPendingChanges = true; } }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // TAB 2: NOTCH APPEARANCE
                 Column {
                     id: notchCol
                     width: parent.width - 6
                     spacing: 20
-                    visible: root.currentTab === 1
+                    visible: root.currentTab === 2
 
                     // SECTION 1: MUSIC VISUALIZER OVERLAY & STYLES
                     Column {
@@ -1007,6 +1063,43 @@ PanelWindow {
 
                                 Rectangle { width: parent.width; height: 1; color: "#2A2A2D" }
 
+                                RowLayout {
+                                    width: parent.width; height: 32
+                                    Text { text: "Clock String Format (Qt QML)"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeNormal; color: Style.textPrimary; Layout.alignment: Qt.AlignVCenter }
+                                    Item { Layout.fillWidth: true }
+                                    Rectangle {
+                                        width: 140; height: 28; radius: 6; color: Style.cardBgHover; border.color: "#3C3C3E"
+                                        TextInput {
+                                            anchors.fill: parent; anchors.margins: 4
+                                            verticalAlignment: TextInput.AlignVCenter
+                                            horizontalAlignment: TextInput.AlignHCenter
+                                            font.family: Style.fontFamilyMono
+                                            font.pixelSize: Style.fontSizeSmall
+                                            color: Style.accent
+                                            text: root.clockFormatVal
+                                            onEditingFinished: { root.clockFormatVal = text; root.hasPendingChanges = true; }
+                                        }
+                                    }
+                                }
+
+                                Rectangle { width: parent.width; height: 1; color: "#2A2A2D" }
+
+                                Column {
+                                    width: parent.width; spacing: 6
+                                    RowLayout {
+                                        width: parent.width
+                                        Text { text: "Clock Font Size"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeNormal; color: Style.textPrimary }
+                                        Item { Layout.fillWidth: true }
+                                        Text { text: root.clockFontSizeVal + " px"; font.family: Style.fontFamilyMono; font.pixelSize: Style.fontSizeSmall; color: Style.accent; font.weight: Font.Bold }
+                                    }
+                                    CustomSlider {
+                                        width: parent.width; from: 10; to: 24; value: root.clockFontSizeVal; stepSize: 1
+                                        onMoved: function(val) { root.clockFontSizeVal = Math.round(val); root.hasPendingChanges = true; }
+                                    }
+                                }
+
+                                Rectangle { width: parent.width; height: 1; color: "#2A2A2D" }
+
                                 Column {
                                     width: parent.width; spacing: 6
                                     RowLayout {
@@ -1113,52 +1206,6 @@ PanelWindow {
                         }
                     }
 
-                    // SECTION 5.5: SYSTEM MONITOR & POLLING RATE
-                    Column {
-                        width: parent.width; spacing: 8
-                        RowLayout {
-                            width: parent.width; spacing: 6
-                            Text { text: "󰻠"; font.family: Style.fontFamilyMono; font.pixelSize: 13; color: Style.accent }
-                            Text { text: "SYSTEM MONITOR & POLLING RATE"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeSmall; font.weight: Font.Bold; color: Style.textMuted }
-                        }
-
-                        Rectangle {
-                            width: parent.width; height: secnSysInner.height + 24; radius: Style.radiusMedium; color: Style.cardBg; border.color: Style.cardBorder
-                            Column {
-                                id: secnSysInner
-                                anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top; anchors.margins: 14; spacing: 14
-
-                                Column {
-                                    width: parent.width; spacing: 6
-                                    RowLayout {
-                                        width: parent.width
-                                        Text { text: "Hardware Stats Polling Rate"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeNormal; color: Style.textPrimary }
-                                        Item { Layout.fillWidth: true }
-                                        Text { text: (root.sysStatsIntervalVal / 1000.0).toFixed(1) + " s"; font.family: Style.fontFamilyMono; font.pixelSize: Style.fontSizeSmall; color: Style.accent; font.weight: Font.Bold }
-                                    }
-                                    CustomSlider {
-                                        width: parent.width; from: 500; to: 5000; value: root.sysStatsIntervalVal; stepSize: 250
-                                        onMoved: function(val) { root.sysStatsIntervalVal = Math.round(val); root.hasPendingChanges = true; }
-                                    }
-                                }
-
-                                Column {
-                                    width: parent.width; spacing: 6
-                                    RowLayout {
-                                        width: parent.width
-                                        Text { text: "Network Scan Refresh Interval"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeNormal; color: Style.textPrimary }
-                                        Item { Layout.fillWidth: true }
-                                        Text { text: (root.networkRefreshIntervalVal / 1000.0).toFixed(1) + " s"; font.family: Style.fontFamilyMono; font.pixelSize: Style.fontSizeSmall; color: Style.accent; font.weight: Font.Bold }
-                                    }
-                                    CustomSlider {
-                                        width: parent.width; from: 2000; to: 15000; value: root.networkRefreshIntervalVal; stepSize: 500
-                                        onMoved: function(val) { root.networkRefreshIntervalVal = Math.round(val); root.hasPendingChanges = true; }
-                                    }
-                                }
-                            }
-                        }
-                    }
-
                     // SECTION 6: NOTCH EXPANSION ANIMATION
                     Column {
                         width: parent.width; spacing: 8
@@ -1205,6 +1252,189 @@ PanelWindow {
                                 }
                             }
                         }
+                    }
+
+                } // End of Tab 2
+
+                // TAB 3: NOTCH SYSTEM
+                Column {
+                    id: notchSysCol
+                    width: parent.width - 6
+                    spacing: 20
+                    visible: root.currentTab === 3
+
+                    // SECTION 5.1: POWER & OSD
+                    Column {
+                        width: parent.width; spacing: 8
+                        RowLayout {
+                            width: parent.width; spacing: 6
+                            Text { text: "󰁹"; font.family: Style.fontFamilyMono; font.pixelSize: 13; color: Style.accent }
+                            Text { text: "POWER & OSD TIMEOUTS"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeSmall; font.weight: Font.Bold; color: Style.textMuted }
+                        }
+
+                        Rectangle {
+                            width: parent.width; height: secPowerInner.height + 24; radius: Style.radiusMedium; color: Style.cardBg; border.color: Style.cardBorder
+                            Column {
+                                id: secPowerInner
+                                anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top; anchors.margins: 14; spacing: 14
+
+                                Column {
+                                    width: parent.width; spacing: 6
+                                    RowLayout {
+                                        width: parent.width
+                                        Text { text: "Battery Warning Threshold"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeNormal; color: Style.textPrimary }
+                                        Item { Layout.fillWidth: true }
+                                        Text { text: root.batteryWarningThresholdVal + "%"; font.family: Style.fontFamilyMono; font.pixelSize: Style.fontSizeSmall; color: Style.accent; font.weight: Font.Bold }
+                                    }
+                                    CustomSlider {
+                                        width: parent.width; from: 5; to: 40; value: root.batteryWarningThresholdVal; stepSize: 1
+                                        onMoved: function(val) { root.batteryWarningThresholdVal = Math.round(val); root.hasPendingChanges = true; }
+                                    }
+                                }
+
+                                Rectangle { width: parent.width; height: 1; color: "#2A2A2D" }
+
+                                Column {
+                                    width: parent.width; spacing: 6
+                                    RowLayout {
+                                        width: parent.width
+                                        Text { text: "OSD Notification Timeout"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeNormal; color: Style.textPrimary }
+                                        Item { Layout.fillWidth: true }
+                                        Text { text: (root.osdTimeoutVal / 1000.0).toFixed(1) + " s"; font.family: Style.fontFamilyMono; font.pixelSize: Style.fontSizeSmall; color: Style.accent; font.weight: Font.Bold }
+                                    }
+                                    CustomSlider {
+                                        width: parent.width; from: 500; to: 5000; value: root.osdTimeoutVal; stepSize: 250
+                                        onMoved: function(val) { root.osdTimeoutVal = Math.round(val); root.hasPendingChanges = true; }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // SECTION 5.5: SYSTEM MONITOR & POLLING RATE
+                    Column {
+                        width: parent.width; spacing: 8
+                        RowLayout {
+                            width: parent.width; spacing: 6
+                            Text { text: "󰻠"; font.family: Style.fontFamilyMono; font.pixelSize: 13; color: Style.accent }
+                            Text { text: "SYSTEM MONITOR & POLLING RATE"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeSmall; font.weight: Font.Bold; color: Style.textMuted }
+                        }
+
+                        Rectangle {
+                            width: parent.width; height: secnSysInner.height + 24; radius: Style.radiusMedium; color: Style.cardBg; border.color: Style.cardBorder
+                            Column {
+                                id: secnSysInner
+                                anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top; anchors.margins: 14; spacing: 14
+
+                                Column {
+                                    width: parent.width; spacing: 6
+                                    RowLayout {
+                                        width: parent.width
+                                        Text { text: "Hardware Stats Polling Rate"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeNormal; color: Style.textPrimary }
+                                        Item { Layout.fillWidth: true }
+                                        Text { text: (root.sysStatsIntervalVal / 1000.0).toFixed(1) + " s"; font.family: Style.fontFamilyMono; font.pixelSize: Style.fontSizeSmall; color: Style.accent; font.weight: Font.Bold }
+                                    }
+                                    CustomSlider {
+                                        width: parent.width; from: 500; to: 5000; value: root.sysStatsIntervalVal; stepSize: 250
+                                        onMoved: function(val) { root.sysStatsIntervalVal = Math.round(val); root.hasPendingChanges = true; }
+                                    }
+                                }
+
+                                Column {
+                                    width: parent.width; spacing: 6
+                                    RowLayout {
+                                        width: parent.width
+                                        Text { text: "Network Scan Refresh Interval"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeNormal; color: Style.textPrimary }
+                                        Item { Layout.fillWidth: true }
+                                        Text { text: (root.networkRefreshIntervalVal / 1000.0).toFixed(1) + " s"; font.family: Style.fontFamilyMono; font.pixelSize: Style.fontSizeSmall; color: Style.accent; font.weight: Font.Bold }
+                                    }
+                                    CustomSlider {
+                                        width: parent.width; from: 2000; to: 15000; value: root.networkRefreshIntervalVal; stepSize: 500
+                                        onMoved: function(val) { root.networkRefreshIntervalVal = Math.round(val); root.hasPendingChanges = true; }
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+            }
+            // Bottom Action Bar
+            RowLayout {
+                Layout.fillWidth: true
+                spacing: 12
+
+                Item { Layout.fillWidth: true }
+
+                // Reset Defaults Button
+                Rectangle {
+                    implicitWidth: resetRow.implicitWidth + 14
+                    implicitHeight: 34
+                    radius: 17
+                    color: resetM.containsMouse ? Style.cardBgHover : Style.cardBg
+                    border.color: Style.cardBorder
+
+                    scale: (root.buttonAnimsVal && resetM.pressed) ? 0.95 : ((root.buttonAnimsVal && resetM.containsMouse) ? 1.05 : 1.0)
+                    Behavior on scale { enabled: root.buttonAnimsVal; NumberAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
+
+                    RowLayout {
+                        id: resetRow
+                        anchors.centerIn: parent
+                        spacing: 6
+                        Text { text: "󰑐"; font.family: Style.fontFamilyMono; color: Style.accent; font.pixelSize: 13 }
+                        Text { text: "Reset"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeSmall; color: Style.textPrimary; font.weight: Font.Bold }
+                    }
+
+                    MouseArea {
+                        id: resetM
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: {
+                            resetDefaultsProc.command = ["bash", "/home/yogesh/.config/quickshell/scripts/hyprland/set_hypr_option.sh", "reset_defaults", ""];
+                            resetDefaultsProc.running = true;
+                        }
+                    }
+                }
+
+                // APPLY CHANGES BUTTON (Highlights when changes exist, gives 2s "Applied ✓" feedback)
+                Rectangle {
+                    implicitWidth: applyRow.implicitWidth + 20
+                    implicitHeight: 34
+                    radius: 17
+                    color: root.isAppliedSuccess ? Style.success : (root.hasPendingChanges ? Style.accent : (applyM.containsMouse ? Style.cardBgHover : Style.cardBg))
+                    border.color: root.hasPendingChanges ? Style.accent : Style.cardBorder
+
+                    scale: (root.buttonAnimsVal && applyM.pressed) ? 0.95 : ((root.buttonAnimsVal && applyM.containsMouse) ? 1.05 : 1.0)
+                    Behavior on scale { enabled: root.buttonAnimsVal; NumberAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
+                    Behavior on color { ColorAnimation { duration: 180 } }
+
+                    RowLayout {
+                        id: applyRow
+                        anchors.centerIn: parent
+                        spacing: 6
+
+                        Text {
+                            text: root.isAppliedSuccess ? "󰄬" : (root.hasPendingChanges ? "󰄲" : "󰄬")
+                            font.family: Style.fontFamilyMono
+                            color: root.isAppliedSuccess ? "#FFFFFF" : (root.hasPendingChanges ? "#000000" : Style.textSecondary)
+                            font.pixelSize: 13
+                        }
+
+                        Text {
+                            text: root.isAppliedSuccess ? "Applied ✓" : (root.hasPendingChanges ? "Apply Changes *" : "Apply Changes")
+                            font.family: Style.fontFamily
+                            font.pixelSize: Style.fontSizeSmall
+                            color: root.isAppliedSuccess ? "#FFFFFF" : (root.hasPendingChanges ? "#000000" : Style.textPrimary)
+                            font.weight: Font.Bold
+                        }
+                    }
+
+                    MouseArea {
+                        id: applyM
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: root.applyAllSettings()
                     }
                 }
             }

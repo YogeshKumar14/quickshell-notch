@@ -9,6 +9,8 @@ def main():
         "decoration:rounding",
         "general:border_size",
         "decoration:blur:enabled",
+        "decoration:blur:size",
+        "decoration:blur:passes",
         "general:col.active_border",
         "general:col.inactive_border",
         "general:layout",
@@ -16,8 +18,12 @@ def main():
         "decoration:active_opacity",
         "decoration:inactive_opacity",
         "decoration:shadow:enabled",
+        "decoration:shadow:range",
         "decoration:dim_inactive",
-        "master:mfact"
+        "master:mfact",
+        "input:sensitivity",
+        "input:touchpad:tap_to_click",
+        "input:touchpad:natural_scroll"
     ]
 
     res = {}
@@ -104,6 +110,18 @@ def main():
 
     # animation speed multiplier (placeholder)
     res["anim_speed"] = 1.0
+
+    # blur size & passes
+    res["blur_size"] = results.get("decoration:blur:size", {}).get("int", 8)
+    res["blur_passes"] = results.get("decoration:blur:passes", {}).get("int", 3)
+
+    # shadow range
+    res["shadow_range"] = results.get("decoration:shadow:range", {}).get("int", 4)
+
+    # input
+    res["input_sensitivity"] = results.get("input:sensitivity", {}).get("float", 0.0)
+    res["input_tap_to_click"] = results.get("input:touchpad:tap_to_click", {}).get("bool", False)
+    res["input_natural_scroll"] = results.get("input:touchpad:natural_scroll", {}).get("bool", False)
 
     print(json.dumps(res))
 

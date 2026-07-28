@@ -3,6 +3,7 @@ import QtQuick.Layouts
 import QtQuick.Controls
 import Quickshell
 import Quickshell.Io
+import Quickshell.Hyprland
 import Quickshell.Services.Mpris
 import "../theme"
 
@@ -10,6 +11,53 @@ Item {
     id: root
 
     property bool isExpanded: false
+    property bool isOsdActive: false
+    property string osdIcon: "󰕾"
+    property int osdValue: 50
+    property real animatedOsdValue: root.osdValue
+    property color osdColor: Style.accent
+
+    Behavior on osdColor {
+        ColorAnimation { duration: 250; easing.type: Easing.OutCubic }
+    }
+
+    Behavior on animatedOsdValue {
+        SpringAnimation {
+            spring: root.expandSpringTension
+            damping: root.expandSpringDamping
+            epsilon: 0.25
+        }
+    }
+
+    function showOsd(type, value) {
+        if (type === "volume") {
+            root.osdIcon = "󰕾";
+            root.osdColor = Style.accent;
+            root.volumeLevel = value;
+            root.osdValue = root.volumeLevel;
+        } else if (type === "brightness") {
+            root.osdIcon = "󰃠";
+            root.osdColor = "#EBCB8B"; // Warm yellow
+            root.brightnessLevel = value;
+            root.osdValue = root.brightnessLevel;
+        }
+        
+        root.isExpanded = false;
+        root.isPowerMenuOpen = false;
+        root.isWifiMenuOpen = false;
+        root.isBluetoothMenuOpen = false;
+        root.isWorkspaceActive = false;
+        
+        root.isOsdActive = true;
+        osdTimer.restart();
+    }
+
+    Timer {
+        id: osdTimer
+        interval: root.osdTimeoutVal
+        repeat: false
+        onTriggered: root.isOsdActive = false
+    }
     signal openFullSettings()
 
     // Expose notchBox to shell.qml for input mask
@@ -56,6 +104,7 @@ Item {
 
     onIsExpandedChanged: {
         if (isExpanded) {
+            root.isOsdActive = false;
             if (currentPage === 1 || currentPage === 2) {
                 focusTabSearchTimer.restart();
             }
@@ -77,6 +126,7 @@ Item {
 
     onIsPowerMenuOpenChanged: {
         if (isPowerMenuOpen) {
+            root.isOsdActive = false;
             root.forceActiveFocus();
         } else if (isExpanded) {
             focusTabSearchTimer.restart();
@@ -85,12 +135,14 @@ Item {
 
     onIsWifiMenuOpenChanged: {
         if (isWifiMenuOpen) {
+            root.isOsdActive = false;
             root.forceActiveFocus();
         }
     }
 
     onIsBluetoothMenuOpenChanged: {
         if (isBluetoothMenuOpen) {
+            root.isOsdActive = false;
             root.forceActiveFocus();
         }
     }
@@ -252,6 +304,10 @@ Item {
     property int notchRadiusVal: 16
     property bool drippingEarsVal: true
     property bool clock12hVal: false
+    property string clockFormatVal: "h:mm A"
+    property int clockFontSizeVal: 14
+    property int batteryWarningThresholdVal: 20
+    property int osdTimeoutVal: 2000
     property bool workspaceOverlayVal: true
     property int workspaceTimeoutVal: 2500
     property string wsAnimType: "stretch"
@@ -279,7 +335,7 @@ Item {
     property bool isVisualizerActive: false
 
     // Evaluated Visualizer Display State
-    property bool showVisualizer: root.visualizerEnabledVal && root.isVisualizerActive && !root.isWorkspaceActive
+    property bool showVisualizer: root.visualizerEnabledVal && root.isVisualizerActive && !root.isWorkspaceActive && !root.isOsdActive
 
     function triggerVisualizerPopup() {
         if (!root.visualizerEnabledVal || root.isExpanded || root.isWorkspaceActive) return;
@@ -335,7 +391,7 @@ Item {
 
     Process {
         id: visualizerStreamProc
-        command: ["python3", "/home/yogesh/.config/quickshell/scripts/stream_audio_visualizer.py"]
+        command: ["python3", "/home/yogesh/.config/quickshell/scripts/notch/stream_audio_visualizer.py"]
         running: true
         stdout: SplitParser {
             onRead: function(data) {
@@ -362,43 +418,57 @@ Item {
         }
     }
 
-    // Workspace IPC state
+    // Workspace native QML state
     property int activeWorkspace: 1
     property var occupiedWorkspaces: [1]
     property bool isWorkspaceActive: false
+    onIsWorkspaceActiveChanged: { if (isWorkspaceActive) root.isOsdActive = false; }
+
+    // High-speed direct Hyprland IPC poll for accurate occupied workspace array
+    Process {
+        id: occupiedProc
+        command: ["bash", "-c", "hyprctl workspaces | awk 'BEGIN {printf \"[\"} /^workspace ID/ {id=$3} /windows:/ {if($2>0) {if(c++) printf \",\"; printf id}} END {print \"]\"}'"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    root.occupiedWorkspaces = JSON.parse(this.text.trim());
+                } catch(e) {}
+            }
+        }
+    }
+
+    Timer {
+        id: occupiedPoller
+        interval: 500
+        repeat: true
+        running: true
+        onTriggered: {
+            if (!occupiedProc.running) {
+                occupiedProc.running = true;
+            }
+        }
+    }
+
+    Connections {
+        target: Hyprland
+
+        function onFocusedWorkspaceChanged() {
+            if (Hyprland.focusedWorkspace) {
+                var newActive = Hyprland.focusedWorkspace.id;
+                if (root.workspaceOverlayVal && !root.isExpanded && newActive !== root.activeWorkspace) {
+                    root.isWorkspaceActive = true;
+                    workspaceDismissTimer.restart();
+                }
+                root.activeWorkspace = newActive;
+            }
+        }
+    }
 
     Timer {
         id: workspaceDismissTimer
         interval: root.workspaceTimeoutVal
         repeat: false
         onTriggered: root.isWorkspaceActive = false
-    }
-
-    Process {
-        id: dispatchWsProc
-    }
-
-    Process {
-        id: workspaceWatcherProc
-        command: ["python3", "/home/yogesh/.config/quickshell/scripts/watch_workspaces.py"]
-        running: true
-        stdout: SplitParser {
-            onRead: function(data) {
-                try {
-                    var parsed = JSON.parse(data.trim());
-                    var oldActive = root.activeWorkspace;
-                    if (parsed.active !== undefined) root.activeWorkspace = parsed.active;
-                    if (parsed.occupied !== undefined) root.occupiedWorkspaces = parsed.occupied;
-
-                    if (root.workspaceOverlayVal && !root.isExpanded && parsed.active !== oldActive) {
-                        root.isWorkspaceActive = true;
-                        workspaceDismissTimer.restart();
-                    }
-                } catch (e) {
-                    console.log("Error parsing workspace IPC payload:", e);
-                }
-            }
-        }
     }
 
     // 100% Pixel-Perfect Centering Math for Workspace Handle (Center = 10 + index * 22)
@@ -518,7 +588,7 @@ Item {
 
     Process {
         id: loadNotchSettingsProc
-        command: ["python3", "/home/yogesh/.config/quickshell/scripts/get_notch_settings.py"]
+        command: ["python3", "/home/yogesh/.config/quickshell/scripts/notch/get_notch_settings.py"]
         stdout: StdioCollector {
             onStreamFinished: {
                 try {
@@ -551,6 +621,10 @@ Item {
                     if (data.tab_damping !== undefined) root.tabSpringDamping = data.tab_damping;
                     if (data.stats_interval !== undefined) root.sysStatsIntervalVal = data.stats_interval;
                     if (data.network_refresh !== undefined) root.networkRefreshIntervalVal = data.network_refresh;
+                    if (data.osd_timeout !== undefined) root.osdTimeoutVal = data.osd_timeout;
+                    if (data.clock_format !== undefined) root.clockFormatVal = data.clock_format;
+                    if (data.clock_font_size !== undefined) root.clockFontSizeVal = data.clock_font_size;
+                    if (data.battery_warning_threshold !== undefined) root.batteryWarningThresholdVal = data.battery_warning_threshold;
                 } catch (e) {
                     console.log("Error loading notch settings:", e);
                 }
@@ -578,17 +652,7 @@ Item {
 
     function updateClock() {
         var now = new Date();
-        var h = now.getHours();
-        var m = now.getMinutes();
-        var pad = function(n) { return n < 10 ? "0" + n : "" + n; };
-        if (root.clock12hVal) {
-            var ampm = h >= 12 ? "PM" : "AM";
-            h = h % 12;
-            if (h === 0) h = 12;
-            root.timeStr = pad(h) + ":" + pad(m) + " " + ampm;
-        } else {
-            root.timeStr = pad(h) + ":" + pad(m);
-        }
+        root.timeStr = Qt.formatDateTime(now, root.clockFormatVal);
     }
 
     Timer {
@@ -641,7 +705,7 @@ Item {
             if (root.pendingWallpaperPath !== "" && !applyWallpaperProc.running) {
                 var targetPath = root.pendingWallpaperPath;
                 root.pendingWallpaperPath = "";
-                applyWallpaperProc.command = ["bash", "/home/yogesh/.config/quickshell/scripts/apply_wallpaper.sh", targetPath];
+                applyWallpaperProc.command = ["bash", "/home/yogesh/.config/quickshell/scripts/desktop/apply_wallpaper.sh", targetPath];
                 applyWallpaperProc.running = true;
             }
         }
@@ -658,7 +722,7 @@ Item {
     // Dynamic Wallust Accent fetcher
     Process {
         id: wallustAccentProc
-        command: ["bash", "/home/yogesh/.config/quickshell/scripts/get_wallust_colors.sh"]
+        command: ["bash", "/home/yogesh/.config/quickshell/scripts/desktop/get_wallust_colors.sh"]
         running: true
         stdout: StdioCollector {
             onStreamFinished: {
@@ -722,7 +786,7 @@ Item {
 
     Process {
         id: sysScanner
-        command: ["python3", "/home/yogesh/.config/quickshell/scripts/get_system_info.py"]
+        command: ["python3", "/home/yogesh/.config/quickshell/scripts/desktop/get_system_info.py"]
         stdout: StdioCollector {
             onStreamFinished: {
                 try {
@@ -778,7 +842,7 @@ Item {
 
     Process {
         id: wifiScanner
-        command: ["python3", "/home/yogesh/.config/quickshell/scripts/manage_wifi.py"]
+        command: ["python3", "/home/yogesh/.config/quickshell/scripts/network/manage_wifi.py"]
         stdout: StdioCollector {
             onStreamFinished: {
                 try {
@@ -793,7 +857,7 @@ Item {
 
     Process {
         id: btScanner
-        command: ["python3", "/home/yogesh/.config/quickshell/scripts/manage_bluetooth.py"]
+        command: ["python3", "/home/yogesh/.config/quickshell/scripts/network/manage_bluetooth.py"]
         stdout: StdioCollector {
             onStreamFinished: {
                 try {
@@ -867,6 +931,10 @@ Item {
 
 
     property int volumeLevel: 50
+    property int micLevel: 50
+    property int brightnessLevel: 50
+    property int batteryLevel: 100
+    property string batteryStatus: "Unknown"
 
     Process {
         id: volProc
@@ -882,17 +950,69 @@ Item {
 
     Process {
         id: setVolProc
+    }
+
+    Process {
+        id: micProc
+        command: ["bash", "-c", "wpctl get-volume @DEFAULT_AUDIO_SOURCE@ | awk '{print int($2 * 100)}'"]
+        running: true
         stdout: StdioCollector {
-            onStreamFinished: volProc.running = true
+            onStreamFinished: {
+                var val = parseInt(this.text.trim());
+                if (!isNaN(val)) root.micLevel = val;
+            }
         }
     }
 
-    // Low-frequency volume poll to track external changes (hardware keys, etc.)
+    Process {
+        id: setMicProc
+        stdout: StdioCollector { onStreamFinished: micProc.running = true }
+    }
+
+    Process {
+        id: brightnessProc
+        command: ["bash", "-c", "brightnessctl -m | awk -F, '{print int($4)}'"]
+        running: true
+        stdout: StdioCollector {
+            onStreamFinished: {
+                var val = parseInt(this.text.trim());
+                if (!isNaN(val)) root.brightnessLevel = val;
+            }
+        }
+    }
+
+    Process {
+        id: setBrightnessProc
+        stdout: StdioCollector { onStreamFinished: brightnessProc.running = true }
+    }
+
+    Process {
+        id: batteryProc
+        command: ["bash", "-c", "echo $(cat /sys/class/power_supply/BAT0/capacity); cat /sys/class/power_supply/BAT0/status"]
+        running: true
+        stdout: StdioCollector {
+            onStreamFinished: {
+                var lines = this.text.trim().split("\n");
+                if (lines.length >= 2) {
+                    var val = parseInt(lines[0]);
+                    if (!isNaN(val)) root.batteryLevel = val;
+                    root.batteryStatus = lines[1].trim();
+                }
+            }
+        }
+    }
+
+    // Low-frequency poll to track external changes (hardware keys, battery drain)
     Timer {
         interval: 3000
         running: true
         repeat: true
-        onTriggered: volProc.running = true
+        onTriggered: {
+            volProc.running = true;
+            micProc.running = true;
+            brightnessProc.running = true;
+            batteryProc.running = true;
+        }
     }
 
     // Click-outside dismissal no longer needed: PanelWindow mask passes through
@@ -965,8 +1085,8 @@ Item {
         anchors.top: parent.top
         anchors.horizontalCenter: parent.horizontalCenter
 
-        width: (root.isPowerMenuOpen || root.isWifiMenuOpen || root.isBluetoothMenuOpen) ? 320 : (root.isExpanded ? Style.notchWidthExpanded : (root.isWorkspaceActive ? 240 : (root.showVisualizer ? root.dynamicVisNotchWidth : root.compactWidthVal)))
-        height: root.isPowerMenuOpen ? 260 : ((root.isWifiMenuOpen || root.isBluetoothMenuOpen) ? 320 : (root.isExpanded ? root.expandedHeightVal : Style.notchHeightCompact))
+        width: root.isOsdActive ? 280 : ((root.isPowerMenuOpen || root.isWifiMenuOpen || root.isBluetoothMenuOpen) ? 320 : (root.isExpanded ? Style.notchWidthExpanded : (root.isWorkspaceActive ? 240 : (root.showVisualizer ? root.dynamicVisNotchWidth : root.compactWidthVal))))
+        height: root.isOsdActive ? Style.notchHeightCompact : (root.isPowerMenuOpen ? 260 : ((root.isWifiMenuOpen || root.isBluetoothMenuOpen) ? 320 : (root.isExpanded ? root.expandedHeightVal : Style.notchHeightCompact)))
 
         color: "#000000"
         border.width: 0
@@ -1035,7 +1155,7 @@ Item {
             // 1. COMPACT CLOCK DISPLAY
             Item {
                 anchors.fill: parent
-                opacity: (!root.isWorkspaceActive && !root.showVisualizer) ? 1.0 : 0.0
+                opacity: (!root.isWorkspaceActive && !root.showVisualizer && !root.isOsdActive) ? 1.0 : 0.0
                 visible: opacity > 0.01
 
                 Behavior on opacity {
@@ -1048,8 +1168,8 @@ Item {
 
                     Text {
                         text: root.timeStr
-                        font.family: Style.fontFamilyMono
-                        font.pixelSize: Style.fontSizeNormal
+                        font.family: Style.fontFamily
+                        font.pixelSize: root.clockFontSizeVal
                         font.weight: Font.Bold
                         color: Style.textPrimary
                     }
@@ -1128,8 +1248,7 @@ Item {
                                             root.isWorkspaceActive = false;
                                             autoCloseTimer.stop();
                                         } else {
-                                            dispatchWsProc.command = ["hyprctl", "dispatch", "workspace", wsNum.toString()];
-                                            dispatchWsProc.running = true;
+                                            Hyprland.dispatch("workspace " + wsNum.toString());
                                             workspaceDismissTimer.restart();
                                         }
                                     }
@@ -1314,6 +1433,58 @@ Item {
                     }
                 }
             }
+            // 4. OSD OVERLAY (Volume & Brightness)
+            Item {
+                anchors.fill: parent
+                opacity: root.isOsdActive ? 1.0 : 0.0
+                visible: opacity > 0.01
+
+                Behavior on opacity {
+                    NumberAnimation { duration: 180 }
+                }
+
+                RowLayout {
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    anchors.verticalCenter: parent.verticalCenter
+                    anchors.leftMargin: 20
+                    anchors.rightMargin: 20
+                    spacing: 12
+
+                    Text {
+                        text: root.osdIcon
+                        font.family: Style.fontFamilyMono
+                        font.pixelSize: 18
+                        color: root.osdColor
+                        Layout.alignment: Qt.AlignVCenter
+                    }
+
+                    Rectangle {
+                        Layout.fillWidth: true
+                        height: 6
+                        radius: 3
+                        color: Style.cardBgHover
+                        Layout.alignment: Qt.AlignVCenter
+
+                        Rectangle {
+                            height: parent.height
+                            width: parent.width * (root.animatedOsdValue / 100.0)
+                            radius: 3
+                            color: root.osdColor
+                        }
+                    }
+
+                    Text {
+                        text: Math.round(root.animatedOsdValue) + "%"
+                        font.family: Style.fontFamilyMono
+                        font.pixelSize: 12
+                        font.weight: Font.Bold
+                        color: Style.textPrimary
+                        Layout.alignment: Qt.AlignVCenter
+                        Layout.minimumWidth: 32
+                    }
+                }
+            }
         }
 
         // --- EXPANDED CONTENT ---
@@ -1404,6 +1575,24 @@ Item {
                     }
 
                     Item { Layout.fillWidth: true }
+
+                    // Compact Battery Status
+                    RowLayout {
+                        spacing: 6
+                        Layout.rightMargin: 4
+                        Text {
+                            text: root.batteryStatus === "Charging" ? "󰂄" : (root.batteryLevel > 90 ? "󰁹" : (root.batteryLevel > 50 ? "󰁾" : (root.batteryLevel > root.batteryWarningThresholdVal ? "󰁻" : "󰂎")))
+                            font.family: Style.fontFamilyMono
+                            font.pixelSize: 14
+                            color: root.batteryStatus === "Charging" ? "#A3BE8C" : (root.batteryLevel <= root.batteryWarningThresholdVal ? "#BF616A" : Style.textPrimary)
+                        }
+                        Text {
+                            text: root.batteryLevel + "%"
+                            font.family: Style.fontFamilyMono
+                            font.pixelSize: Style.fontSizeSmall
+                            color: Style.textPrimary
+                        }
+                    }
 
                     // WiFi Status Button with Micro-Animations
                     Rectangle {
@@ -1534,33 +1723,6 @@ Item {
                         }
                     }
 
-                    // Close button with Micro-Animations
-                    Rectangle {
-                        width: 28; height: 28; radius: 14
-                        color: closeM.containsMouse ? Style.danger : Style.cardBg
-                        border.color: Style.cardBorder
-
-                        scale: (root.buttonAnimsVal && closeM.pressed) ? 0.95 : ((root.buttonAnimsVal && closeM.containsMouse) ? 1.08 : 1.0)
-                        Behavior on scale { enabled: root.buttonAnimsVal; NumberAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
-                        Behavior on color { ColorAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
-
-                        Text {
-                            anchors.centerIn: parent
-                            text: "󰅖"
-                            font.family: Style.fontFamilyMono
-                            font.pixelSize: 12
-                            color: closeM.containsMouse ? "#FFF" : Style.textSecondary
-                            Behavior on color { ColorAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
-                        }
-
-                        MouseArea {
-                            id: closeM
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: root.isExpanded = false
-                        }
-                    }
                 }
 
                 // Tab Switch Viewport with SpringAnimation Profile
@@ -1589,13 +1751,15 @@ Item {
                         height: pageViewport.height
 
                         // PAGE 0: Media + Quick Controls Combined
-                        Item {
+                        ScrollView {
                             width: pageViewport.width
                             height: pageViewport.height
                             clip: true
+                            ScrollBar.vertical.policy: ScrollBar.AsNeeded
+                            ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
 
                             ColumnLayout {
-                                anchors.fill: parent
+                                width: pageViewport.width
                                 spacing: 14
 
                                 Text {
@@ -1788,8 +1952,17 @@ Item {
                                             value: root.volumeLevel
                                             onMoved: function(val) {
                                                 root.volumeLevel = Math.round(val);
-                                                setVolProc.command = ["wpctl", "set-volume", "@DEFAULT_AUDIO_SINK@", root.volumeLevel + "%"];
-                                                setVolProc.running = true;
+                                                if (!volumeThrottleTimer.running) {
+                                                    volumeThrottleTimer.start();
+                                                }
+                                            }
+                                            Timer {
+                                                id: volumeThrottleTimer
+                                                interval: 50
+                                                onTriggered: {
+                                                    setVolProc.command = ["wpctl", "set-volume", "@DEFAULT_AUDIO_SINK@", root.volumeLevel + "%"];
+                                                    setVolProc.running = true;
+                                                }
                                             }
                                         }
                                     }
@@ -2567,7 +2740,7 @@ Item {
                         onToggled: function(val) {
                             root.wifiPower = val;
                             wifiToggler.running = false;
-                            wifiToggler.command = ["python3", "/home/yogesh/.config/quickshell/scripts/manage_wifi.py", val ? "on" : "off"];
+                            wifiToggler.command = ["python3", "/home/yogesh/.config/quickshell/scripts/network/manage_wifi.py", val ? "on" : "off"];
                             wifiToggler.running = true;
                             wifiScanTimer.restart();
                         }
@@ -2644,7 +2817,7 @@ Item {
 
                                     onAccepted: {
                                         wifiToggler.running = false;
-                                        wifiToggler.command = ["python3", "/home/yogesh/.config/quickshell/scripts/manage_wifi.py", "connect", root.wifiPromptSsid, root.wifiPasswordText];
+                                        wifiToggler.command = ["python3", "/home/yogesh/.config/quickshell/scripts/network/manage_wifi.py", "connect", root.wifiPromptSsid, root.wifiPasswordText];
                                         wifiToggler.running = true;
                                         root.isWifiPasswordPromptOpen = false;
                                         wifiScanTimer.restart();
@@ -2708,7 +2881,7 @@ Item {
                                     anchors.fill: parent; cursorShape: Qt.PointingHandCursor
                                     onClicked: {
                                         wifiToggler.running = false;
-                                        wifiToggler.command = ["python3", "/home/yogesh/.config/quickshell/scripts/manage_wifi.py", "connect", root.wifiPromptSsid, root.wifiPasswordText];
+                                        wifiToggler.command = ["python3", "/home/yogesh/.config/quickshell/scripts/network/manage_wifi.py", "connect", root.wifiPromptSsid, root.wifiPasswordText];
                                         wifiToggler.running = true;
                                         root.isWifiPasswordPromptOpen = false;
                                         wifiScanTimer.restart();
@@ -2842,7 +3015,7 @@ Item {
                                             wifiPasswordInput.forceActiveFocus();
                                         } else {
                                             wifiToggler.running = false;
-                                            wifiToggler.command = ["python3", "/home/yogesh/.config/quickshell/scripts/manage_wifi.py", "connect", modelData.ssid];
+                                            wifiToggler.command = ["python3", "/home/yogesh/.config/quickshell/scripts/network/manage_wifi.py", "connect", modelData.ssid];
                                             wifiToggler.running = true;
                                             wifiScanTimer.restart();
                                         }
@@ -2920,7 +3093,7 @@ Item {
                         onToggled: function(val) {
                             root.btPower = val;
                             btToggler.running = false;
-                            btToggler.command = ["python3", "/home/yogesh/.config/quickshell/scripts/manage_bluetooth.py", val ? "on" : "off"];
+                            btToggler.command = ["python3", "/home/yogesh/.config/quickshell/scripts/network/manage_bluetooth.py", val ? "on" : "off"];
                             btToggler.running = true;
                             btScanTimer.restart();
                         }
@@ -3030,7 +3203,7 @@ Item {
                             id: devM; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
                             onClicked: {
                                 btToggler.running = false;
-                                btToggler.command = ["python3", "/home/yogesh/.config/quickshell/scripts/manage_bluetooth.py", "toggle_conn", modelData.mac];
+                                btToggler.command = ["python3", "/home/yogesh/.config/quickshell/scripts/network/manage_bluetooth.py", "toggle_conn", modelData.mac];
                                 btToggler.running = true;
                                 btScanTimer.restart();
                             }

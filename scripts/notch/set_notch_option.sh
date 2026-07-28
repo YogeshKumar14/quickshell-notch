@@ -1,4 +1,8 @@
 #!/usr/bin/env bash
+if [ "$QUICKSHELL_SANDBOX" = "1" ]; then
+    echo "sandbox_skipped"
+    exit 0
+fi
 KEY="$1"
 VAL="$2"
 

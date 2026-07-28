@@ -19,7 +19,7 @@ FocusScope {
     // Fast process scanner
     Process {
         id: appScanner
-        command: ["python3", "/home/yogesh/.config/quickshell/scripts/get_apps.py"]
+        command: ["python3", "/home/yogesh/.config/quickshell/scripts/desktop/get_apps.py"]
         stdout: StdioCollector {
             onStreamFinished: {
                 try {

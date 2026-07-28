@@ -60,6 +60,12 @@ Scope {
                             notchComp.isExpanded = !notchComp.isExpanded;
                         } else if (cmd === "close") {
                             notchComp.isExpanded = false;
+                        } else if (cmd.startsWith("osd:vol:")) {
+                            var v = parseInt(cmd.split(":")[2]);
+                            if (!isNaN(v)) notchComp.showOsd("volume", v);
+                        } else if (cmd.startsWith("osd:bri:")) {
+                            var b = parseInt(cmd.split(":")[2]);
+                            if (!isNaN(b)) notchComp.showOsd("brightness", b);
                         }
                         clientSocket.connected = false;
                     }

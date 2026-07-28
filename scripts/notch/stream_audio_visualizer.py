@@ -6,12 +6,23 @@ import time
 import subprocess
 import shutil
 import atexit
+import signal
+
+import ctypes
 
 CONFIG_DIR = os.path.expanduser("~/.config/quickshell")
 NOTCH_CONFIG_FILE = os.path.join(CONFIG_DIR, "notch_settings.json")
 CAVA_CONFIG_FILE = os.path.join(CONFIG_DIR, "cava_config")
 
 proc = None
+
+def set_pdeathsig():
+    try:
+        libc = ctypes.CDLL("libc.so.6")
+        PR_SET_PDEATHSIG = 1
+        libc.prctl(PR_SET_PDEATHSIG, signal.SIGTERM)
+    except Exception:
+        pass
 
 def cleanup():
     global proc
@@ -23,6 +34,13 @@ def cleanup():
             pass
 
 atexit.register(cleanup)
+
+def sig_handler(signum, frame):
+    cleanup()
+    sys.exit(0)
+
+signal.signal(signal.SIGTERM, sig_handler)
+signal.signal(signal.SIGINT, sig_handler)
 
 def get_default_monitor():
     try:
@@ -91,7 +109,8 @@ def main():
                 stdout=subprocess.PIPE,
                 stderr=subprocess.DEVNULL,
                 text=True,
-                bufsize=1
+                bufsize=1,
+                preexec_fn=set_pdeathsig
             )
 
             last_config_check = time.monotonic()

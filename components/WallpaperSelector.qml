@@ -20,7 +20,7 @@ FocusScope {
 
     Process {
         id: scannerProc
-        command: ["python3", "/home/yogesh/.config/quickshell/scripts/scan_wallpapers.py"]
+        command: ["python3", "/home/yogesh/.config/quickshell/scripts/desktop/scan_wallpapers.py"]
         stdout: StdioCollector {
             onStreamFinished: {
                 try {

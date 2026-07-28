@@ -16,3 +16,7 @@ scratch_*.qml
 test_*.qml
 *.save
 *.save.*
+
+# Python cache files
+__pycache__/
+*.py[cod]

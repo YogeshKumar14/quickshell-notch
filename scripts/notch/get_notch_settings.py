@@ -37,7 +37,11 @@ DEFAULTS = {
     "visualizer_pulsar_scale": 1.2,
     "visualizer_pause_delay": 1000,
     "stats_interval": 2000,
-    "network_refresh": 5000
+    "network_refresh": 5000,
+    "osd_timeout": 2000,
+    "clock_format": "h:mm A",
+    "clock_font_size": 14,
+    "battery_warning_threshold": 20
 }
 
 def main():
