@@ -10,13 +10,22 @@ def get_status():
         
         devices = []
         if is_on:
+            connected_macs = set()
+            try:
+                conn_out = subprocess.check_output(["bluetoothctl", "devices", "Connected"], stderr=subprocess.DEVNULL).decode()
+                for line in conn_out.splitlines():
+                    parts = line.split(" ")
+                    if len(parts) >= 3:
+                        connected_macs.add(parts[1])
+            except Exception:
+                pass
+
             devices_out = subprocess.check_output(["bluetoothctl", "devices"], stderr=subprocess.DEVNULL).decode()
             for line in devices_out.splitlines():
                 parts = line.split(" ", 2)
                 if len(parts) >= 3:
                     mac, name = parts[1], parts[2]
-                    info_out = subprocess.check_output(["bluetoothctl", "info", mac], stderr=subprocess.DEVNULL).decode()
-                    is_connected = "Connected: yes" in info_out
+                    is_connected = mac in connected_macs
                     devices.append({
                         "mac": mac,
                         "name": name,

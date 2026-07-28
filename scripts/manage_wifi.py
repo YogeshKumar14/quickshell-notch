@@ -9,26 +9,16 @@ def get_status():
         is_on = (power_out == "enabled")
         
         active_ssid = ""
-        if is_on:
-            try:
-                active_out = subprocess.check_output(["nmcli", "-t", "-f", "name,type", "connection", "show", "--active"], stderr=subprocess.DEVNULL).decode()
-                for line in active_out.splitlines():
-                    parts = line.split(":")
-                    if len(parts) >= 2 and "wireless" in parts[1]:
-                        active_ssid = parts[0]
-                        break
-            except Exception:
-                pass
-        
-        # Retrieve saved connections
         saved_ssids = set()
         if is_on:
             try:
-                conn_out = subprocess.check_output(["nmcli", "-t", "-f", "name,type", "connection", "show"], stderr=subprocess.DEVNULL).decode()
+                conn_out = subprocess.check_output(["nmcli", "-t", "-f", "name,type,active", "connection", "show"], stderr=subprocess.DEVNULL).decode()
                 for line in conn_out.splitlines():
                     parts = line.split(":")
-                    if len(parts) >= 2 and "wireless" in parts[1]:
+                    if len(parts) >= 3 and "wireless" in parts[1]:
                         saved_ssids.add(parts[0])
+                        if parts[2] == "yes":
+                            active_ssid = parts[0]
             except Exception:
                 pass
         
