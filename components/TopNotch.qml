@@ -1923,6 +1923,7 @@ Item {
                                                 
                                                 // Media Prev Button
                                                 Rectangle {
+                                                    Layout.alignment: Qt.AlignVCenter
                                                     width: 32; height: 32; radius: 16; color: Style.cardBgHover
                                                     scale: (root.buttonAnimsVal && prevM.pressed) ? 0.90 : ((root.buttonAnimsVal && prevM.containsMouse) ? 1.15 : 1.0)
                                                     Behavior on scale { enabled: root.buttonAnimsVal; SpringAnimation { spring: 3.5; damping: 0.6; mass: 1.0 } }
@@ -1934,6 +1935,7 @@ Item {
 
                                                 // Media Play/Pause Button
                                                 Rectangle {
+                                                    Layout.alignment: Qt.AlignVCenter
                                                     width: 40; height: 40; radius: 20; color: Style.accent
                                                     scale: (root.buttonAnimsVal && playM.pressed) ? 0.90 : ((root.buttonAnimsVal && playM.containsMouse) ? 1.15 : 1.0)
                                                     Behavior on scale { enabled: root.buttonAnimsVal; SpringAnimation { spring: 3.5; damping: 0.6; mass: 1.0 } }
@@ -1945,6 +1947,7 @@ Item {
 
                                                 // Media Next Button
                                                 Rectangle {
+                                                    Layout.alignment: Qt.AlignVCenter
                                                     width: 32; height: 32; radius: 16; color: Style.cardBgHover
                                                     scale: (root.buttonAnimsVal && nextM.pressed) ? 0.90 : ((root.buttonAnimsVal && nextM.containsMouse) ? 1.15 : 1.0)
                                                     Behavior on scale { enabled: root.buttonAnimsVal; SpringAnimation { spring: 3.5; damping: 0.6; mass: 1.0 } }
