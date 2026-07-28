@@ -36,8 +36,8 @@ QtObject {
     readonly property int radiusLarge: 20
 
     // Proportional UI Typography
-    readonly property string fontFamily: "Ubuntu, DejaVu Sans, JetBrainsMono Nerd Font Propo, sans-serif"
-    readonly property string fontFamilyMono: "JetBrainsMono Nerd Font, monospace"
+    readonly property string fontFamily: "Inter, Roboto, Noto Sans, Ubuntu, sans-serif"
+    readonly property string fontFamilyMono: "JetBrainsMono Nerd Font, FiraCode Nerd Font, monospace"
     readonly property int fontSizeSmall: 11
     readonly property int fontSizeNormal: 13
     readonly property int fontSizeLarge: 15
