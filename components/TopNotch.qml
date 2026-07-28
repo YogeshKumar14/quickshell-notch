@@ -1546,26 +1546,44 @@ Item {
                         border.color: Style.cardBorder
                         border.width: 1
 
+                        // Sliding Highlight Pill
+                        Rectangle {
+                            id: slidingPill
+                            height: 32
+                            radius: 16
+                            color: Style.accent
+                            z: 0
+
+                            property var currentItem: segRepeater.itemAt(root.currentPage)
+                            x: currentItem ? currentItem.x : 0
+                            width: currentItem ? currentItem.width : 0
+
+                            Behavior on x { SpringAnimation { spring: root.tabSpringTension; damping: root.tabSpringDamping } }
+                            Behavior on width { SpringAnimation { spring: root.tabSpringTension; damping: root.tabSpringDamping } }
+                        }
+
                         RowLayout {
                             id: segRow
                             anchors.fill: parent
                             spacing: 0
+                            z: 1 // Keep tabs above the sliding pill
 
                             Repeater {
+                                id: segRepeater
                                 model: ["Media", "Walls", "Apps", "Notifs", "Stats"]
                                 
                                 Rectangle {
-                                    Layout.preferredWidth: segInner.implicitWidth + 24
+                                    Layout.preferredWidth: segInner.width + 24
                                     Layout.fillHeight: true
                                     radius: 16
-                                    color: root.currentPage === index ? Style.accent : (segMouse.containsMouse ? Style.cardBgHover : "transparent")
+                                    color: (root.currentPage !== index && segMouse.containsMouse) ? Style.cardBgHover : "transparent"
                                     
                                     Behavior on color { ColorAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
 
-                                    RowLayout {
+                                    Row {
                                         id: segInner
                                         anchors.centerIn: parent
-                                        spacing: 6
+                                        spacing: 0
 
                                         Text {
                                             text: modelData
@@ -1576,18 +1594,29 @@ Item {
                                             Behavior on color { ColorAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
                                         }
 
-                                        Rectangle {
-                                            width: 14; height: 14; radius: 7
-                                            color: root.currentPage === index ? "#000" : Style.accent
-                                            visible: index === 3 && root.notifCount > 0
-                                            
-                                            Text {
-                                                anchors.centerIn: parent
-                                                text: root.notifCount > 9 ? "9+" : root.notifCount.toString()
-                                                font.family: Style.fontFamily
-                                                font.pixelSize: 8
-                                                font.weight: Font.Bold
-                                                color: root.currentPage === index ? Style.accent : "#000"
+                                        // Smooth Morphing Badge Wrapper
+                                        Item {
+                                            width: (index === 3 && root.notifCount > 0) ? 20 : 0
+                                            height: 14
+                                            anchors.verticalCenter: parent.verticalCenter
+                                            clip: true
+                                            Behavior on width { NumberAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
+
+                                            Rectangle {
+                                                x: 6 // Visual spacing
+                                                width: 14; height: 14; radius: 7
+                                                color: root.currentPage === index ? "#000" : Style.accent
+                                                Behavior on color { ColorAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
+                                                
+                                                Text {
+                                                    anchors.centerIn: parent
+                                                    text: root.notifCount > 9 ? "9+" : root.notifCount.toString()
+                                                    font.family: Style.fontFamily
+                                                    font.pixelSize: 8
+                                                    font.weight: Font.Bold
+                                                    color: root.currentPage === index ? Style.accent : "#000"
+                                                    Behavior on color { ColorAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
+                                                }
                                             }
                                         }
                                     }
