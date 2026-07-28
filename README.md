@@ -4,6 +4,17 @@ A customized, high-performance desktop status bar and control center built with 
 
 Top Notch morphs dynamically between a compact top-center status pill and an expanded, tabbed system control dashboard.
 
+## Showcase
+
+### Dynamic Dashboard
+![Notch Expanded Dashboard](assets/2026-07-28-132607_hyprshot.png)
+
+### Widget Integrations
+![Notch Widgets](assets/2026-07-27-223516_hyprshot.png)
+
+### Video Demo
+<video src="https://raw.githubusercontent.com/YogeshKumar14/quickshell-notch/main/assets/notch_demo.mp4" controls="controls" muted="muted" playsinline="playsinline"></video>
+
 ---
 
 ## Features
