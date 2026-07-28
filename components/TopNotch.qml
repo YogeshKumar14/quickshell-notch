@@ -3191,16 +3191,19 @@ Item {
                                 anchors.fill: parent
                                 anchors.leftMargin: 10; anchors.rightMargin: 10
                                 spacing: 8
-                                M3Icon {
-                                    id: wifiActiveIcon
-                                    name: wifiToggler.running ? "restart_alt" : "wifi"
-                                    color: Style.accent; size: 16
-                                    transformOrigin: Item.Center
-                                    RotationAnimation on rotation {
-                                        running: wifiToggler.running
-                                        from: 0; to: 360; loops: Animation.Infinite; duration: 1000
+                                    M3Icon {
+                                        id: wifiActiveIcon
+                                        name: wifiToggler.running ? "restart_alt" : "wifi"
+                                        color: Style.accent; size: 16
+                                        transformOrigin: Item.Center
+                                        RotationAnimation on rotation {
+                                            running: wifiToggler.running
+                                            from: 0; to: 360; loops: Animation.Infinite; duration: 1000
+                                            onRunningChanged: {
+                                                if (!running) wifiActiveIcon.rotation = 0;
+                                            }
+                                        }
                                     }
-                                }
                                 Text {
                                     text: wifiToggler.running ? "Connecting to: " + root.wifiPromptSsid : "Connected: " + root.wifiActiveSsid
                                     font.family: Style.fontFamily; font.pixelSize: Style.fontSizeNormal
