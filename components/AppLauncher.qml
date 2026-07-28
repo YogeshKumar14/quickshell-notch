@@ -172,10 +172,14 @@ FocusScope {
                 cellHeight: 90
                 currentIndex: root.selectedIndex
                 highlightFollowsCurrentItem: true
-                highlightMoveDuration: 200
+                highlightMoveDuration: 0 // Disable default linear animation
 
                 highlight: Item {
                     z: 10
+                    
+                    Behavior on x { NumberAnimation { duration: 250; easing.type: Easing.OutCubic } }
+                    Behavior on y { NumberAnimation { duration: 250; easing.type: Easing.OutCubic } }
+
                     Rectangle {
                         anchors.fill: parent
                         anchors.margins: 4
