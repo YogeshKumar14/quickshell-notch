@@ -398,7 +398,12 @@ Item {
             onRead: function(data) {
                 try {
                     var parsed = JSON.parse(data.trim());
-                    if (parsed.bars !== undefined) root.visualizerBars = parsed.bars;
+                    if (parsed.bars !== undefined) {
+                        // OPTIMIZATION: Only propagate bindings if visualizer is actually visible
+                        if (root.showVisualizer || notchWindow.height > Style.notchHeightCompact + 10) {
+                            root.visualizerBars = parsed.bars;
+                        }
+                    }
                     if (parsed.active !== undefined) {
                         var wasActive = root.isAudioActive;
                         root.isAudioActive = parsed.active;

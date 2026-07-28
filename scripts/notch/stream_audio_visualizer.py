@@ -64,7 +64,7 @@ def get_bar_count():
 def write_cava_config(bar_count, monitor_source):
     config_content = f"""[general]
 bars = {bar_count}
-framerate = 25
+framerate = 15
 autosens = 1
 sleep_timer = 2
 
