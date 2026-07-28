@@ -1814,27 +1814,49 @@ Item {
                                         anchors.margins: 14
                                         spacing: 16
 
-                                        // Left: Circular Album Art
+                                        // Left: Circular Album Art (Spinning Vinyl)
                                         Rectangle {
                                             width: 62; height: 62; radius: 31
                                             color: Style.cardBgHover
                                             border.color: Style.cardBorder
                                             clip: true
                                             
-                                            Image {
-                                                id: dynamicAlbumArt
+                                            // The rotating vinyl container
+                                            Item {
                                                 anchors.fill: parent
-                                                source: (root.activePlayer && root.activePlayer.trackArtUrl) ? root.activePlayer.trackArtUrl : ""
-                                                fillMode: Image.PreserveAspectCrop
-                                                visible: false
+                                                visible: dynamicAlbumArt.source.toString() !== ""
+
+                                                RotationAnimation on rotation {
+                                                    from: 0
+                                                    to: 360
+                                                    duration: 10000 // 10 seconds for a full vinyl rotation
+                                                    loops: Animation.Infinite
+                                                    running: true
+                                                    paused: !root.isPlaying
+                                                }
+
+                                                Image {
+                                                    id: dynamicAlbumArt
+                                                    anchors.fill: parent
+                                                    source: (root.activePlayer && root.activePlayer.trackArtUrl) ? root.activePlayer.trackArtUrl : ""
+                                                    fillMode: Image.PreserveAspectCrop
+                                                    visible: false
+                                                }
+
+                                                OpacityMask {
+                                                    anchors.fill: parent
+                                                    source: dynamicAlbumArt
+                                                    maskSource: Rectangle {
+                                                        width: 62; height: 62; radius: 31
+                                                    }
+                                                }
                                             }
 
-                                            OpacityMask {
-                                                anchors.fill: parent
-                                                source: dynamicAlbumArt
-                                                maskSource: Rectangle {
-                                                    width: 62; height: 62; radius: 31
-                                                }
+                                            // Vinyl Center Hole Cutout (Static over the rotating image)
+                                            Rectangle {
+                                                width: 14; height: 14; radius: 7
+                                                anchors.centerIn: parent
+                                                color: Style.background
                                                 visible: dynamicAlbumArt.source.toString() !== ""
                                             }
 
