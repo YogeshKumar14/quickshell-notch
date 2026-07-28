@@ -199,6 +199,24 @@ FocusScope {
                 cellWidth: gridContainer.calculatedCellWidth
                 cellHeight: 110
 
+                currentIndex: root.selectedIndex
+                highlightFollowsCurrentItem: true
+                highlightMoveDuration: 200
+
+                highlight: Item {
+                    z: 10
+                    Rectangle {
+                        anchors.centerIn: parent
+                        width: parent.width - 12
+                        height: parent.height - 10
+                        radius: Style.radiusMedium
+                        color: "#1AFFFFFF" // Subtle overlay
+                        border.color: Style.accent
+                        border.width: 2
+                        scale: 1.04 // Matches the popped delegate
+                    }
+                }
+
                 model: wallModel
 
                 delegate: Item {
@@ -214,19 +232,16 @@ FocusScope {
                         width: parent.width - 12
                         height: parent.height - 10
                         radius: Style.radiusMedium
-                        color: isHovered ? Style.cardBgHover : Style.cardBg
-                        border.color: isSelected ? Style.accent : (isHovered ? Style.accent : Style.cardBorder)
-                        border.width: isSelected ? 2 : 1
-                        scale: isSelected ? 1.04 : (isHovered ? 1.04 : 1.0)
+                        color: Style.cardBg
+                        border.color: Style.cardBorder
+                        border.width: 1
+                        scale: isSelected ? 1.04 : 1.0
 
                         // Accent glow on selected item
                         layer.enabled: isSelected
                         layer.effect: null
 
                         Behavior on scale { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
-                        Behavior on color { ColorAnimation { duration: 180 } }
-                        Behavior on border.color { ColorAnimation { duration: 180 } }
-                        Behavior on border.width { NumberAnimation { duration: 180 } }
 
                         ClippingRectangle {
                             anchors.fill: parent

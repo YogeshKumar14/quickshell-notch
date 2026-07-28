@@ -170,6 +170,22 @@ FocusScope {
                 clip: true
                 cellWidth: gridContainer.calculatedCellWidth
                 cellHeight: 90
+                currentIndex: root.selectedIndex
+                highlightFollowsCurrentItem: true
+                highlightMoveDuration: 200
+
+                highlight: Item {
+                    z: 10
+                    Rectangle {
+                        anchors.fill: parent
+                        anchors.margins: 4
+                        radius: Style.radiusMedium
+                        color: "#1AFFFFFF" // Subtle overlay
+                        border.color: Style.accent
+                        border.width: 2
+                        scale: 1.03 // Matches the popped delegate
+                    }
+                }
 
                 model: appModel
 
@@ -184,14 +200,11 @@ FocusScope {
                         anchors.fill: parent
                         anchors.margins: 4
                         radius: Style.radiusMedium
-                        color: isHovered ? Style.cardBgHover : Style.cardBg
-                        border.color: isSelected ? Style.accent : (isHovered ? Style.accent : Style.cardBorder)
-                        border.width: isSelected ? 2 : 1
+                        color: Style.cardBg
+                        border.color: Style.cardBorder
+                        border.width: 1
                         scale: isSelected ? 1.03 : 1.0
 
-                        Behavior on color { ColorAnimation { duration: 180 } }
-                        Behavior on border.color { ColorAnimation { duration: 180 } }
-                        Behavior on border.width { NumberAnimation { duration: 180 } }
                         Behavior on scale { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
 
                         ColumnLayout {
