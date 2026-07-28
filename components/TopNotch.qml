@@ -1572,7 +1572,7 @@ Item {
                             color: Style.accent
                             z: 0
 
-                            property var currentItem: segRepeater.itemAt(root.currentPage)
+                            property var currentItem: (segRepeater.count > 0) ? segRepeater.itemAt(root.currentPage) : null
                             x: currentItem ? currentItem.x : 0
                             width: currentItem ? currentItem.width : 0
 
