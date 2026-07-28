@@ -1866,11 +1866,16 @@ Item {
                                             width: 140
                                             height: 60
 
+                                            property bool isHovered: mediaHoverArea.containsMouse || 
+                                                (typeof prevM !== "undefined" && prevM.containsMouse) || 
+                                                (typeof playM !== "undefined" && playM.containsMouse) || 
+                                                (typeof nextM !== "undefined" && nextM.containsMouse)
+
                                             // Live Visualizer (Visible when NOT hovered)
                                             RowLayout {
                                                 anchors.fill: parent
                                                 spacing: 4
-                                                opacity: mediaHoverArea.containsMouse ? 0.0 : 1.0
+                                                opacity: parent.isHovered ? 0.0 : 1.0
                                                 Behavior on opacity { NumberAnimation { duration: 250; easing.type: Easing.InOutQuad } }
                                                 visible: opacity > 0.01
 
@@ -1893,7 +1898,7 @@ Item {
                                             RowLayout {
                                                 anchors.fill: parent
                                                 spacing: 12
-                                                opacity: mediaHoverArea.containsMouse ? 1.0 : 0.0
+                                                opacity: parent.isHovered ? 1.0 : 0.0
                                                 Behavior on opacity { NumberAnimation { duration: 250; easing.type: Easing.InOutQuad } }
                                                 visible: opacity > 0.01
 
