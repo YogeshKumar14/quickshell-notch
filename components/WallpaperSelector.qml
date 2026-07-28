@@ -198,13 +198,15 @@ FocusScope {
                 clip: true
                 cellWidth: gridContainer.calculatedCellWidth
                 cellHeight: 110
-
                 currentIndex: root.selectedIndex
-                highlightFollowsCurrentItem: true
-                highlightMoveDuration: 0 // Disable default linear animation
+                highlightFollowsCurrentItem: false
 
                 highlight: Item {
                     z: 10
+                    width: gridView.cellWidth
+                    height: gridView.cellHeight
+                    x: gridView.currentItem ? gridView.currentItem.x : 0
+                    y: gridView.currentItem ? gridView.currentItem.y : 0
                     
                     Behavior on x { NumberAnimation { duration: 250; easing.type: Easing.OutCubic } }
                     Behavior on y { NumberAnimation { duration: 250; easing.type: Easing.OutCubic } }

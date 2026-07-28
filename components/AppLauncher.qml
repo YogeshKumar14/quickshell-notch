@@ -171,11 +171,14 @@ FocusScope {
                 cellWidth: gridContainer.calculatedCellWidth
                 cellHeight: 90
                 currentIndex: root.selectedIndex
-                highlightFollowsCurrentItem: true
-                highlightMoveDuration: 0 // Disable default linear animation
+                highlightFollowsCurrentItem: false
 
                 highlight: Item {
                     z: 10
+                    width: appGrid.cellWidth
+                    height: appGrid.cellHeight
+                    x: appGrid.currentItem ? appGrid.currentItem.x : 0
+                    y: appGrid.currentItem ? appGrid.currentItem.y : 0
                     
                     Behavior on x { NumberAnimation { duration: 250; easing.type: Easing.OutCubic } }
                     Behavior on y { NumberAnimation { duration: 250; easing.type: Easing.OutCubic } }
