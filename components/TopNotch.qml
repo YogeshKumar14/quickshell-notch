@@ -1613,6 +1613,7 @@ Item {
                             text: root.batteryLevel + "%"
                             font.family: Style.fontFamily
                             font.pixelSize: Style.fontSizeSmall
+                            font.weight: Font.Bold
                             color: Style.textPrimary
                         }
                     }
