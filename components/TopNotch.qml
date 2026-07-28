@@ -1474,10 +1474,9 @@ Item {
                     anchors.rightMargin: 20
                     spacing: 12
 
-                    Text {
-                        text: root.osdIcon
-                        font.family: Style.fontFamilyMono
-                        font.pixelSize: 18
+                    M3Icon {
+                        name: root.osdIcon
+                        size: 24
                         color: root.osdColor
                         Layout.alignment: Qt.AlignVCenter
                     }
@@ -1603,10 +1602,9 @@ Item {
                     RowLayout {
                         spacing: 6
                         Layout.rightMargin: 4
-                        Text {
-                            text: root.batteryStatus === "Charging" ? "󰂄" : (root.batteryLevel > 90 ? "󰁹" : (root.batteryLevel > 50 ? "󰁾" : (root.batteryLevel > root.batteryWarningThresholdVal ? "󰁻" : "󰂎")))
-                            font.family: Style.fontFamilyMono
-                            font.pixelSize: 14
+                        M3Icon {
+                            name: root.batteryStatus === "Charging" ? "󰂄" : (root.batteryLevel > 90 ? "󰁹" : (root.batteryLevel > 50 ? "󰁾" : (root.batteryLevel > root.batteryWarningThresholdVal ? "󰁻" : "󰂎")))
+                            size: 18
                             color: root.batteryStatus === "Charging" ? "#A3BE8C" : (root.batteryLevel <= root.batteryWarningThresholdVal ? "#BF616A" : Style.textPrimary)
                         }
                         Text {
@@ -1628,13 +1626,11 @@ Item {
                         Behavior on scale { enabled: root.buttonAnimsVal; NumberAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
                         Behavior on color { ColorAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
 
-                        Text {
+                        M3Icon {
                             anchors.centerIn: parent
-                            text: root.wifiPower ? "󰖩" : "󰖪"
-                            font.family: Style.fontFamilyMono
-                            font.pixelSize: 13
+                            name: root.wifiPower ? "󰖩" : "󰖪"
+                            size: 16
                             color: root.isWifiMenuOpen ? "#000" : (root.wifiPower ? Style.accent : Style.textSecondary)
-                            Behavior on color { ColorAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
                         }
 
                         MouseArea {
@@ -2216,7 +2212,7 @@ Item {
                                             RowLayout {
                                                 anchors.centerIn: parent
                                                 spacing: 6
-                                                Text { text: "󰈅"; font.family: Style.fontFamilyMono; font.pixelSize: 13; color: Style.accent }
+                                                M3Icon { name: "apps"; size: 16; color: Style.accent }
                                                 Text { text: "Dismiss Latest"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeSmall; font.weight: Font.Bold; color: Style.textPrimary }
                                             }
 
@@ -2244,12 +2240,10 @@ Item {
                                             RowLayout {
                                                 anchors.centerIn: parent
                                                 spacing: 6
-                                                Text {
-                                                    text: "󰅖"
-                                                    font.family: Style.fontFamilyMono
-                                                    font.pixelSize: 13
+                                                M3Icon {
+                                                    name: "delete"
+                                                    size: 16
                                                     color: clearM.containsMouse ? "#FFF" : Style.danger
-                                                    Behavior on color { ColorAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
                                                 }
                                                 Text {
                                                     text: "Clear All"
@@ -2285,11 +2279,10 @@ Item {
                                             RowLayout {
                                                 anchors.centerIn: parent
                                                 spacing: 6
-                                                Text {
-                                                    text: "󰍹"
-                                                    font.family: Style.fontFamilyMono; font.pixelSize: 13
+                                                M3Icon {
+                                                    name: "settings"
+                                                    size: 16
                                                     color: openCcM.containsMouse ? "#000" : Style.accent
-                                                    Behavior on color { ColorAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
                                                 }
                                                 Text {
                                                     text: "Open Panel"
@@ -2328,7 +2321,7 @@ Item {
                                         anchors.margins: 12
                                         spacing: 10
 
-                                        Text { text: "󰌾"; font.family: Style.fontFamilyMono; font.pixelSize: 16; color: root.isInhibited ? Style.danger : Style.success }
+                                        M3Icon { name: "coffee"; size: 24; color: root.isInhibited ? Style.danger : Style.success }
 
                                         ColumnLayout {
                                             Layout.fillWidth: true

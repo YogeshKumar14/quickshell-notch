@@ -11,10 +11,50 @@ Item {
     implicitWidth: size
     implicitHeight: size
 
+    function getSvgName(inputName) {
+        // Map Nerd Font characters to M3 SVG names
+        const iconMap = {
+            "󰕾": "volume_up",
+            "󰖁": "volume_mute",
+            "󰝟": "volume_off",
+            "󰃠": "light_mode", // Need to download light_mode
+            "󰤨": "wifi",
+            "󰤯": "wifi_off", // Need to download wifi_off
+            "󰖩": "wifi",
+            "󰖪": "wifi_off",
+            "󰂯": "bluetooth",
+            "󰂲": "bluetooth_disabled", // Need to download bluetooth_disabled
+            "󰁹": "battery_full",
+            "󰁾": "battery_full",
+            "󰁻": "battery_alert",
+            "󰂎": "battery_alert",
+            "󰂄": "battery_charging_full",
+            "󰂃": "battery_alert",
+            "󰈅": "apps",
+            "󰌾": "coffee", // Using coffee for idle inhibitor
+            "󰄬": "done",
+            "󰒮": "skip_previous",
+            "󰏤": "pause",
+            "󰐊": "play_arrow",
+            "󰒭": "skip_next",
+            "󰍬": "mic",
+            "󰍭": "mic_off",
+            "󰻠": "memory",
+            "󰍛": "memory",
+            "󰈀": "wifi",
+            "󰋊": "hard_drive",
+            "󰂚": "notifications",
+            "󰂛": "notifications_off",
+            "󰍉": "search",
+            "󰸉": "wallpaper"
+        };
+        return iconMap[inputName] || inputName;
+    }
+
     Image {
         id: img
         anchors.fill: parent
-        source: name !== "" ? "file:///home/yogesh/.config/quickshell/assets/icons/" + name + ".svg" : ""
+        source: name !== "" ? "file:///home/yogesh/.config/quickshell/assets/icons/" + getSvgName(name) + ".svg" : ""
         sourceSize: Qt.size(size, size)
         fillMode: Image.PreserveAspectFit
         asynchronous: true
