@@ -5,6 +5,7 @@ import Quickshell
 import Quickshell.Io
 import Quickshell.Hyprland
 import Quickshell.Services.Mpris
+import Qt5Compat.GraphicalEffects
 import "../theme"
 
 Item {
@@ -1819,10 +1820,20 @@ Item {
                                             clip: true
                                             
                                             Image {
+                                                id: dynamicAlbumArt
                                                 anchors.fill: parent
                                                 source: (root.activePlayer && root.activePlayer.trackArtUrl) ? root.activePlayer.trackArtUrl : ""
                                                 fillMode: Image.PreserveAspectCrop
-                                                visible: source.toString() !== ""
+                                                visible: false
+                                            }
+
+                                            OpacityMask {
+                                                anchors.fill: parent
+                                                source: dynamicAlbumArt
+                                                maskSource: Rectangle {
+                                                    width: 62; height: 62; radius: 31
+                                                }
+                                                visible: dynamicAlbumArt.source.toString() !== ""
                                             }
 
                                             Text {
