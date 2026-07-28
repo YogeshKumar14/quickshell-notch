@@ -784,6 +784,10 @@ Item {
     property var cpuHistory: []
     property var ramHistory: []
 
+    property int netRxSpeed: 0
+    property int netTxSpeed: 0
+    property var netHistory: []
+
     Process {
         id: sysScanner
         command: ["python3", "/home/yogesh/.config/quickshell/scripts/desktop/get_system_info.py"]
@@ -794,6 +798,8 @@ Item {
                     root.cpuUsage = data.cpu;
                     root.ramUsage = data.ram;
                     root.diskUsage = data.disk;
+                    if (data.net_rx !== undefined) root.netRxSpeed = data.net_rx;
+                    if (data.net_tx !== undefined) root.netTxSpeed = data.net_tx;
 
                     // Accumulate CPU History
                     var cpuArr = [];
@@ -806,12 +812,25 @@ Item {
 
                     // Accumulate RAM History
                     var ramArr = [];
-                    for (var i = 0; i < root.ramHistory.length; i++) {
-                        ramArr.push(root.ramHistory[i]);
+                    for (var j = 0; j < root.ramHistory.length; j++) {
+                        ramArr.push(root.ramHistory[j]);
                     }
                     ramArr.push(data.ram);
                     if (ramArr.length > 20) ramArr.shift();
                     root.ramHistory = ramArr;
+                    
+                    // Accumulate Net History (using max of RX/TX normalized up to 10MB/s roughly for graph scaling)
+                    var netArr = [];
+                    for (var k = 0; k < root.netHistory.length; k++) {
+                        netArr.push(root.netHistory[k]);
+                    }
+                    // Normalize to a percentage of 10MB/s max for graphing
+                    var maxNet = Math.max(root.netRxSpeed, root.netTxSpeed);
+                    var netPct = Math.min(100, Math.floor((maxNet / (10 * 1024 * 1024)) * 100));
+                    netArr.push(netPct);
+                    if (netArr.length > 20) netArr.shift();
+                    root.netHistory = netArr;
+
                 } catch(e) {}
             }
         }
@@ -2402,29 +2421,142 @@ Item {
                                             }
                                         }
                                     }
-                                }
+                                } // End Row 1
 
-                                // Disk Storage Card
-                                Rectangle {
+                                RowLayout {
                                     Layout.fillWidth: true
-                                    implicitHeight: 76
-                                    radius: Style.radiusMedium
-                                    color: Style.cardBg
-                                    border.color: Style.cardBorder
+                                    spacing: 12
 
-                                    ColumnLayout {
-                                        anchors.fill: parent
-                                        anchors.margins: 12
-                                        spacing: 4
+                                    // Network Usage Card
+                                    Rectangle {
+                                        Layout.fillWidth: true
+                                        implicitHeight: 134
+                                        radius: Style.radiusMedium
+                                        color: Style.cardBg
+                                        border.color: Style.cardBorder
 
-                                        RowLayout {
-                                            Text { text: "󰋊 Disk Storage (Root)"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeNormal; font.weight: Font.Bold; color: Style.textPrimary }
-                                            Item { Layout.fillWidth: true }
-                                            Text { text: root.diskUsage + "%"; font.family: Style.fontFamilyMono; font.pixelSize: Style.fontSizeNormal; font.weight: Font.Bold; color: Style.accent }
+                                        ColumnLayout {
+                                            anchors.fill: parent
+                                            anchors.margins: 12
+                                            spacing: 4
+
+                                            RowLayout {
+                                                Text { text: "󰈀 Network"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeNormal; font.weight: Font.Bold; color: Style.textPrimary }
+                                                Item { Layout.fillWidth: true }
+                                                Text { 
+                                                    function formatBytes(bytes) {
+                                                        if (bytes < 1024) return bytes + "B/s";
+                                                        if (bytes < 1024*1024) return (bytes/1024).toFixed(0) + "K/s";
+                                                        return (bytes/(1024*1024)).toFixed(1) + "M/s";
+                                                    }
+                                                    text: "⇣" + formatBytes(root.netRxSpeed) + " ⇡" + formatBytes(root.netTxSpeed)
+                                                    font.family: Style.fontFamilyMono
+                                                    font.pixelSize: 10
+                                                    font.weight: Font.Bold
+                                                    color: Style.accent
+                                                }
+                                            }
+
+                                            Canvas {
+                                                id: netGraph
+                                                Layout.fillWidth: true
+                                                implicitHeight: 42
+                                                property var hist: root.netHistory
+                                                onHistChanged: requestPaint()
+
+                                                onPaint: {
+                                                    var ctx = getContext("2d");
+                                                    ctx.clearRect(0, 0, width, height);
+                                                    if (!hist || hist.length < 2) return;
+
+                                                    var colorObj = Style.accent;
+                                                    ctx.strokeStyle = colorObj;
+                                                    ctx.lineWidth = 1.3;
+                                                    ctx.beginPath();
+
+                                                    var step = width / (hist.length - 1);
+                                                    for (var i = 0; i < hist.length; i++) {
+                                                        var x = i * step;
+                                                        var y = height - (hist[i] / 100.0 * (height - 4)) - 2;
+                                                        if (i === 0) ctx.moveTo(x, y);
+                                                        else ctx.lineTo(x, y);
+                                                    }
+                                                    ctx.stroke();
+
+                                                    ctx.lineTo(width, height);
+                                                    ctx.lineTo(0, height);
+                                                    ctx.closePath();
+                                                    var grad = ctx.createLinearGradient(0, 0, 0, height);
+                                                    grad.addColorStop(0, Qt.rgba(colorObj.r, colorObj.g, colorObj.b, 0.08));
+                                                    grad.addColorStop(1, Qt.rgba(colorObj.r, colorObj.g, colorObj.b, 0.0));
+                                                    ctx.fillStyle = grad;
+                                                    ctx.fill();
+                                                }
+                                            }
                                         }
-                                        Rectangle {
-                                            Layout.fillWidth: true; height: 6; radius: 3; color: Style.cardBgHover
-                                            Rectangle { height: parent.height; width: parent.width * (root.diskUsage / 100.0); radius: 3; color: Style.accent }
+                                    }
+
+                                    // Disk Storage Radial Gauge
+                                    Rectangle {
+                                        Layout.fillWidth: true
+                                        implicitHeight: 134
+                                        radius: Style.radiusMedium
+                                        color: Style.cardBg
+                                        border.color: Style.cardBorder
+
+                                        ColumnLayout {
+                                            anchors.fill: parent
+                                            anchors.margins: 12
+                                            spacing: 4
+
+                                            RowLayout {
+                                                Text { text: "󰋊 Disk (Root)"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeNormal; font.weight: Font.Bold; color: Style.textPrimary }
+                                                Item { Layout.fillWidth: true }
+                                            }
+
+                                            Item {
+                                                Layout.fillWidth: true
+                                                implicitHeight: 64
+
+                                                Canvas {
+                                                    id: diskRadial
+                                                    anchors.fill: parent
+                                                    property real val: root.diskUsage
+                                                    onValChanged: requestPaint()
+
+                                                    onPaint: {
+                                                        var ctx = getContext("2d");
+                                                        ctx.clearRect(0, 0, width, height);
+                                                        var cx = width / 2;
+                                                        var cy = height / 2;
+                                                        var r = Math.min(width, height) / 2 - 6;
+
+                                                        // Background track
+                                                        ctx.beginPath();
+                                                        ctx.arc(cx, cy, r, 0, 2 * Math.PI);
+                                                        ctx.lineWidth = 10;
+                                                        ctx.strokeStyle = Style.cardBgHover;
+                                                        ctx.stroke();
+
+                                                        // Accent progress
+                                                        ctx.beginPath();
+                                                        var endAngle = (root.diskUsage / 100.0) * 2 * Math.PI;
+                                                        ctx.arc(cx, cy, r, -Math.PI/2, -Math.PI/2 + endAngle);
+                                                        ctx.strokeStyle = Style.accent;
+                                                        ctx.lineCap = "round";
+                                                        ctx.stroke();
+                                                    }
+                                                }
+
+                                                Text {
+                                                    text: root.diskUsage + "%"
+                                                    anchors.centerIn: parent
+                                                    font.family: Style.fontFamilyMono
+                                                    font.pixelSize: 14
+                                                    font.weight: Font.Bold
+                                                    color: Style.textPrimary
+                                                }
+                                            }
                                         }
                                     }
                                 }

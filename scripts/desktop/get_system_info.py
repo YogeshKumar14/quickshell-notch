@@ -56,8 +56,34 @@ def get_disk_usage():
     except Exception:
         return 0
 
+def get_net_bytes():
+    rx = 0
+    tx = 0
+    try:
+        with open("/proc/net/dev", "r") as f:
+            lines = f.readlines()[2:]
+            for line in lines:
+                parts = line.split(":")
+                if len(parts) == 2:
+                    if parts[0].strip() == "lo": continue
+                    data = parts[1].split()
+                    rx += int(data[0])
+                    tx += int(data[8])
+    except Exception:
+        pass
+    return rx, tx
+
 if __name__ == "__main__":
+    t1 = time.perf_counter()
+    net_rx1, net_tx1 = get_net_bytes()
     cpu = get_cpu_usage()
+    net_rx2, net_tx2 = get_net_bytes()
+    t2 = time.perf_counter()
+    
+    delta = t2 - t1
+    rx_speed = int((net_rx2 - net_rx1) / delta) if delta > 0 else 0
+    tx_speed = int((net_tx2 - net_tx1) / delta) if delta > 0 else 0
+    
     ram = get_ram_usage()
     disk = get_disk_usage()
-    print(json.dumps({"cpu": cpu, "ram": ram, "disk": disk}))
+    print(json.dumps({"cpu": cpu, "ram": ram, "disk": disk, "net_rx": rx_speed, "net_tx": tx_speed}))
