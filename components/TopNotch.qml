@@ -1205,7 +1205,7 @@ Item {
                         Text {
                             anchors.centerIn: parent
                             text: root.notifCount > 9 ? "9+" : root.notifCount.toString()
-                            font.family: Style.fontFamilyMono
+                            font.family: Style.fontFamily
                             font.pixelSize: 8
                             font.weight: Font.Bold
                             color: "#000000"
@@ -1308,12 +1308,10 @@ Item {
                     height: Style.notchHeightCompact
                     spacing: 12
 
-                    Text {
-                        text: "󰎆"
-                        font.family: Style.fontFamilyMono
-                        font.pixelSize: 13
+                    M3Icon {
+                        name: "music_note"
+                        size: 16
                         color: Style.accent
-                        verticalAlignment: Text.AlignVCenter
                         Layout.alignment: Qt.AlignVCenter
 
                         SequentialAnimation on opacity {
@@ -1657,13 +1655,11 @@ Item {
                         Behavior on scale { enabled: root.buttonAnimsVal; NumberAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
                         Behavior on color { ColorAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
 
-                        Text {
+                        M3Icon {
                             anchors.centerIn: parent
-                            text: root.btPower ? "󰂯" : "󰂲"
-                            font.family: Style.fontFamilyMono
-                            font.pixelSize: 13
+                            name: root.btPower ? "󰂯" : "󰂲"
+                            size: 16
                             color: root.isBluetoothMenuOpen ? "#000" : (root.btPower ? Style.accent : Style.textSecondary)
-                            Behavior on color { ColorAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
                         }
 
                         MouseArea {
@@ -1690,13 +1686,11 @@ Item {
                         Behavior on scale { enabled: root.buttonAnimsVal; NumberAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
                         Behavior on color { ColorAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
 
-                        Text {
+                        M3Icon {
                             anchors.centerIn: parent
-                            text: "󰐥"
-                            font.family: Style.fontFamilyMono
-                            font.pixelSize: 13
+                            name: "󰐥"
+                            size: 16
                             color: root.isPowerMenuOpen ? "#FFF" : (powerM.containsMouse ? Style.danger : Style.textSecondary)
-                            Behavior on color { ColorAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
                         }
 
                         MouseArea {
@@ -1722,13 +1716,11 @@ Item {
                         Behavior on scale { enabled: root.buttonAnimsVal; NumberAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
                         Behavior on color { ColorAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
 
-                        Text {
+                        M3Icon {
                             anchors.centerIn: parent
-                            text: "󰒓"
-                            font.family: Style.fontFamilyMono
-                            font.pixelSize: 13
+                            name: "󰒓"
+                            size: 16
                             color: gearM.containsMouse ? Style.accent : Style.textSecondary
-                            Behavior on color { ColorAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
                         }
 
                         MouseArea {
@@ -1856,11 +1848,10 @@ Item {
                                                 visible: dynamicAlbumArt.source.toString() !== ""
                                             }
 
-                                            Text {
+                                            M3Icon {
                                                 anchors.centerIn: parent
-                                                text: "󰎆"
-                                                font.family: Style.fontFamilyMono
-                                                font.pixelSize: 24
+                                                name: "music_note"
+                                                size: 24
                                                 color: Style.accent
                                                 visible: !(root.activePlayer && root.activePlayer.trackArtUrl && root.activePlayer.trackArtUrl !== "")
                                             }
@@ -2141,11 +2132,10 @@ Item {
 
                                             Behavior on color { ColorAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
 
-                                            Text {
+                                            M3Icon {
                                                 anchors.centerIn: parent
-                                                text: root.dndActive ? "󰂛" : "󰂚"
-                                                font.family: Style.fontFamilyMono
-                                                font.pixelSize: 26
+                                                name: root.dndActive ? "notifications_off" : "notifications"
+                                                size: 26
                                                 color: root.dndActive ? "#FFFFFF" : Style.accent
 
                                                 Behavior on color { ColorAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
@@ -2767,11 +2757,10 @@ Item {
                                         border.color: Qt.alpha(modelData.color, 0.4)
                                         border.width: 1
 
-                                        Text {
+                                        M3Icon {
                                             anchors.centerIn: parent
-                                            text: modelData.icon
-                                            font.family: Style.fontFamilyMono
-                                            font.pixelSize: 18
+                                            name: modelData.icon
+                                            size: 24
                                             color: modelData.color
                                         }
                                     }
@@ -2823,7 +2812,7 @@ Item {
                         Text {
                             Layout.alignment: Qt.AlignHCenter
                             text: "Executing in " + root.powerCountdown + "s"
-                            font.family: Style.fontFamilyMono
+                            font.family: Style.fontFamily
                             font.pixelSize: Style.fontSizeNormal
                             color: Style.accent
                         }
@@ -2925,12 +2914,11 @@ Item {
                         color: wifiRefM.containsMouse ? Style.cardBgHover : Style.cardBg
                         border.color: Style.cardBorder
                         visible: !root.isWifiPasswordPromptOpen && root.wifiPower
-                        Text {
+                        M3Icon {
                             id: wifiRefText
                             anchors.centerIn: parent
-                            text: "󰑐"
-                            font.family: Style.fontFamilyMono
-                            font.pixelSize: 11
+                            name: "restart_alt"
+                            size: 14
                             color: Style.textPrimary
 
                             transformOrigin: Item.Center
@@ -2998,11 +2986,10 @@ Item {
                                 anchors.leftMargin: 10; anchors.rightMargin: 10
                                 spacing: 8
 
-                                Text {
-                                    text: "󰌾"
-                                    font.family: Style.fontFamilyMono
+                                M3Icon {
+                                    name: "lock"
                                     color: Style.textMuted
-                                    font.pixelSize: 13
+                                    size: 16
                                 }
 
                                 TextInput {
@@ -3041,11 +3028,10 @@ Item {
                                 Rectangle {
                                     width: 24; height: 24; radius: 12
                                     color: "transparent"
-                                    Text {
+                                    M3Icon {
                                         anchors.centerIn: parent
-                                        text: root.showWifiPassword ? "󰈈" : "󰈉"
-                                        font.family: Style.fontFamilyMono
-                                        font.pixelSize: 12
+                                        name: root.showWifiPassword ? "visibility" : "visibility_off"
+                                        size: 16
                                         color: wifiEyeM.containsMouse ? Style.textPrimary : Style.textMuted
                                     }
                                     MouseArea {
@@ -3130,10 +3116,10 @@ Item {
                                 anchors.fill: parent
                                 anchors.leftMargin: 10; anchors.rightMargin: 10
                                 spacing: 8
-                                Text {
+                                M3Icon {
                                     id: wifiActiveIcon
-                                    text: wifiToggler.running ? "󰑐" : "󰖩"
-                                    font.family: Style.fontFamilyMono; color: Style.accent; font.pixelSize: 13
+                                    name: wifiToggler.running ? "restart_alt" : "wifi"
+                                    color: Style.accent; size: 16
                                     transformOrigin: Item.Center
                                     RotationAnimation on rotation {
                                         running: wifiToggler.running
@@ -3148,7 +3134,7 @@ Item {
                                     Layout.fillWidth: true
                                     elide: Text.ElideRight
                                 }
-                                Text { text: wifiToggler.running ? "" : "󰄬"; font.family: Style.fontFamilyMono; color: Style.accent; font.pixelSize: 11 }
+                                M3Icon { name: wifiToggler.running ? "" : "done"; color: Style.accent; size: 16 }
                             }
                         }
 
@@ -3160,10 +3146,10 @@ Item {
                             Column {
                                 anchors.centerIn: parent
                                 spacing: 8
-                                Text {
+                                M3Icon {
                                     anchors.horizontalCenter: parent.horizontalCenter
-                                    text: !root.wifiPower ? "󰖪" : "󰑐"
-                                    font.family: Style.fontFamilyMono; font.pixelSize: 32
+                                    name: !root.wifiPower ? "wifi_off" : "restart_alt"
+                                    size: 32
                                     color: Style.textMuted
                                 }
                                 Text {
@@ -3194,11 +3180,10 @@ Item {
                                     anchors.leftMargin: 8; anchors.rightMargin: 8
                                     spacing: 8
 
-                                    Text {
-                                        text: "󰖩"
-                                        font.family: Style.fontFamilyMono
+                                    M3Icon {
+                                        name: "wifi"
                                         color: modelData.active ? Style.accent : Style.textSecondary
-                                        font.pixelSize: 11
+                                        size: 16
                                         opacity: modelData.signal > 75 ? 1.0 : (modelData.signal > 50 ? 0.75 : (modelData.signal > 25 ? 0.5 : 0.25))
                                     }
 
@@ -3210,11 +3195,10 @@ Item {
                                         elide: Text.ElideRight
                                     }
 
-                                    Text {
-                                        text: modelData.active ? "󰄬" : (modelData.security ? "󰌾" : "")
-                                        font.family: Style.fontFamilyMono
+                                    M3Icon {
+                                        name: modelData.active ? "done" : (modelData.security ? "lock" : "")
                                         color: modelData.active ? Style.accent : Style.textMuted
-                                        font.pixelSize: 10
+                                        size: 16
                                     }
                                 }
 
@@ -3279,12 +3263,11 @@ Item {
                         color: btRefM.containsMouse ? Style.cardBgHover : Style.cardBg
                         border.color: Style.cardBorder
                         visible: root.btPower
-                        Text {
+                        M3Icon {
                             id: btRefText
                             anchors.centerIn: parent
-                            text: "󰑐"
-                            font.family: Style.fontFamilyMono
-                            font.pixelSize: 11
+                            name: "restart_alt"
+                            size: 14
                             color: Style.textPrimary
 
                             transformOrigin: Item.Center
@@ -3328,10 +3311,10 @@ Item {
                         anchors.fill: parent
                         anchors.leftMargin: 10; anchors.rightMargin: 10
                         spacing: 8
-                        Text {
+                        M3Icon {
                             id: btActiveIcon
-                            text: "󰑐"
-                            font.family: Style.fontFamilyMono; color: Style.accent; font.pixelSize: 13
+                            name: "restart_alt"
+                            color: Style.accent; size: 16
                             transformOrigin: Item.Center
                             RotationAnimation on rotation {
                                 running: btToggler.running
@@ -3356,10 +3339,10 @@ Item {
                     Column {
                         anchors.centerIn: parent
                         spacing: 8
-                        Text {
+                        M3Icon {
                             anchors.horizontalCenter: parent.horizontalCenter
-                            text: !root.btPower ? "󰂲" : "󰑐"
-                            font.family: Style.fontFamilyMono; font.pixelSize: 32
+                            name: !root.btPower ? "bluetooth_disabled" : "restart_alt"
+                            size: 32
                             color: Style.textMuted
                         }
                         Text {
@@ -3390,11 +3373,10 @@ Item {
                             anchors.leftMargin: 8; anchors.rightMargin: 8
                             spacing: 8
 
-                            Text {
-                                text: modelData.connected ? "󰂱" : "󰂯"
-                                font.family: Style.fontFamilyMono
+                            M3Icon {
+                                name: "bluetooth"
                                 color: modelData.connected ? Style.accent : Style.textSecondary
-                                font.pixelSize: 11
+                                size: 16
                             }
 
                             Text {
@@ -3405,11 +3387,10 @@ Item {
                                 elide: Text.ElideRight
                             }
 
-                            Text {
-                                text: modelData.connected ? "󰄬" : ""
-                                font.family: Style.fontFamilyMono
+                            M3Icon {
+                                name: modelData.connected ? "done" : ""
                                 color: Style.accent
-                                font.pixelSize: 11
+                                size: 16
                             }
                         }
 

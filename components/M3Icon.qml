@@ -31,7 +31,7 @@ Item {
             "󰂄": "battery_charging_full",
             "󰂃": "battery_alert",
             "󰈅": "apps",
-            "󰌾": "coffee", // Using coffee for idle inhibitor
+            "󰌾": "lock", // Lock icon for wifi password and inhibitor (if applicable)
             "󰄬": "done",
             "󰒮": "skip_previous",
             "󰏤": "pause",
@@ -46,7 +46,16 @@ Item {
             "󰂚": "notifications",
             "󰂛": "notifications_off",
             "󰍉": "search",
-            "󰸉": "wallpaper"
+            "󰸉": "wallpaper",
+            "󰐥": "power_settings_new",
+            "󰑐": "restart_alt",
+            "󰤄": "coffee", // Sleep mapped to coffee for now
+            "󰍃": "logout",
+            "󰒓": "settings",
+            "󰎆": "music_note",
+            "󰅂": "chevron_right",
+            "󰈈": "visibility",
+            "󰈉": "visibility_off"
         };
         return iconMap[inputName] || inputName;
     }
