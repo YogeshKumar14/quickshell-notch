@@ -1499,7 +1499,7 @@ Item {
 
                     Text {
                         text: Math.round(root.animatedOsdValue) + "%"
-                        font.family: Style.fontFamilyMono
+                        font.family: Style.fontFamily
                         font.pixelSize: 12
                         font.weight: Font.Bold
                         color: Style.textPrimary
@@ -1576,7 +1576,7 @@ Item {
                                         Text {
                                             anchors.centerIn: parent
                                             text: root.notifCount > 9 ? "9+" : root.notifCount.toString()
-                                            font.family: Style.fontFamilyMono
+                                            font.family: Style.fontFamily
                                             font.pixelSize: 7
                                             font.weight: Font.Bold
                                             color: root.currentPage === index ? Style.accent : "#000000"
@@ -1611,7 +1611,7 @@ Item {
                         }
                         Text {
                             text: root.batteryLevel + "%"
-                            font.family: Style.fontFamilyMono
+                            font.family: Style.fontFamily
                             font.pixelSize: Style.fontSizeSmall
                             color: Style.textPrimary
                         }
@@ -1970,7 +1970,7 @@ Item {
                                             Layout.fillWidth: true
                                             Text { text: "󰕾  Master Volume"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeNormal; color: Style.textPrimary }
                                             Item { Layout.fillWidth: true }
-                                            Text { text: root.volumeLevel + "%"; font.family: Style.fontFamilyMono; font.pixelSize: Style.fontSizeSmall; font.weight: Font.Bold; color: Style.accent }
+                                            Text { text: root.volumeLevel + "%"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeSmall; font.weight: Font.Bold; color: Style.accent }
                                         }
 
                                         CustomSlider {
@@ -2013,7 +2013,7 @@ Item {
                                             Layout.fillWidth: true
                                             Text { text: "󰍬  Microphone Input"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeNormal; color: Style.textPrimary }
                                             Item { Layout.fillWidth: true }
-                                            Text { text: root.micLevel + "%"; font.family: Style.fontFamilyMono; font.pixelSize: Style.fontSizeSmall; font.weight: Font.Bold; color: Style.accent }
+                                            Text { text: root.micLevel + "%"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeSmall; font.weight: Font.Bold; color: Style.accent }
                                         }
 
                                         CustomSlider {
@@ -2368,7 +2368,7 @@ Item {
                                             RowLayout {
                                                 Text { text: "󰻠 CPU Usage"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeNormal; font.weight: Font.Bold; color: Style.textPrimary }
                                                 Item { Layout.fillWidth: true }
-                                                Text { text: root.cpuUsage + "%"; font.family: Style.fontFamilyMono; font.pixelSize: Style.fontSizeNormal; font.weight: Font.Bold; color: Style.accent }
+                                                Text { text: root.cpuUsage + "%"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeNormal; font.weight: Font.Bold; color: Style.accent }
                                             }
 
                                             Canvas {
@@ -2430,7 +2430,7 @@ Item {
                                             RowLayout {
                                                 Text { text: "󰍛 RAM Memory"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeNormal; font.weight: Font.Bold; color: Style.textPrimary }
                                                 Item { Layout.fillWidth: true }
-                                                Text { text: root.ramUsage + "%"; font.family: Style.fontFamilyMono; font.pixelSize: Style.fontSizeNormal; font.weight: Font.Bold; color: Style.accent }
+                                                Text { text: root.ramUsage + "%"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeNormal; font.weight: Font.Bold; color: Style.accent }
                                             }
 
                                             Canvas {
@@ -2504,7 +2504,7 @@ Item {
                                                         return (bytes/(1024*1024)).toFixed(1) + "M/s";
                                                     }
                                                     text: "⇣" + formatBytes(root.netRxSpeed) + " ⇡" + formatBytes(root.netTxSpeed)
-                                                    font.family: Style.fontFamilyMono
+                                                    font.family: Style.fontFamily
                                                     font.pixelSize: 10
                                                     font.weight: Font.Bold
                                                     color: Style.accent
@@ -2605,7 +2605,7 @@ Item {
                                                 Text {
                                                     text: root.diskUsage + "%"
                                                     anchors.centerIn: parent
-                                                    font.family: Style.fontFamilyMono
+                                                    font.family: Style.fontFamily
                                                     font.pixelSize: 14
                                                     font.weight: Font.Bold
                                                     color: Style.textPrimary
