@@ -32,8 +32,9 @@ QtObject {
     readonly property int radiusNotchBottom: 16
 
     readonly property int radiusSmall: 8
-    readonly property int radiusMedium: 14
-    readonly property int radiusLarge: 20
+    readonly property int radiusMedium: 28
+    readonly property int radiusLarge: 32
+    readonly property int radiusPill: 100
 
     // Proportional UI Typography
     readonly property string fontFamily: "Inter, Roboto, Noto Sans, Ubuntu, sans-serif"

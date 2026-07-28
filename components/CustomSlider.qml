@@ -43,7 +43,7 @@ Item {
         }
 
         scale: control.pressed ? 0.99 : (control.hovered ? 1.005 : 1.0)
-        Behavior on scale { NumberAnimation { duration: 150; easing.type: Easing.OutCubic } }
+        Behavior on scale { SpringAnimation { spring: 4.0; damping: 0.6; mass: 1.0 } }
 
         background: Rectangle {
             width: control.availableWidth
@@ -58,7 +58,7 @@ Item {
                 radius: height / 2
 
                 Behavior on width {
-                    NumberAnimation { duration: 75; easing.type: Easing.OutQuad }
+                    SpringAnimation { spring: 3.5; damping: 0.7; mass: 1.0 }
                 }
             }
         }

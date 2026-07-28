@@ -33,13 +33,13 @@ Item {
         x: root.checked ? root.width - width - 2 : 2
 
         Behavior on x {
-            NumberAnimation { duration: 180; easing.type: Easing.OutCubic }
+            SpringAnimation { spring: 3.0; damping: 0.7; mass: 1.0 }
         }
 
         scale: mouseArea.pressed ? 1.15 : (mouseArea.containsMouse ? 1.06 : 1.0)
 
         Behavior on scale {
-            NumberAnimation { duration: 140; easing.type: Easing.OutCubic }
+            SpringAnimation { spring: 4.0; damping: 0.6; mass: 1.0 }
         }
     }
 

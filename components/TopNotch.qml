@@ -1942,33 +1942,33 @@ Item {
                                                 // Media Prev Button
                                                 Rectangle {
                                                     width: 32; height: 32; radius: 16; color: Style.cardBgHover
-                                                    scale: (root.buttonAnimsVal && prevM.pressed) ? 0.92 : ((root.buttonAnimsVal && prevM.containsMouse) ? 1.08 : 1.0)
-                                                    Behavior on scale { enabled: root.buttonAnimsVal; NumberAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
+                                                    scale: (root.buttonAnimsVal && prevM.pressed) ? 0.90 : ((root.buttonAnimsVal && prevM.containsMouse) ? 1.15 : 1.0)
+                                                    Behavior on scale { enabled: root.buttonAnimsVal; SpringAnimation { spring: 3.5; damping: 0.6; mass: 1.0 } }
                                                     Behavior on color { ColorAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
 
-                                                    Text { anchors.centerIn: parent; text: "󰒮"; font.family: Style.fontFamilyMono; color: Style.textPrimary; font.pixelSize: 14 }
+                                                    M3Icon { anchors.centerIn: parent; name: "skip_previous"; color: Style.textPrimary; size: 24 }
                                                     MouseArea { id: prevM; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: if (root.activePlayer) root.activePlayer.previous() }
                                                 }
 
                                                 // Media Play/Pause Button
                                                 Rectangle {
                                                     width: 40; height: 40; radius: 20; color: Style.accent
-                                                    scale: (root.buttonAnimsVal && playM.pressed) ? 0.92 : ((root.buttonAnimsVal && playM.containsMouse) ? 1.08 : 1.0)
-                                                    Behavior on scale { enabled: root.buttonAnimsVal; NumberAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
+                                                    scale: (root.buttonAnimsVal && playM.pressed) ? 0.90 : ((root.buttonAnimsVal && playM.containsMouse) ? 1.15 : 1.0)
+                                                    Behavior on scale { enabled: root.buttonAnimsVal; SpringAnimation { spring: 3.5; damping: 0.6; mass: 1.0 } }
                                                     Behavior on color { ColorAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
 
-                                                    Text { anchors.centerIn: parent; text: root.isPlaying ? "󰏤" : "󰐊"; font.family: Style.fontFamilyMono; color: "#000"; font.pixelSize: 18; font.weight: Font.Bold }
+                                                    M3Icon { anchors.centerIn: parent; name: root.isPlaying ? "pause" : "play_arrow"; color: "#000000"; size: 28 }
                                                     MouseArea { id: playM; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: if (root.activePlayer) root.activePlayer.togglePlaying() }
                                                 }
 
                                                 // Media Next Button
                                                 Rectangle {
                                                     width: 32; height: 32; radius: 16; color: Style.cardBgHover
-                                                    scale: (root.buttonAnimsVal && nextM.pressed) ? 0.92 : ((root.buttonAnimsVal && nextM.containsMouse) ? 1.08 : 1.0)
-                                                    Behavior on scale { enabled: root.buttonAnimsVal; NumberAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
+                                                    scale: (root.buttonAnimsVal && nextM.pressed) ? 0.90 : ((root.buttonAnimsVal && nextM.containsMouse) ? 1.15 : 1.0)
+                                                    Behavior on scale { enabled: root.buttonAnimsVal; SpringAnimation { spring: 3.5; damping: 0.6; mass: 1.0 } }
                                                     Behavior on color { ColorAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
 
-                                                    Text { anchors.centerIn: parent; text: "󰒭"; font.family: Style.fontFamilyMono; color: Style.textPrimary; font.pixelSize: 14 }
+                                                    M3Icon { anchors.centerIn: parent; name: "skip_next"; color: Style.textPrimary; size: 24 }
                                                     MouseArea { id: nextM; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: if (root.activePlayer) root.activePlayer.next() }
                                                 }
                                             }
@@ -1991,7 +1991,9 @@ Item {
 
                                         RowLayout {
                                             Layout.fillWidth: true
-                                            Text { text: "󰕾  Master Volume"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeNormal; color: Style.textPrimary }
+                                            spacing: 8
+                                            M3Icon { name: "volume_up"; color: Style.textPrimary; size: 18 }
+                                            Text { text: "Master Volume"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeNormal; color: Style.textPrimary }
                                             Item { Layout.fillWidth: true }
                                             Text { text: root.volumeLevel + "%"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeSmall; font.weight: Font.Bold; color: Style.accent }
                                         }
@@ -2034,7 +2036,9 @@ Item {
 
                                         RowLayout {
                                             Layout.fillWidth: true
-                                            Text { text: "󰍬  Microphone Input"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeNormal; color: Style.textPrimary }
+                                            spacing: 8
+                                            M3Icon { name: "mic"; color: Style.textPrimary; size: 18 }
+                                            Text { text: "Microphone Input"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeNormal; color: Style.textPrimary }
                                             Item { Layout.fillWidth: true }
                                             Text { text: root.micLevel + "%"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeSmall; font.weight: Font.Bold; color: Style.accent }
                                         }
@@ -2389,7 +2393,9 @@ Item {
                                             spacing: 4
 
                                             RowLayout {
-                                                Text { text: "󰻠 CPU Usage"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeNormal; font.weight: Font.Bold; color: Style.textPrimary }
+                                                spacing: 6
+                                                M3Icon { name: "memory"; color: Style.textPrimary; size: 16 }
+                                                Text { text: "CPU Usage"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeNormal; font.weight: Font.Bold; color: Style.textPrimary }
                                                 Item { Layout.fillWidth: true }
                                                 Text { text: root.cpuUsage + "%"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeNormal; font.weight: Font.Bold; color: Style.accent }
                                             }
@@ -2451,7 +2457,9 @@ Item {
                                             spacing: 4
 
                                             RowLayout {
-                                                Text { text: "󰍛 RAM Memory"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeNormal; font.weight: Font.Bold; color: Style.textPrimary }
+                                                spacing: 6
+                                                M3Icon { name: "memory"; color: Style.textPrimary; size: 16 }
+                                                Text { text: "RAM Memory"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeNormal; font.weight: Font.Bold; color: Style.textPrimary }
                                                 Item { Layout.fillWidth: true }
                                                 Text { text: root.ramUsage + "%"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeNormal; font.weight: Font.Bold; color: Style.accent }
                                             }
@@ -2518,7 +2526,9 @@ Item {
                                             spacing: 4
 
                                             RowLayout {
-                                                Text { text: "󰈀 Network"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeNormal; font.weight: Font.Bold; color: Style.textPrimary }
+                                                spacing: 6
+                                                M3Icon { name: "wifi"; color: Style.textPrimary; size: 16 }
+                                                Text { text: "Network"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeNormal; font.weight: Font.Bold; color: Style.textPrimary }
                                                 Item { Layout.fillWidth: true }
                                                 Text { 
                                                     function formatBytes(bytes) {
@@ -2587,7 +2597,9 @@ Item {
                                             spacing: 4
 
                                             RowLayout {
-                                                Text { text: "󰋊 Disk (Root)"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeNormal; font.weight: Font.Bold; color: Style.textPrimary }
+                                                spacing: 6
+                                                M3Icon { name: "hard_drive"; color: Style.textPrimary; size: 16 }
+                                                Text { text: "Disk (Root)"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeNormal; font.weight: Font.Bold; color: Style.textPrimary }
                                                 Item { Layout.fillWidth: true }
                                             }
 
