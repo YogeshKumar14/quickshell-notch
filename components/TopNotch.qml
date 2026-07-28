@@ -1802,58 +1802,85 @@ Item {
                                         anchors.margins: 14
                                         spacing: 16
 
-                                        // Left: Circular Album Art (Spinning Vinyl)
-                                        Rectangle {
-                                            width: 62; height: 62; radius: 31
-                                            color: Style.cardBgHover
-                                            border.color: Style.cardBorder
-                                            clip: true
+                                        // Left: Circular Album Art (Spinning Vinyl) + Visualizer
+                                        Item {
+                                            width: 80; height: 80
+                                            anchors.verticalCenter: parent.verticalCenter
                                             
-                                            // The rotating vinyl container
-                                            Item {
-                                                anchors.fill: parent
-                                                visible: dynamicAlbumArt.source.toString() !== ""
-
-                                                RotationAnimation on rotation {
-                                                    from: 0
-                                                    to: 360
-                                                    duration: 10000 // 10 seconds for a full vinyl rotation
-                                                    loops: Animation.Infinite
-                                                    running: true
-                                                    paused: !root.isPlaying
-                                                }
-
-                                                Image {
-                                                    id: dynamicAlbumArt
-                                                    anchors.fill: parent
-                                                    source: (root.activePlayer && root.activePlayer.trackArtUrl) ? root.activePlayer.trackArtUrl : ""
-                                                    fillMode: Image.PreserveAspectCrop
-                                                    visible: false
-                                                }
-
-                                                OpacityMask {
-                                                    anchors.fill: parent
-                                                    source: dynamicAlbumArt
-                                                    maskSource: Rectangle {
-                                                        width: 62; height: 62; radius: 31
+                                            // Circular Visualizer
+                                            Repeater {
+                                                model: 24
+                                                Rectangle {
+                                                    property real val: (root.visualizerBars && root.visualizerBars.length > 0) ? root.visualizerBars[index % root.visualizerBars.length] : 0
+                                                    width: 4
+                                                    height: Math.max(4, (val / 100.0) * 16)
+                                                    radius: 2
+                                                    color: Style.accent
+                                                    x: 40 - width / 2
+                                                    y: 40 - 36 - height // 36px from center (outside 31px vinyl)
+                                                    
+                                                    transformOrigin: Item.Bottom
+                                                    transform: Rotation {
+                                                        origin.x: width / 2
+                                                        origin.y: height + 36
+                                                        angle: (360 / 24) * index
                                                     }
                                                 }
                                             }
 
-                                            // Vinyl Center Hole Cutout (Static over the rotating image)
                                             Rectangle {
-                                                width: 14; height: 14; radius: 7
+                                                width: 62; height: 62; radius: 31
                                                 anchors.centerIn: parent
-                                                color: Style.background
-                                                visible: dynamicAlbumArt.source.toString() !== ""
-                                            }
+                                                color: Style.cardBgHover
+                                                border.color: Style.cardBorder
+                                                clip: true
+                                                
+                                                // The rotating vinyl container
+                                                Item {
+                                                    anchors.fill: parent
+                                                    visible: dynamicAlbumArt.source.toString() !== ""
 
-                                            M3Icon {
-                                                anchors.centerIn: parent
-                                                name: "music_note"
-                                                size: 24
-                                                color: Style.accent
-                                                visible: !(root.activePlayer && root.activePlayer.trackArtUrl && root.activePlayer.trackArtUrl !== "")
+                                                    RotationAnimation on rotation {
+                                                        from: 0
+                                                        to: 360
+                                                        duration: 10000 // 10 seconds for a full vinyl rotation
+                                                        loops: Animation.Infinite
+                                                        running: true
+                                                        paused: !root.isPlaying
+                                                    }
+
+                                                    Image {
+                                                        id: dynamicAlbumArt
+                                                        anchors.fill: parent
+                                                        source: (root.activePlayer && root.activePlayer.trackArtUrl) ? root.activePlayer.trackArtUrl : ""
+                                                        fillMode: Image.PreserveAspectCrop
+                                                        visible: false
+                                                    }
+
+                                                    OpacityMask {
+                                                        anchors.fill: parent
+                                                        source: dynamicAlbumArt
+                                                        maskSource: Rectangle {
+                                                            width: 62; height: 62; radius: 31
+                                                        }
+                                                    }
+                                                }
+
+                                                // Vinyl Center Hole Cutout (Static over the rotating image)
+                                                Rectangle {
+                                                    width: 14; height: 14; radius: 7
+                                                    anchors.centerIn: parent
+                                                    color: Style.background
+                                                    visible: dynamicAlbumArt.source.toString() !== ""
+                                                }
+
+                                                M3Icon {
+                                                    anchors.centerIn: parent
+                                                    name: "music_note"
+                                                    size: 24
+                                                    color: Style.accent
+                                                    visible: !(root.activePlayer && root.activePlayer.trackArtUrl && root.activePlayer.trackArtUrl !== "")
+                                                }
                                             }
                                         }
 
@@ -1883,46 +1910,14 @@ Item {
                                             }
                                         }
 
-                                        // Right: Dynamic Swap (Visualizer <-> Controls)
+                                        // Right: Playback Controls (Always Visible)
                                         Item {
                                             width: 140
                                             height: 60
 
-                                            property bool isHovered: mediaHoverArea.containsMouse || 
-                                                (typeof prevM !== "undefined" && prevM.containsMouse) || 
-                                                (typeof playM !== "undefined" && playM.containsMouse) || 
-                                                (typeof nextM !== "undefined" && nextM.containsMouse)
-
-                                            // Live Visualizer (Visible when NOT hovered)
-                                            RowLayout {
-                                                anchors.fill: parent
-                                                spacing: 4
-                                                opacity: parent.isHovered ? 0.0 : 1.0
-                                                Behavior on opacity { NumberAnimation { duration: 250; easing.type: Easing.InOutQuad } }
-                                                visible: opacity > 0.01
-
-                                                Item { Layout.fillWidth: true } // Push visualizer to right
-
-                                                Repeater {
-                                                    model: 10
-                                                    Rectangle {
-                                                        width: 4
-                                                        property real val: (root.visualizerBars && index < root.visualizerBars.length) ? root.visualizerBars[index] : 0
-                                                        height: Math.max(4, Math.min(30, (val / 100.0) * 30))
-                                                        radius: 2
-                                                        color: Style.accent
-                                                        anchors.verticalCenter: parent.verticalCenter
-                                                    }
-                                                }
-                                            }
-
-                                            // Playback Controls (Visible WHEN hovered)
                                             RowLayout {
                                                 anchors.fill: parent
                                                 spacing: 12
-                                                opacity: parent.isHovered ? 1.0 : 0.0
-                                                Behavior on opacity { NumberAnimation { duration: 250; easing.type: Easing.InOutQuad } }
-                                                visible: opacity > 0.01
 
                                                 Item { Layout.fillWidth: true } // Push controls to right
                                                 
