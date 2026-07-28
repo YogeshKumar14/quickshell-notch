@@ -1815,20 +1815,23 @@ Item {
                                             // Circular Visualizer
                                             Repeater {
                                                 model: 24
-                                                Rectangle {
-                                                    property real val: (root.visualizerBars && root.visualizerBars.length > 0) ? root.visualizerBars[index % root.visualizerBars.length] : 0
+                                                Item {
                                                     width: 4
-                                                    height: Math.max(4, (val / 100.0) * 16)
-                                                    radius: 2
-                                                    color: Style.accent
-                                                    x: 40 - width / 2
-                                                    y: 40 - 36 - height // 36px from center (outside 31px vinyl)
+                                                    height: 40 // Center to top edge
+                                                    x: 38 // 40 - width/2
+                                                    y: 0
                                                     
                                                     transformOrigin: Item.Bottom
-                                                    transform: Rotation {
-                                                        origin.x: width / 2
-                                                        origin.y: height + 36
-                                                        angle: (360 / 24) * index
+                                                    rotation: (360 / 24) * index
+                                                    
+                                                    Rectangle {
+                                                        property real val: (root.visualizerBars && root.visualizerBars.length > 0) ? root.visualizerBars[index % root.visualizerBars.length] : 0
+                                                        width: 4
+                                                        height: Math.max(4, (val / 100.0) * 16)
+                                                        radius: 2
+                                                        color: Style.accent
+                                                        anchors.bottom: parent.bottom
+                                                        anchors.bottomMargin: 36 // 36px offset from the center (vinyl radius)
                                                     }
                                                 }
                                             }

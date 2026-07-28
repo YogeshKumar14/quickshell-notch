@@ -1,6 +1,6 @@
 [general]
 bars = 20
-framerate = 25
+framerate = 15
 autosens = 1
 sleep_timer = 2
 
