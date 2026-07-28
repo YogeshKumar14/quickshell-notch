@@ -1546,22 +1546,6 @@ Item {
                         border.color: Style.cardBorder
                         border.width: 1
 
-                        // Sliding Highlight Pill
-                        Rectangle {
-                            id: slidingPill
-                            height: 32
-                            radius: 16
-                            color: Style.accent
-                            z: 0
-
-                            property var currentItem: segRepeater.itemAt(root.currentPage)
-                            x: currentItem ? currentItem.x : 0
-                            width: currentItem ? currentItem.width : 0
-
-                            Behavior on x { SpringAnimation { spring: root.tabSpringTension; damping: root.tabSpringDamping } }
-                            Behavior on width { SpringAnimation { spring: root.tabSpringTension; damping: root.tabSpringDamping } }
-                        }
-
                         // Sliding Hover Pill
                         Rectangle {
                             id: hoverPill
@@ -1575,9 +1559,25 @@ Item {
                             width: hoveredItem ? hoveredItem.width : slidingPill.width
                             opacity: segRow.hoveredIndex >= 0 && segRow.hoveredIndex !== root.currentPage ? 1 : 0
 
-                            Behavior on x { SpringAnimation { spring: root.tabSpringTension; damping: root.tabSpringDamping } }
-                            Behavior on width { SpringAnimation { spring: root.tabSpringTension; damping: root.tabSpringDamping } }
+                            Behavior on x { enabled: hoverPill.width > 0; SpringAnimation { spring: root.tabSpringTension; damping: root.tabSpringDamping } }
+                            Behavior on width { enabled: hoverPill.width > 0; SpringAnimation { spring: root.tabSpringTension; damping: root.tabSpringDamping } }
                             Behavior on opacity { NumberAnimation { duration: root.buttonSpeedVal } }
+                        }
+
+                        // Sliding Highlight Pill
+                        Rectangle {
+                            id: slidingPill
+                            height: 32
+                            radius: 16
+                            color: Style.accent
+                            z: 0
+
+                            property var currentItem: segRepeater.itemAt(root.currentPage)
+                            x: currentItem ? currentItem.x : 0
+                            width: currentItem ? currentItem.width : 0
+
+                            Behavior on x { enabled: slidingPill.width > 0; SpringAnimation { spring: root.tabSpringTension; damping: root.tabSpringDamping } }
+                            Behavior on width { enabled: slidingPill.width > 0; SpringAnimation { spring: root.tabSpringTension; damping: root.tabSpringDamping } }
                         }
 
                         RowLayout {
