@@ -1651,10 +1651,10 @@ Item {
                         }
                     }
 
-                    // Gear Icon button with Micro-Animations
+                    // Notification Bell Icon button with Micro-Animations
                     Rectangle {
                         width: 28; height: 28; radius: 14
-                        color: gearM.containsMouse ? Style.cardBgHover : Style.cardBg
+                        color: notifM.containsMouse ? Style.cardBgHover : Style.cardBg
                         border.color: Style.cardBorder
 
                         scale: (root.buttonAnimsVal && notifM.pressed) ? 0.95 : ((root.buttonAnimsVal && notifM.containsMouse) ? 1.08 : 1.0)

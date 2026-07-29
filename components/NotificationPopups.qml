@@ -8,7 +8,7 @@ Item {
     id: root
 
     width: 374
-    implicitHeight: popupListView.contentHeight
+    implicitHeight: popupListView.contentHeight + 48
 
     // --- Data Layer ---
     // ListModel stores SCALAR properties only (strings, ints).
@@ -76,16 +76,17 @@ Item {
         width: parent.width
         height: contentHeight
         interactive: false
-        spacing: 0
-        clip: false
+        spacing: -2
+        clip: true
 
         model: popupModel
 
-        // Slide in from the right with a spring bounce
+        // Slide in from the right-top with a spring bounce
         add: Transition {
             ParallelAnimation {
                 NumberAnimation { property: "opacity"; from: 0; to: 1; duration: 250; easing.type: Easing.OutCubic }
                 SpringAnimation { property: "x"; spring: 3.5; damping: 0.75; from: 374; to: 0 }
+                SpringAnimation { property: "y"; spring: 6.0; damping: 0.8; from: -20; to: 0 }
             }
         }
 
@@ -97,9 +98,9 @@ Item {
             }
         }
 
-        // Spring-based repositioning when items shift for dynamic reflow
+        // Spring-based repositioning when items shift for connected drip reflow
         displaced: Transition {
-            SpringAnimation { properties: "y"; spring: 4.0; damping: 0.7 }
+            SpringAnimation { properties: "y"; spring: 5.0; damping: 0.65 }
         }
 
         delegate: Item {

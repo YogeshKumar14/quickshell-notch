@@ -22,7 +22,7 @@ Item {
 
     Timer {
         id: clearTimer
-        interval: 80
+        interval: 180
         repeat: true
         onTriggered: {
             if (root.clearIdx < root.notifModel.count) {
@@ -135,6 +135,17 @@ Item {
             clip: true
             spacing: 4
             visible: root.notifCount > 0
+
+            remove: Transition {
+                ParallelAnimation {
+                    NumberAnimation { property: "opacity"; to: 0; duration: 150; easing.type: Easing.OutCubic }
+                    NumberAnimation { property: "x"; to: 60; duration: 150; easing.type: Easing.OutCubic }
+                }
+            }
+
+            displaced: Transition {
+                NumberAnimation { properties: "y"; duration: 200; easing.type: Easing.OutCubic }
+            }
 
             delegate: Rectangle {
                 width: notifList.width
