@@ -92,7 +92,7 @@ FocusScope {
                 anchors.rightMargin: 10
                 spacing: 6
 
-                Text { text: "󰍉"; font.family: Style.fontFamilyMono; color: Style.textMuted; font.pixelSize: 13 }
+                M3Icon { name: "search"; color: Style.textMuted; size: 16 }
 
                 TextInput {
                     id: searchAppInput
@@ -180,8 +180,8 @@ FocusScope {
                     x: appGrid.currentItem ? appGrid.currentItem.x : 0
                     y: appGrid.currentItem ? appGrid.currentItem.y : 0
                     
-                    Behavior on x { NumberAnimation { duration: 250; easing.type: Easing.OutCubic } }
-                    Behavior on y { NumberAnimation { duration: 250; easing.type: Easing.OutCubic } }
+                    Behavior on x { SpringAnimation { spring: 4.0; damping: 0.7; mass: 1.0 } }
+                    Behavior on y { SpringAnimation { spring: 4.0; damping: 0.7; mass: 1.0 } }
 
                     Rectangle {
                         anchors.fill: parent
@@ -212,7 +212,7 @@ FocusScope {
                         border.width: 1
                         scale: isSelected ? 1.03 : 1.0
 
-                        Behavior on scale { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
+                        Behavior on scale { SpringAnimation { spring: 4.0; damping: 0.6; mass: 1.0 } }
 
                         ColumnLayout {
                             anchors.centerIn: parent
@@ -234,13 +234,12 @@ FocusScope {
                                     sourceSize.height: 32
                                 }
 
-                                Text {
+                                M3Icon {
                                     anchors.centerIn: parent
                                     visible: appIcon.status !== Image.Ready
-                                    text: "󰵆"
-                                    font.family: Style.fontFamilyMono
-                                    font.pixelSize: 20
+                                    name: "apps"
                                     color: Style.accent
+                                    size: 24
                                 }
                             }
 

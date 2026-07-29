@@ -341,7 +341,7 @@ PanelWindow {
                                 RowLayout {
                                     anchors.centerIn: parent
                                     spacing: 6
-                                    Text { text: index < 2 ? "󰍹" : "󰒓"; font.family: Style.fontFamilyMono; color: root.currentTab === index ? "#000" : Style.textSecondary; font.pixelSize: 13 }
+                                    M3Icon { name: index < 2 ? "desktop_windows" : "settings"; color: root.currentTab === index ? "#000" : Style.textSecondary; size: 16 }
                                     Text { text: modelData; font.family: Style.fontFamily; color: root.currentTab === index ? "#000" : Style.textSecondary; font.pixelSize: 12; font.weight: Font.Bold }
                                 }
 
@@ -415,7 +415,7 @@ PanelWindow {
                         RowLayout {
                             width: parent.width
                             spacing: 6
-                            Text { text: "󰍹"; font.family: Style.fontFamilyMono; font.pixelSize: 13; color: Style.accent }
+                            M3Icon { name: "desktop_windows"; color: Style.accent; size: 16 }
                             Text { text: "WINDOW LAYOUT & GAPS"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeSmall; font.weight: Font.Bold; color: Style.textMuted }
                         }
 
@@ -505,7 +505,7 @@ PanelWindow {
                         width: parent.width; spacing: 8
                         RowLayout {
                             width: parent.width; spacing: 6
-                            Text { text: "󰒓"; font.family: Style.fontFamilyMono; font.pixelSize: 13; color: Style.accent }
+                            M3Icon { name: "settings"; color: Style.accent; size: 16 }
                             Text { text: "DECORATION & OPACITY"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeSmall; font.weight: Font.Bold; color: Style.textMuted }
                         }
 
@@ -586,7 +586,7 @@ PanelWindow {
                         width: parent.width; spacing: 8
                         RowLayout {
                             width: parent.width; spacing: 6
-                            Text { text: "󰒓"; font.family: Style.fontFamilyMono; font.pixelSize: 13; color: Style.accent }
+                            M3Icon { name: "settings"; color: Style.accent; size: 16 }
                             Text { text: "BORDERS & EFFECTS"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeSmall; font.weight: Font.Bold; color: Style.textMuted }
                         }
 
@@ -689,7 +689,7 @@ PanelWindow {
                         width: parent.width; spacing: 8
                         RowLayout {
                             width: parent.width; spacing: 6
-                            Text { text: "󰍽"; font.family: Style.fontFamilyMono; font.pixelSize: 13; color: Style.accent }
+                            M3Icon { name: "keyboard"; color: Style.accent; size: 16 }
                             Text { text: "MOUSE & TOUCHPAD INPUT"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeSmall; font.weight: Font.Bold; color: Style.textMuted }
                         }
 
@@ -747,7 +747,7 @@ PanelWindow {
                         width: parent.width; spacing: 8
                         RowLayout {
                             width: parent.width; spacing: 6
-                            Text { text: "󰎆"; font.family: Style.fontFamilyMono; font.pixelSize: 13; color: Style.accent }
+                            M3Icon { name: "music_note"; color: Style.accent; size: 16 }
                             Text { text: "MUSIC VISUALIZER OVERLAY & STYLES"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeSmall; font.weight: Font.Bold; color: Style.textMuted }
                         }
 
@@ -920,7 +920,7 @@ PanelWindow {
                         width: parent.width; spacing: 8
                         RowLayout {
                             width: parent.width; spacing: 6
-                            Text { text: "󰍹"; font.family: Style.fontFamilyMono; font.pixelSize: 13; color: Style.accent }
+                            M3Icon { name: "desktop_windows"; color: Style.accent; size: 16 }
                             Text { text: "BUTTON MICRO-ANIMATIONS"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeSmall; font.weight: Font.Bold; color: Style.textMuted }
                         }
 
@@ -969,7 +969,7 @@ PanelWindow {
                         width: parent.width; spacing: 8
                         RowLayout {
                             width: parent.width; spacing: 6
-                            Text { text: "󰍹"; font.family: Style.fontFamilyMono; font.pixelSize: 13; color: Style.accent }
+                            M3Icon { name: "desktop_windows"; color: Style.accent; size: 16 }
                             Text { text: "WORKSPACE OVERLAY & HANDLE ANIMATIONS"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeSmall; font.weight: Font.Bold; color: Style.textMuted }
                         }
 
@@ -1035,7 +1035,7 @@ PanelWindow {
                         width: parent.width; spacing: 8
                         RowLayout {
                             width: parent.width; spacing: 6
-                            Text { text: "󰍹"; font.family: Style.fontFamilyMono; font.pixelSize: 13; color: Style.accent }
+                            M3Icon { name: "desktop_windows"; color: Style.accent; size: 16 }
                             Text { text: "BAR APPEARANCE, CLOCK & APP GRID"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeSmall; font.weight: Font.Bold; color: Style.textMuted }
                         }
 
@@ -1154,7 +1154,7 @@ PanelWindow {
                         width: parent.width; spacing: 8
                         RowLayout {
                             width: parent.width; spacing: 6
-                            Text { text: "󰸉"; font.family: Style.fontFamilyMono; font.pixelSize: 13; color: Style.accent }
+                            M3Icon { name: "wallpaper"; color: Style.accent; size: 16 }
                             Text { text: "WALLPAPER TRANSITION CONTROL"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeSmall; font.weight: Font.Bold; color: Style.textMuted }
                         }
 
@@ -1211,7 +1211,7 @@ PanelWindow {
                         width: parent.width; spacing: 8
                         RowLayout {
                             width: parent.width; spacing: 6
-                            Text { text: "󰍹"; font.family: Style.fontFamilyMono; font.pixelSize: 13; color: Style.accent }
+                            M3Icon { name: "desktop_windows"; color: Style.accent; size: 16 }
                             Text { text: "NOTCH EXPANSION ANIMATION"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeSmall; font.weight: Font.Bold; color: Style.textMuted }
                         }
 
@@ -1268,7 +1268,7 @@ PanelWindow {
                         width: parent.width; spacing: 8
                         RowLayout {
                             width: parent.width; spacing: 6
-                            Text { text: "󰁹"; font.family: Style.fontFamilyMono; font.pixelSize: 13; color: Style.accent }
+                            M3Icon { name: "battery_charging_full"; color: Style.accent; size: 16 }
                             Text { text: "POWER & OSD TIMEOUTS"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeSmall; font.weight: Font.Bold; color: Style.textMuted }
                         }
 
@@ -1316,7 +1316,7 @@ PanelWindow {
                         width: parent.width; spacing: 8
                         RowLayout {
                             width: parent.width; spacing: 6
-                            Text { text: "󰻠"; font.family: Style.fontFamilyMono; font.pixelSize: 13; color: Style.accent }
+                            M3Icon { name: "memory"; color: Style.accent; size: 16 }
                             Text { text: "SYSTEM MONITOR & POLLING RATE"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeSmall; font.weight: Font.Bold; color: Style.textMuted }
                         }
 
@@ -1380,7 +1380,7 @@ PanelWindow {
                         id: resetRow
                         anchors.centerIn: parent
                         spacing: 6
-                        Text { text: "󰑐"; font.family: Style.fontFamilyMono; color: Style.accent; font.pixelSize: 13 }
+                        M3Icon { name: "refresh"; color: Style.accent; size: 16 }
                         Text { text: "Reset"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeSmall; color: Style.textPrimary; font.weight: Font.Bold }
                     }
 

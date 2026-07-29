@@ -58,6 +58,7 @@ Item {
                 radius: height / 2
 
                 Behavior on width {
+                    enabled: !control.pressed
                     SpringAnimation { spring: 3.5; damping: 0.7; mass: 1.0 }
                 }
             }

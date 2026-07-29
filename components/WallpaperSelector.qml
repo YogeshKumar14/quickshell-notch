@@ -118,7 +118,7 @@ FocusScope {
                 anchors.rightMargin: 10
                 spacing: 6
 
-                Text { text: "󰍉"; font.family: Style.fontFamilyMono; color: Style.textMuted; font.pixelSize: 13 }
+                M3Icon { name: "search"; color: Style.textMuted; size: 16 }
 
                 TextInput {
                     id: searchInput
