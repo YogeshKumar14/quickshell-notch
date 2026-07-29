@@ -280,26 +280,6 @@ FocusScope {
                                     color: Style.accent
                                 }
                             }
-
-                            Rectangle {
-                                anchors.left: parent.left
-                                anchors.right: parent.right
-                                anchors.bottom: parent.bottom
-                                height: 22
-                                color: "#D0000000"
-
-                                Text {
-                                    anchors.fill: parent
-                                    anchors.margins: 4
-                                    text: model.name
-                                    font.family: Style.fontFamily
-                                    font.pixelSize: 10
-                                    font.weight: Font.Medium
-                                    color: Style.textPrimary
-                                    elide: Text.ElideRight
-                                    verticalAlignment: Text.AlignVCenter
-                                }
-                            }
                         }
 
                         MouseArea {
