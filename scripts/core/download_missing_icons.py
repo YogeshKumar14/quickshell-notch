@@ -4,7 +4,8 @@ import os
 ICONS = [
     "wifi", "bluetooth", "battery_full", "battery_charging_full", 
     "battery_alert", "memory", "hard_drive", "notifications", 
-    "notifications_off", "search", "wallpaper", "apps", "coffee"
+    "notifications_off", "search", "wallpaper", "apps", "coffee",
+    "refresh", "desktop_windows", "keyboard", "notifications_none"
 ]
 
 base_url = "https://raw.githubusercontent.com/google/material-design-icons/master/symbols/web/{}/materialsymbolsrounded/{}_48px.svg"
