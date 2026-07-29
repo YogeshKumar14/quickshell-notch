@@ -9,7 +9,7 @@ When building or modifying UI components for this project, you MUST strictly adh
 
 ## 1. Aesthetics & Shapes
 - **M3 Expressive Shapes**: Go all-in on expressive shapes. Use full pill-shapes (e.g., `radius: height / 2`) for buttons, sliders, and highlights. Use large rounded corners (e.g., `28px+`) for outer cards and floating containers.
-- **Glassmorphism**: Use translucent blacks (e.g., `#D0000000`) paired with `layer.effect: GaussianBlur` for premium overlays and backgrounds. Avoid opaque flat colors.
+- **Solid Black & Wallust**: We DO NOT use glassmorphism in this project. Use solid black (`#000000` or `Style.cardBg`) for all backgrounds, and strictly use the dynamically updating Wallust accent colors (`Style.accent`) for highlights. Avoid opaque flat colors that aren't tied to the `Style` singleton.
 - **Icons**: NEVER use legacy text-based NerdFonts (e.g., `text: "󰐥"`). ALWAYS use Google's Material Symbols Rounded via the custom `M3Icon` component mapped to an SVG file (e.g., `M3Icon { name: "power_settings_new" }`).
 
 ## 2. Micro-Animations & Fluid Motion

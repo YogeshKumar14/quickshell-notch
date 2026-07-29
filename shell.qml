@@ -51,7 +51,7 @@ Scope {
             right: true
         }
         
-        implicitWidth: 350
+        implicitWidth: 374
         implicitHeight: popupsComp.implicitHeight
         color: "transparent"
         
