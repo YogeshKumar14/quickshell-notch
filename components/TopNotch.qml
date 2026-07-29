@@ -279,7 +279,7 @@ Item {
         } else {
             if (appsTabAlive) appsUnloadTimer.restart();
         }
-        if (currentPage === 4) {
+        if (currentPage === 3) {
             sysScanner.running = true;
         }
     }
@@ -845,7 +845,7 @@ Item {
     Timer {
         id: sysTimer
         interval: root.sysStatsIntervalVal
-        running: root.isExpanded && root.currentPage === 4
+        running: root.isExpanded && root.currentPage === 3
         repeat: true
         onTriggered: sysScanner.running = true
     }
@@ -1596,7 +1596,7 @@ Item {
 
                             Repeater {
                                 id: segRepeater
-                                model: ["Media", "Walls", "Apps", "Notifs", "Stats"]
+                                model: ["Media", "Walls", "Apps", "Stats"]
                                 
                                 Rectangle {
                                     property bool isHovered: segMouse.containsMouse
@@ -1621,7 +1621,7 @@ Item {
 
                                         // Smooth Morphing Badge Wrapper
                                         Item {
-                                            width: (index === 3 && root.notifCount > 0) ? 20 : 0
+                                            width: 0 // badge removed
                                             height: 14
                                             anchors.verticalCenter: parent.verticalCenter
                                             clip: true
@@ -1661,7 +1661,7 @@ Item {
                                         width: 1
                                         height: 16
                                         color: Style.cardBorder
-                                        visible: index < 4 && root.currentPage !== index && root.currentPage !== index + 1
+                                        visible: index < 3 && root.currentPage !== index && root.currentPage !== index + 1
                                     }
                                 }
                             }
@@ -2169,250 +2169,7 @@ Item {
                             }
                         }
 
-                        // PAGE 3: ENHANCED iOS NOTIFICATION CONTROL CENTER
-                        Item {
-                            width: pageViewport.width
-                            height: pageViewport.height
-                            clip: true
-
-                            ColumnLayout {
-                                anchors.fill: parent
-                                spacing: 12
-
-                                Text {
-                                    text: "SwayNC Control Center"
-                                    font.family: Style.fontFamily
-                                    font.pixelSize: Style.fontSizeLarge
-                                    font.weight: Font.Bold
-                                    color: Style.accent
-                                }
-
-                                // CARD 1: Status Overview & DND Switch
-                                Rectangle {
-                                    Layout.fillWidth: true
-                                    implicitHeight: 110
-                                    radius: Style.radiusMedium
-                                    color: Style.cardBg
-                                    border.color: Style.cardBorder
-
-                                    RowLayout {
-                                        anchors.fill: parent
-                                        anchors.margins: 14
-                                        spacing: 14
-
-                                        Rectangle {
-                                            width: 58; height: 58; radius: Style.radiusMedium
-                                            color: root.dndActive ? Style.danger : Style.cardBgHover
-                                            border.color: Style.cardBorder
-
-                                            Behavior on color { ColorAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
-
-                                            M3Icon {
-                                                anchors.centerIn: parent
-                                                name: root.dndActive ? "notifications_off" : "notifications"
-                                                size: 26
-                                                color: root.dndActive ? "#FFFFFF" : Style.accent
-
-                                                Behavior on color { ColorAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
-                                            }
-                                        }
-
-                                        ColumnLayout {
-                                            Layout.fillWidth: true
-                                            spacing: 3
-
-                                            Text {
-                                                text: root.notifCount === 0 ? "No Notifications" : root.notifCount + " Unread Notification" + (root.notifCount > 1 ? "s" : "")
-                                                font.family: Style.fontFamily
-                                                font.pixelSize: Style.fontSizeTitle
-                                                font.weight: Font.Bold
-                                                color: Style.textPrimary
-                                            }
-
-                                            Text {
-                                                text: root.dndActive ? "Do Not Disturb (DND) Active" : "Normal Notification Mode"
-                                                font.family: Style.fontFamily
-                                                font.pixelSize: Style.fontSizeSmall
-                                                color: root.dndActive ? Style.danger : Style.textSecondary
-
-                                                Behavior on color { ColorAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
-                                            }
-                                        }
-
-                                        CustomSwitch {
-                                            Layout.alignment: Qt.AlignVCenter
-                                            checked: root.dndActive
-                                            onToggled: function(val) {
-                                                toggleDndProc.running = true;
-                                            }
-                                        }
-                                    }
-                                }
-
-                                // CARD 2: 3-Button Quick Action Grid (With Smooth ColorAnimation Fade-In)
-                                Rectangle {
-                                    Layout.fillWidth: true
-                                    implicitHeight: 58
-                                    radius: Style.radiusMedium
-                                    color: Style.cardBg
-                                    border.color: Style.cardBorder
-
-                                    RowLayout {
-                                        anchors.fill: parent
-                                        anchors.margins: 10
-                                        spacing: 10
-
-                                        // Dismiss Latest Button
-                                        Rectangle {
-                                            Layout.fillWidth: true
-                                            Layout.fillHeight: true
-                                            radius: Style.radiusSmall
-                                            color: dismissM.containsMouse ? Style.cardBgHover : Style.cardBg
-                                            border.color: Style.cardBorder
-
-                                            scale: (root.buttonAnimsVal && dismissM.pressed) ? 0.95 : ((root.buttonAnimsVal && dismissM.containsMouse) ? 1.04 : 1.0)
-                                            Behavior on scale { enabled: root.buttonAnimsVal; NumberAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
-                                            Behavior on color { ColorAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
-
-                                            RowLayout {
-                                                anchors.centerIn: parent
-                                                spacing: 6
-                                                M3Icon { name: "apps"; size: 16; color: Style.accent }
-                                                Text { text: "Dismiss Latest"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeSmall; font.weight: Font.Bold; color: Style.textPrimary }
-                                            }
-
-                                            MouseArea {
-                                                id: dismissM
-                                                anchors.fill: parent
-                                                hoverEnabled: true
-                                                cursorShape: Qt.PointingHandCursor
-                                                onClicked: dismissLatestProc.running = true
-                                            }
-                                        }
-
-                                        // Clear All Button (Smooth Red Background & Text Color Fade-In)
-                                        Rectangle {
-                                            Layout.fillWidth: true
-                                            Layout.fillHeight: true
-                                            radius: Style.radiusSmall
-                                            color: clearM.containsMouse ? Style.danger : Style.cardBgHover
-                                            border.color: Style.cardBorder
-
-                                            scale: (root.buttonAnimsVal && clearM.pressed) ? 0.95 : ((root.buttonAnimsVal && clearM.containsMouse) ? 1.04 : 1.0)
-                                            Behavior on scale { enabled: root.buttonAnimsVal; NumberAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
-                                            Behavior on color { ColorAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
-
-                                            RowLayout {
-                                                anchors.centerIn: parent
-                                                spacing: 6
-                                                M3Icon {
-                                                    name: "delete"
-                                                    size: 16
-                                                    color: clearM.containsMouse ? "#FFF" : Style.danger
-                                                }
-                                                Text {
-                                                    text: "Clear All"
-                                                    font.family: Style.fontFamily
-                                                    font.pixelSize: Style.fontSizeSmall
-                                                    font.weight: Font.Bold
-                                                    color: clearM.containsMouse ? "#FFF" : Style.textPrimary
-                                                    Behavior on color { ColorAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
-                                                }
-                                            }
-
-                                            MouseArea {
-                                                id: clearM
-                                                anchors.fill: parent
-                                                hoverEnabled: true
-                                                cursorShape: Qt.PointingHandCursor
-                                                onClicked: clearNotifsProc.running = true
-                                            }
-                                        }
-
-                                        // Open SwayNC Control Center Panel Button (Smooth Blue Background & Text Color Fade-In)
-                                        Rectangle {
-                                            Layout.fillWidth: true
-                                            Layout.fillHeight: true
-                                            radius: Style.radiusSmall
-                                            color: openCcM.containsMouse ? Style.accent : Style.cardBgHover
-                                            border.color: Style.cardBorder
-
-                                            scale: (root.buttonAnimsVal && openCcM.pressed) ? 0.95 : ((root.buttonAnimsVal && openCcM.containsMouse) ? 1.04 : 1.0)
-                                            Behavior on scale { enabled: root.buttonAnimsVal; NumberAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
-                                            Behavior on color { ColorAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
-
-                                            RowLayout {
-                                                anchors.centerIn: parent
-                                                spacing: 6
-                                                M3Icon {
-                                                    name: "settings"
-                                                    size: 16
-                                                    color: openCcM.containsMouse ? "#000" : Style.accent
-                                                }
-                                                Text {
-                                                    text: "Open Panel"
-                                                    font.family: Style.fontFamily
-                                                    font.pixelSize: Style.fontSizeSmall
-                                                    font.weight: Font.Bold
-                                                    color: openCcM.containsMouse ? "#000" : Style.textPrimary
-                                                    Behavior on color { ColorAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
-                                                }
-                                            }
-
-                                            MouseArea {
-                                                id: openCcM
-                                                anchors.fill: parent
-                                                hoverEnabled: true
-                                                cursorShape: Qt.PointingHandCursor
-                                                onClicked: {
-                                                    root.isExpanded = false;
-                                                    openSwayncProc.running = true;
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-
-                                // CARD 3: System Inhibitor & Privacy Card
-                                Rectangle {
-                                    Layout.fillWidth: true
-                                    implicitHeight: 52
-                                    radius: Style.radiusMedium
-                                    color: Style.cardBg
-                                    border.color: Style.cardBorder
-
-                                    RowLayout {
-                                        anchors.fill: parent
-                                        anchors.margins: 12
-                                        spacing: 10
-
-                                        M3Icon { name: "coffee"; size: 24; color: root.isInhibited ? Style.danger : Style.success }
-
-                                        ColumnLayout {
-                                            Layout.fillWidth: true
-                                            spacing: 1
-
-                                            Text {
-                                                text: "System Inhibitor Status"
-                                                font.family: Style.fontFamily
-                                                font.pixelSize: Style.fontSizeSmall
-                                                font.weight: Font.Bold
-                                                color: Style.textPrimary
-                                            }
-
-                                            Text {
-                                                text: root.isInhibited ? "Notifications Suppressed (Game/Fullscreen App Active)" : "Notification Popups Active & Allowed"
-                                                font.family: Style.fontFamily
-                                                font.pixelSize: 10
-                                                color: root.isInhibited ? Style.danger : Style.textSecondary
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-
-                        // PAGE 4: Hardware Stats Dashboard
+                        // PAGE 3: Hardware Stats Dashboard
                         Item {
                             width: pageViewport.width
                             height: pageViewport.height
