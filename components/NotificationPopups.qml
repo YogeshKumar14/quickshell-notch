@@ -15,18 +15,41 @@ Item {
     ListModel { id: popupModel }
 
     property var notifObjectMap: ({})
-    property var timerMap: ({})
+    property var notifTimestamps: ({})
+    property var pausedTimestamps: ({})
     property int nextNotifId: 0
+
+    // Shared auto-dismiss timer (no per-notification QML object creation)
+    Timer {
+        id: dismissTimer
+        interval: 1000
+        repeat: true
+        running: popupModel.count > 0
+        onTriggered: {
+            var now = Date.now();
+            for (var i = 0; i < popupModel.count; i++) {
+                var nid = popupModel.get(i).nid;
+                if (root.pausedTimestamps[nid]) continue;
+                var ts = root.notifTimestamps[nid];
+                if (ts && now - ts > 5000) {
+                    root.removeById(nid);
+                    break;
+                }
+            }
+        }
+    }
 
     function addNotification(notif) {
         var nid = root.nextNotifId++;
 
-        // Store QObject ref
         var omap = root.notifObjectMap;
         omap[nid] = notif;
         root.notifObjectMap = omap;
 
-        // Insert at top (newest first)
+        var tsmap = root.notifTimestamps;
+        tsmap[nid] = Date.now();
+        root.notifTimestamps = tsmap;
+
         popupModel.insert(0, {
             nid: nid,
             summary: notif.summary || "",
@@ -36,27 +59,12 @@ Item {
             urgency: notif.urgency || 0
         });
 
-        // Enforce max 4 visible — push out oldest
         if (popupModel.count > 4) {
             var oldestIdx = popupModel.count - 1;
             var oldestNid = popupModel.get(oldestIdx).nid;
             popupModel.remove(oldestIdx, 1);
             dismissAndCleanup(oldestNid);
         }
-
-        // Auto-dismiss timer (5s, pauses on hover)
-        var timer = Qt.createQmlObject(
-            "import QtQuick; Timer { interval: 5000; running: true; repeat: false }",
-            root
-        );
-        var tmap = root.timerMap;
-        tmap[nid] = timer;
-        root.timerMap = tmap;
-
-        var capturedNid = nid;
-        timer.triggered.connect(function() {
-            root.removeById(capturedNid);
-        });
     }
 
     function removeById(nid) {
@@ -84,23 +92,16 @@ Item {
             delete omap[nid];
             root.notifObjectMap = omap;
         }
-        var tmap = root.timerMap;
-        if (tmap[nid]) {
-            tmap[nid].stop();
-            tmap[nid].destroy();
-            delete tmap[nid];
-            root.timerMap = tmap;
-        }
+        delete root.notifTimestamps[nid];
+        delete root.pausedTimestamps[nid];
     }
 
     function pauseTimer(nid) {
-        var tmap = root.timerMap;
-        if (tmap[nid]) tmap[nid].stop();
+        root.pausedTimestamps[nid] = true;
     }
 
     function resumeTimer(nid) {
-        var tmap = root.timerMap;
-        if (tmap[nid]) tmap[nid].restart();
+        delete root.pausedTimestamps[nid];
     }
 
     // --- View Layer ---

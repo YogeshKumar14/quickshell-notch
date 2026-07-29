@@ -42,7 +42,7 @@ def sig_handler(signum, frame):
 signal.signal(signal.SIGTERM, sig_handler)
 signal.signal(signal.SIGINT, sig_handler)
 
-def get_default_monitor():
+def get_monitor():
     try:
         sink = subprocess.check_output(["pactl", "get-default-sink"], text=True, stderr=subprocess.DEVNULL).strip()
         if sink:
@@ -90,20 +90,15 @@ def main():
         print(json.dumps({"bars": [0]*12, "active": False}), flush=True)
         sys.exit(0)
 
-    current_bar_count = get_bar_count()
-    current_monitor = get_default_monitor()
-    write_cava_config(current_bar_count, current_monitor)
+    bar_count = get_bar_count()
+    monitor = get_monitor()
+    write_cava_config(bar_count, monitor)
 
-    last_mtime = 0
-    if os.path.exists(NOTCH_CONFIG_FILE):
-        last_mtime = os.path.getmtime(NOTCH_CONFIG_FILE)
+    silent_frames = 0
+    last_was_active = True
 
     while True:
         try:
-            current_bar_count = get_bar_count()
-            current_monitor = get_default_monitor()
-            write_cava_config(current_bar_count, current_monitor)
-
             proc = subprocess.Popen(
                 [cava_bin, "-p", CAVA_CONFIG_FILE],
                 stdout=subprocess.PIPE,
@@ -113,10 +108,6 @@ def main():
                 preexec_fn=set_pdeathsig
             )
 
-            last_config_check = time.monotonic()
-            silent_frames = 0
-            last_was_active = True
-
             while proc.poll() is None:
                 line = proc.stdout.readline()
                 if not line:
@@ -125,24 +116,10 @@ def main():
                 if not line:
                     continue
 
-                # Periodic config check (every 5 seconds)
-                now = time.monotonic()
-                if now - last_config_check >= 5.0:
-                    last_config_check = now
-                    if os.path.exists(NOTCH_CONFIG_FILE):
-                        mtime = os.path.getmtime(NOTCH_CONFIG_FILE)
-                        if mtime != last_mtime:
-                            last_mtime = mtime
-                            new_bar_count = get_bar_count()
-                            if new_bar_count != current_bar_count:
-                                proc.kill()
-                                proc.wait()
-                                break
-
                 parts = [p for p in line.split(";") if p != ""]
-                if len(parts) >= current_bar_count:
+                if len(parts) >= bar_count:
                     try:
-                        vals = [int(p) for p in parts[:current_bar_count]]
+                        vals = [int(p) for p in parts[:bar_count]]
                         is_act = any(v > 1 for v in vals)
 
                         if is_act:
@@ -152,7 +129,7 @@ def main():
                         else:
                             silent_frames += 1
                             if last_was_active or silent_frames == 1:
-                                print(json.dumps({"bars": [0] * current_bar_count, "active": False}), flush=True)
+                                print(json.dumps({"bars": [0] * bar_count, "active": False}), flush=True)
                                 last_was_active = False
                     except ValueError:
                         pass
@@ -165,7 +142,7 @@ def main():
                     proc.wait()
                 except Exception:
                     pass
-        time.sleep(0.5)
+        time.sleep(1.0)
 
 if __name__ == "__main__":
     main()

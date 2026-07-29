@@ -7,78 +7,34 @@ fi
 TYPE="$1"
 VAL="$2"
 
-LUA_OVERRIDE="$HOME/.config/hypr/quickshell_hypr.lua"
-MAIN_LUA="$HOME/.config/hypr/hyprland.lua"
+PERSIST_SCRIPT="$HOME/.config/quickshell/scripts/hyprland/persist_hypr_state.py"
 
-# 1. Apply live keyword to memory instantly
+# Apply live keyword to memory instantly
 case "$TYPE" in
-    gaps_in)
-        hyprctl repl "hl.config({ general = { gaps_in = $VAL } })"
-        ;;
-    gaps_out)
-        hyprctl repl "hl.config({ general = { gaps_out = $VAL } })"
-        ;;
-    rounding)
-        hyprctl repl "hl.config({ decoration = { rounding = $VAL } })"
-        ;;
-    border_size)
-        hyprctl repl "hl.config({ general = { border_size = $VAL } })"
-        ;;
-    blur)
-        hyprctl repl "hl.config({ decoration = { blur = { enabled = $VAL } } })"
-        ;;
-    active_border)
-        hyprctl repl "hl.config({ general = { col = { active_border = '$VAL' } } })"
-        ;;
-    inactive_border)
-        hyprctl repl "hl.config({ general = { col = { inactive_border = '$VAL' } } })"
-        ;;
-    layout)
-        hyprctl repl "hl.config({ general = { layout = '$VAL' } })"
-        ;;
-    animations)
-        hyprctl repl "hl.config({ animations = { enabled = $VAL } })"
-        ;;
-    active_opacity)
-        hyprctl repl "hl.config({ decoration = { active_opacity = $VAL } })"
-        ;;
-    inactive_opacity)
-        hyprctl repl "hl.config({ decoration = { inactive_opacity = $VAL } })"
-        ;;
-    shadow)
-        hyprctl repl "hl.config({ decoration = { shadow = { enabled = $VAL } } })"
-        ;;
-    dim_inactive)
-        hyprctl repl "hl.config({ decoration = { dim_inactive = $VAL } })"
-        ;;
-    master_ratio)
-        hyprctl repl "hl.config({ master = { mfact = $VAL } })"
-        ;;
-    input_sensitivity)
-        hyprctl repl "hl.config({ input = { sensitivity = $VAL } })"
-        ;;
-    input_tap_to_click)
-        hyprctl repl "hl.config({ input = { touchpad = { tap_to_click = $VAL } } })"
-        ;;
-    input_natural_scroll)
-        hyprctl repl "hl.config({ input = { touchpad = { natural_scroll = $VAL } } })"
-        ;;
-    shadow_range)
-        hyprctl repl "hl.config({ decoration = { shadow = { range = $VAL } } })"
-        ;;
-    blur_passes)
-        hyprctl repl "hl.config({ decoration = { blur = { passes = $VAL } } })"
-        ;;
-    blur_size)
-        hyprctl repl "hl.config({ decoration = { blur = { size = $VAL } } })"
-        ;;
+    gaps_in)          hyprctl keyword general:gaps_in "$VAL" ;;
+    gaps_out)         hyprctl keyword general:gaps_out "$VAL" ;;
+    rounding)         hyprctl keyword decoration:rounding "$VAL" ;;
+    border_size)      hyprctl keyword general:border_size "$VAL" ;;
+    blur)             hyprctl keyword decoration:blur:enabled "$VAL" ;;
+    active_border)    hyprctl keyword general:col.active_border "$VAL" ;;
+    inactive_border)  hyprctl keyword general:col.inactive_border "$VAL" ;;
+    layout)           hyprctl keyword general:layout "$VAL" ;;
+    animations)       hyprctl keyword animations:enabled "$VAL" ;;
+    active_opacity)   hyprctl keyword decoration:active_opacity "$VAL" ;;
+    inactive_opacity) hyprctl keyword decoration:inactive_opacity "$VAL" ;;
+    shadow)           hyprctl keyword decoration:shadow:enabled "$VAL" ;;
+    dim_inactive)     hyprctl keyword decoration:dim_inactive "$VAL" ;;
+    master_ratio)     hyprctl keyword master:mfact "$VAL" ;;
+    input_sensitivity) hyprctl keyword input:sensitivity "$VAL" ;;
+    input_tap_to_click) hyprctl keyword input:touchpad:tap_to_click "$VAL" ;;
+    input_natural_scroll) hyprctl keyword input:touchpad:natural_scroll "$VAL" ;;
+    shadow_range)     hyprctl keyword decoration:shadow:range "$VAL" ;;
+    blur_passes)      hyprctl keyword decoration:blur:passes "$VAL" ;;
+    blur_size)        hyprctl keyword decoration:blur:size "$VAL" ;;
     reset_defaults)
-        rm -f "$LUA_OVERRIDE"
+        rm -f "$HOME/.config/hypr/quickshell_hypr.lua"
         rm -f "$HOME/.config/hypr/quickshell/quickshell_hypr.lua"
-        # Restore notch_settings.json to defaults
-        NOTCH_CFG="$HOME/.config/quickshell/notch_settings.json"
-        if [ -f "$NOTCH_CFG" ]; then
-            python3 -c "
+        python3 -c "
 import json, os
 cfg = os.path.expanduser('~/.config/quickshell/notch_settings.json')
 defaults = {
@@ -98,161 +54,15 @@ defaults = {
 with open(cfg, 'w') as f:
     json.dump(defaults, f, indent=4)
 "
-        fi
+        rm -f "$HOME/.cache/quickshell/hypr_state.json"
         hyprctl reload
         exit 0
         ;;
     *)
         echo "Unknown option type: $TYPE"
+        exit 1
         ;;
 esac
 
-# 2. Persist options in ~/.config/hypr/quickshell_hypr.lua for reboot durability
-python3 -c "
-import os, json
-
-lua_path = os.path.expanduser('$LUA_OVERRIDE')
-main_lua = os.path.expanduser('$MAIN_LUA')
-
-# Clean up stale file if present
-stale_file = os.path.expanduser('~/.config/hypr/quickshell/quickshell_hypr.lua')
-if os.path.isfile(stale_file):
-    try: os.remove(stale_file)
-    except Exception: pass
-
-cache_file = os.path.expanduser('~/.cache/quickshell/hypr_state.json')
-os.makedirs(os.path.dirname(cache_file), exist_ok=True)
-
-data = {}
-if os.path.isfile(cache_file):
-    try:
-        with open(cache_file, 'r') as fp: data = json.load(fp)
-    except Exception: pass
-
-t = '$TYPE'
-v = '$VAL'
-
-if t in ['gaps_in', 'gaps_out', 'rounding', 'border_size', 'shadow_range', 'blur_passes', 'blur_size']:
-    data[t] = int(v)
-elif t in ['active_opacity', 'inactive_opacity', 'master_ratio', 'input_sensitivity']:
-    data[t] = float(v)
-elif t in ['blur', 'animations', 'shadow', 'dim_inactive', 'input_tap_to_click', 'input_natural_scroll']:
-    data[t] = v.lower() == 'true'
-else:
-    data[t] = v
-
-with open(cache_file, 'w') as fp:
-    json.dump(data, fp)
-
-# Generate quickshell_hypr.lua with modern Hyprland Lua syntax
-lua_code = f'''-- Generated by Top Notch Bar (Permanent Hyprland Configuration Overrides)
-hl.config({{
-    input = {{
-        sensitivity = {data.get('input_sensitivity', 0.0)},
-        touchpad = {{
-            tap_to_click = {'true' if data.get('input_tap_to_click', False) else 'false'},
-            natural_scroll = {'true' if data.get('input_natural_scroll', False) else 'false'}
-        }}
-    }},
-    general = {{
-        gaps_in = {data.get('gaps_in', 5)},
-        gaps_out = {data.get('gaps_out', 10)},
-        border_size = {data.get('border_size', 2)},
-        layout = \"{data.get('layout', 'dwindle')}\",
-        col = {{
-            active_border = \"{data.get('active_border', 'rgba(0a84ffff)')}\",
-            inactive_border = \"{data.get('inactive_border', 'rgba(585b70ff)')}\"
-        }}
-    }},
-    decoration = {{
-        rounding = {data.get('rounding', 10)},
-        active_opacity = {data.get('active_opacity', 1.0)},
-        inactive_opacity = {data.get('inactive_opacity', 1.0)},
-        shadow = {{ 
-            enabled = {'true' if data.get('shadow', True) else 'false'},
-            range = {data.get('shadow_range', 4)}
-        }},
-        dim_inactive = {'true' if data.get('dim_inactive', False) else 'false'},
-        blur = {{ 
-            enabled = {'true' if data.get('blur', True) else 'false'},
-            size = {data.get('blur_size', 8)},
-            passes = {data.get('blur_passes', 3)}
-        }}
-    }},
-    animations = {{ enabled = {'true' if data.get('animations', True) else 'false'} }},
-    master = {{ mfact = {data.get('master_ratio', 0.55)} }}
-}})
-'''
-
-with open(lua_path, 'w', encoding='utf-8') as fp:
-    fp.write(lua_code)
-
-# Generate quickshell_hypr.conf with standard Hyprland syntax
-conf_code = f'''# Generated by Top Notch Bar (Permanent Hyprland Configuration Overrides)
-input {{
-    sensitivity = {data.get('input_sensitivity', 0.0)}
-    touchpad {{
-        tap-to-click = {'true' if data.get('input_tap_to_click', False) else 'false'}
-        natural_scroll = {'true' if data.get('input_natural_scroll', False) else 'false'}
-    }}
-}}
-
-general {{
-    gaps_in = {data.get('gaps_in', 5)}
-    gaps_out = {data.get('gaps_out', 10)}
-    border_size = {data.get('border_size', 2)}
-    layout = {data.get('layout', 'dwindle')}
-    col.active_border = {data.get('active_border', 'rgba(0a84ffff)')}
-    col.inactive_border = {data.get('inactive_border', 'rgba(585b70ff)')}
-}}
-
-decoration {{
-    rounding = {data.get('rounding', 10)}
-    active_opacity = {data.get('active_opacity', 1.0)}
-    inactive_opacity = {data.get('inactive_opacity', 1.0)}
-    dim_inactive = {'true' if data.get('dim_inactive', False) else 'false'}
-
-    blur {{
-        enabled = {'true' if data.get('blur', True) else 'false'}
-        size = {data.get('blur_size', 8)}
-        passes = {data.get('blur_passes', 3)}
-    }}
-
-    shadow {{
-        enabled = {'true' if data.get('shadow', True) else 'false'}
-        range = {data.get('shadow_range', 4)}
-    }}
-}}
-
-animations {{
-    enabled = {'true' if data.get('animations', True) else 'false'}
-}}
-
-master {{
-    mfact = {data.get('master_ratio', 0.55)}
-}}
-'''
-
-conf_path = os.path.expanduser('~/.config/hypr/quickshell_hypr.conf')
-with open(conf_path, 'w', encoding='utf-8') as fp:
-    fp.write(conf_code)
-
-# Auto-append dofile line to main hyprland.lua if not present
-if os.path.isfile(main_lua):
-    with open(main_lua, 'r', encoding='utf-8') as fp:
-        content = fp.read()
-    include_line = 'pcall(dofile, os.getenv(\"HOME\") .. \"/.config/hypr/quickshell_hypr.lua\")'
-    if 'quickshell_hypr.lua' not in content:
-        with open(main_lua, 'a', encoding='utf-8') as fp:
-            fp.write('\n\n-- Include Top Notch Bar Permanent Config\n' + include_line + '\n')
-
-# Auto-append source line to main hyprland.conf if not present
-conf_main = os.path.expanduser('~/.config/hypr/hyprland.conf')
-if os.path.isfile(conf_main):
-    with open(conf_main, 'r', encoding='utf-8') as fp:
-        conf_content = fp.read()
-    source_line = 'source = $HOME/.config/hypr/quickshell_hypr.conf'
-    if 'quickshell_hypr.conf' not in conf_content:
-        with open(conf_main, 'a', encoding='utf-8') as fp:
-            fp.write('\n\n# Include Top Notch Bar Permanent Config\n' + source_line + '\n')
-"
+# Persist to lua + conf files for reboot durability
+python3 "$PERSIST_SCRIPT" "$TYPE" "$VAL"

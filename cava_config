@@ -6,7 +6,7 @@ sleep_timer = 2
 
 [input]
 method = pulse
-source = alsa_output.pci-0000_00_09.2.analog-stereo.monitor
+source = bluez_output.41_42_FF_86_FD_A2.1.monitor
 
 [output]
 method = raw
