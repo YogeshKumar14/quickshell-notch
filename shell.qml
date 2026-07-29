@@ -2,12 +2,63 @@ import Quickshell
 import Quickshell.Wayland
 import Quickshell.Hyprland
 import Quickshell.Io
+import Quickshell.Services.Notifications
 import QtQuick
 import "components"
 import "theme"
 
 Scope {
     id: root
+    
+    // Global Notification Engine
+    ListModel {
+        id: notifHistoryModel
+    }
+    
+    NotificationServer {
+        id: notifServer
+        actionsSupported: true
+        bodyMarkupSupported: true
+        imageSupported: true
+        
+        onNotification: notif => {
+            // Push to History
+            notifHistoryModel.insert(0, {
+                summary: notif.summary,
+                body: notif.body,
+                appName: notif.appName,
+                appIcon: notif.appIcon,
+                image: notif.image,
+                urgency: notif.urgency,
+                timestamp: new Date().toLocaleTimeString()
+            });
+            
+            // Push to transient Pop-ups
+            if (!notchComp.dndActive) {
+                popupsComp.addNotification(notif);
+            }
+        }
+    }
+    
+    // Dripping Notification Pop-ups
+    PanelWindow {
+        id: notifPopupsWindow
+        WlrLayershell.layer: WlrLayer.Overlay
+        WlrLayershell.exclusiveZone: 0
+        
+        anchors {
+            top: true
+            right: true
+        }
+        
+        implicitWidth: 350
+        implicitHeight: popupsComp.implicitHeight
+        color: "transparent"
+        
+        NotificationPopups {
+            id: popupsComp
+        }
+    }
 
     // Top Notch PanelWindow: 624x420 transparent window (allows 32px padding for inverted ears)
     PanelWindow {

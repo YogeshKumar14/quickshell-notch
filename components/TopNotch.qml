@@ -1110,14 +1110,14 @@ Item {
         anchors.top: parent.top
         anchors.horizontalCenter: parent.horizontalCenter
 
-        width: root.isOsdActive ? 280 : ((root.isPowerMenuOpen || root.isWifiMenuOpen || root.isBluetoothMenuOpen) ? 320 : (root.isExpanded ? Style.notchWidthExpanded : (root.isWorkspaceActive ? 240 : (root.showVisualizer ? root.dynamicVisNotchWidth : root.compactWidthVal))))
-        height: root.isOsdActive ? Style.notchHeightCompact : (root.isPowerMenuOpen ? 260 : ((root.isWifiMenuOpen || root.isBluetoothMenuOpen) ? 320 : (root.isExpanded ? root.expandedHeightVal : Style.notchHeightCompact)))
+        width: root.isOsdActive ? 280 : ((root.isPowerMenuOpen || root.isWifiMenuOpen || root.isBluetoothMenuOpen || root.isNotifMenuOpen) ? 320 : (root.isExpanded ? Style.notchWidthExpanded : (root.isWorkspaceActive ? 240 : (root.showVisualizer ? root.dynamicVisNotchWidth : root.compactWidthVal))))
+        height: root.isOsdActive ? Style.notchHeightCompact : (root.isPowerMenuOpen ? 260 : ((root.isWifiMenuOpen || root.isBluetoothMenuOpen || root.isNotifMenuOpen) ? 320 : (root.isExpanded ? root.expandedHeightVal : Style.notchHeightCompact)))
 
         color: "#000000"
         border.width: 0
 
-        bottomLeftRadius: (root.isPowerMenuOpen || root.isWifiMenuOpen || root.isBluetoothMenuOpen) ? Style.radiusLarge : root.notchRadiusVal
-        bottomRightRadius: (root.isPowerMenuOpen || root.isWifiMenuOpen || root.isBluetoothMenuOpen) ? Style.radiusLarge : root.notchRadiusVal
+        bottomLeftRadius: (root.isPowerMenuOpen || root.isWifiMenuOpen || root.isBluetoothMenuOpen || root.isNotifMenuOpen) ? Style.radiusLarge : root.notchRadiusVal
+        bottomRightRadius: (root.isPowerMenuOpen || root.isWifiMenuOpen || root.isBluetoothMenuOpen || root.isNotifMenuOpen) ? Style.radiusLarge : root.notchRadiusVal
         topLeftRadius: 0
         topRightRadius: 0
 
@@ -1520,7 +1520,7 @@ Item {
             anchors.top: parent.top
             anchors.horizontalCenter: parent.horizontalCenter
 
-            opacity: (root.isExpanded && !root.isPowerMenuOpen && !root.isWifiMenuOpen && !root.isBluetoothMenuOpen) ? 1.0 : 0.0
+            opacity: (root.isExpanded && !root.isPowerMenuOpen && !root.isWifiMenuOpen && !root.isBluetoothMenuOpen && !root.isNotifMenuOpen) ? 1.0 : 0.0
             visible: opacity > 0.01
 
             Behavior on opacity {
