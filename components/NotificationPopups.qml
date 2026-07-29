@@ -123,14 +123,6 @@ Item {
             }
         }
 
-        // Exit: slide out to the right
-        remove: Transition {
-            ParallelAnimation {
-                NumberAnimation { property: "opacity"; to: 0; duration: 250; easing.type: Easing.OutCubic }
-                NumberAnimation { property: "x"; to: root.width * 1.5; duration: 400; easing.type: Easing.OutCubic }
-            }
-        }
-
         // Smooth reflow when items shift
         displaced: Transition {
             NumberAnimation { property: "y"; duration: 500; easing.type: Easing.OutQuint }
@@ -143,6 +135,7 @@ Item {
             clip: false
 
             readonly property int notifNid: model.nid
+            readonly property bool isBottom: index === popupModel.count - 1
 
             property bool entered: false
             property bool removing: false
@@ -256,19 +249,6 @@ Item {
                                             radius: 12
                                         }
                                     }
-                                }
-
-                                // Fallback icon when no image
-                                M3Icon {
-                                    anchors.centerIn: parent
-                                    name: "notifications"
-                                    color: {
-                                        if (model.urgency === 2) return Style.danger;
-                                        if (model.urgency === 1) return Style.accent;
-                                        return Style.textSecondary;
-                                    }
-                                    size: 14
-                                    visible: !parent.visible
                                 }
                             }
 
