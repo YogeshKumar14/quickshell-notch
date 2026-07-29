@@ -337,7 +337,7 @@ Item {
                     visible: index === 0
                     opacity: delegateRoot.entered ? 1 : 0
                     scale: delegateRoot.entered ? 1 : 0
-                    transformOrigin: Item.BottomRight
+                    transformOrigin: Item.TopRight
 
                     Behavior on opacity {
                         NumberAnimation { duration: 300; easing.type: Easing.OutCubic }
@@ -369,6 +369,17 @@ Item {
                     width: 24; height: 24
                     anchors.top: bgRect.bottom
                     anchors.right: bgRect.right
+                    opacity: delegateRoot.isBottom ? 1 : 0
+                    scale: delegateRoot.isBottom ? 1 : 0
+                    transformOrigin: Item.TopLeft
+
+                    Behavior on opacity {
+                        NumberAnimation { duration: 300; easing.type: Easing.OutCubic }
+                    }
+
+                    Behavior on scale {
+                        NumberAnimation { duration: 400; easing.type: Easing.OutBack }
+                    }
 
                     onPaint: {
                         var ctx = getContext("2d");
