@@ -8,7 +8,7 @@ Item {
     id: root
 
     width: 374
-    implicitHeight: popupListView.contentHeight + 48
+    implicitHeight: popupListView.contentHeight + 72
 
     // --- Data Layer ---
     // ListModel stores SCALAR properties only (strings, ints).
@@ -81,12 +81,11 @@ Item {
 
         model: popupModel
 
-        // Slide in from the right-top with a spring bounce
+        // Slide in from the right with a spring bounce
         add: Transition {
             ParallelAnimation {
                 NumberAnimation { property: "opacity"; from: 0; to: 1; duration: 250; easing.type: Easing.OutCubic }
                 SpringAnimation { property: "x"; spring: 3.5; damping: 0.75; from: 374; to: 0 }
-                SpringAnimation { property: "y"; spring: 6.0; damping: 0.8; from: -20; to: 0 }
             }
         }
 
@@ -107,7 +106,7 @@ Item {
             id: delegateRoot
             width: popupListView.width
             // Last item is 24px taller to house the bottom-right ear inside its bounds
-            height: bgRect.height + (isBottom ? 24 : 0)
+            height: bgRect.height + 24
             clip: false
 
             property bool isTop: index === 0
@@ -237,11 +236,11 @@ Item {
                     }
                 }
 
-                // --- TOP LEFT INVERTED EAR (first item only) ---
+                // --- TOP LEFT INVERTED EAR (every item except last — creates connected drip) ---
                 Canvas {
                     width: 24; height: 24
                     x: 0; y: 0
-                    visible: delegateRoot.isTop
+                    visible: !delegateRoot.isBottom
 
                     onPaint: {
                         var ctx = getContext("2d");
