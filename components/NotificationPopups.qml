@@ -109,7 +109,7 @@ Item {
         width: parent.width
         height: contentHeight
         interactive: false
-        spacing: 0
+        spacing: -24
         clip: true
         cacheBuffer: 400
 
@@ -139,19 +139,14 @@ Item {
         delegate: Item {
             id: delegateRoot
             width: popupListView.width
-            height: bgRect.height + (delegateRoot.isBottom ? 24 : 0)
+            height: bgRect.height + 24
             clip: false
 
-            readonly property bool isBottom: index === popupModel.count - 1
             readonly property int notifNid: model.nid
-            readonly property bool notifExpanded: expanded
 
-            property bool expanded: false
+            property bool entered: false
             property bool removing: false
             property real dragStartX: 0
-            property real dragStartY: 0
-            property bool dragDecided: false
-            property bool isHorizontalDrag: false
 
             // Exit animation — delayRemove prevents instant destruction
             ListView.onRemove: SequentialAnimation {
@@ -162,6 +157,12 @@ Item {
                     NumberAnimation { target: contentItem; property: "x"; to: root.width * 1.5; duration: 400; easing.type: Easing.OutCubic }
                 }
                 PropertyAction { target: delegateRoot; property: "ListView.delayRemove"; value: false }
+            }
+
+            // Entrance complete — show ear after popup reaches top
+            ListView.onAdd: SequentialAnimation {
+                PauseAnimation { duration: 500 }
+                PropertyAction { target: delegateRoot; property: "entered"; value: true }
             }
 
             // --- Draggable Content Wrapper ---
@@ -182,25 +183,25 @@ Item {
                     height: bgRect.height
                     anchors.right: parent.right
                     drag.target: contentItem
-                    drag.axis: Drag.XAndYAxis
+                    drag.axis: Drag.XAxis
                     drag.minimumX: 0
                     drag.maximumX: root.width * 1.5
-                    drag.minimumY: delegateRoot.expanded ? -1 : -200
-                    drag.maximumY: delegateRoot.expanded ? 200 : 0
 
                     onEntered: root.pauseTimer(delegateRoot.notifNid)
                     onExited: root.resumeTimer(delegateRoot.notifNid)
 
                     onPressed: function(mouse) {
                         delegateRoot.dragStartX = contentItem.x;
-                        delegateRoot.dragStartY = contentItem.y;
-                        delegateRoot.dragDecided = false;
-                        delegateRoot.isHorizontalDrag = false;
                     }
 
                     onReleased: function(mouse) {
                         var deltaX = contentItem.x - delegateRoot.dragStartX;
-                        var deltaY = contentItem.y - delegateRoot.dragStartY;
+
+                        // Tap to dismiss (no significant movement)
+                        if (Math.abs(deltaX) < 10) {
+                            root.removeAtIndex(index);
+                            return;
+                        }
 
                         // Horizontal dismiss threshold
                         if (deltaX > 80) {
@@ -208,14 +209,8 @@ Item {
                             return;
                         }
 
-                        // Vertical expand/collapse
-                        if (Math.abs(deltaY) > 40 && Math.abs(deltaY) > Math.abs(deltaX)) {
-                            delegateRoot.expanded = !delegateRoot.expanded;
-                        }
-
                         // Snap back
                         contentItem.x = 0;
-                        contentItem.y = 0;
                     }
                 }
 
@@ -226,7 +221,6 @@ Item {
                     anchors.right: parent.right
                     height: notifLayout.implicitHeight + 32
                     color: "#000000"
-                    bottomLeftRadius: delegateRoot.isBottom ? 28 : 0
 
                     ColumnLayout {
                         id: notifLayout
@@ -238,7 +232,7 @@ Item {
                         anchors.topMargin: 14
                         spacing: 4
 
-                        // Header row: app icon + app name + timestamp + expand chevron
+                        // Header row: app icon + app name
                         RowLayout {
                             Layout.fillWidth: true
                             spacing: 8
@@ -303,28 +297,6 @@ Item {
                                 Layout.fillWidth: true
                                 elide: Text.ElideRight
                             }
-
-                            // Timestamp
-                            Text {
-                                text: " · "
-                                font.family: Style.fontFamily
-                                font.pixelSize: Style.fontSizeSmall
-                                color: Style.textMuted
-                            }
-
-                            // Expand chevron (only if body exists)
-                            M3Icon {
-                                name: delegateRoot.expanded ? "expand_less" : "expand_more"
-                                color: Style.textMuted
-                                size: 16
-                                visible: model.body.length > 0
-
-                                rotation: delegateRoot.expanded ? 180 : 0
-
-                                Behavior on rotation {
-                                    NumberAnimation { duration: 250; easing.type: Easing.OutCubic }
-                                }
-                            }
                         }
 
                         // Summary (title)
@@ -335,13 +307,13 @@ Item {
                             color: Style.textPrimary
                             font.weight: Font.Bold
                             Layout.fillWidth: true
-                            wrapMode: delegateRoot.expanded ? Text.Wrap : Text.NoWrap
-                            maximumLineCount: delegateRoot.expanded ? 10 : 2
+                            wrapMode: Text.NoWrap
+                            maximumLineCount: 2
                             elide: Text.ElideRight
                             Layout.topMargin: 2
                         }
 
-                        // Body (preview when collapsed, full when expanded)
+                        // Body (preview)
                         Text {
                             text: model.body
                             font.family: Style.fontFamily
@@ -349,21 +321,11 @@ Item {
                             color: Style.textSecondary
                             Layout.fillWidth: true
                             wrapMode: Text.Wrap
-                            maximumLineCount: delegateRoot.expanded ? 20 : 1
+                            maximumLineCount: 1
                             elide: Text.ElideRight
                             visible: model.body.length > 0
                             Layout.topMargin: 2
                         }
-                    }
-
-                    // Thin separator between stacked notifications
-                    Rectangle {
-                        anchors.bottom: parent.bottom
-                        anchors.left: parent.left
-                        anchors.right: parent.right
-                        height: 1
-                        color: "#22ffffff"
-                        visible: !delegateRoot.isBottom
                     }
                 }
 
@@ -371,7 +333,7 @@ Item {
                 Canvas {
                     width: 24; height: 24
                     x: 0; y: 0
-                    visible: index === 0
+                    visible: index === 0 && delegateRoot.entered
 
                     onPaint: {
                         var ctx = getContext("2d");
@@ -389,12 +351,12 @@ Item {
                     onVisibleChanged: if (visible) requestPaint()
                 }
 
-                // --- BOTTOM RIGHT INVERTED EAR (last item only, INSIDE delegate) ---
+                // --- BOTTOM RIGHT INVERTED EAR (last item only) ---
+                // Always present in delegate, naturally occluded by overlapping delegate below
                 Canvas {
                     width: 24; height: 24
                     anchors.top: bgRect.bottom
                     anchors.right: bgRect.right
-                    visible: delegateRoot.isBottom
 
                     onPaint: {
                         var ctx = getContext("2d");
@@ -409,7 +371,6 @@ Item {
                     }
 
                     Component.onCompleted: requestPaint()
-                    onVisibleChanged: if (visible) requestPaint()
                 }
             }
         }
