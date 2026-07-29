@@ -375,4 +375,15 @@ Item {
             }
         }
     }
+
+    // Hidden mask target for PanelWindow input region (350px bgRect only, no ear gap)
+    Rectangle {
+        id: inputMask
+        width: 350
+        anchors.right: parent.right
+        height: popupListView.contentHeight
+        visible: false
+    }
+
+    property alias popupArea: inputMask
 }

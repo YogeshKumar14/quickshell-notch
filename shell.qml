@@ -54,6 +54,9 @@ Scope {
         implicitWidth: 374
         implicitHeight: popupsComp.implicitHeight
         color: "transparent"
+
+        // Input passthrough: only the visible notification cards receive input
+        mask: Region { item: popupsComp.popupArea }
         
         NotificationPopups {
             id: popupsComp
