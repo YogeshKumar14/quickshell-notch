@@ -271,13 +271,11 @@ FocusScope {
                                 color: Style.cardBg
                                 visible: model.path === "random"
 
-                                Text {
+                                M3Icon {
                                     anchors.centerIn: parent
-                                    text: "🎲  Shuffle"
-                                    font.family: Style.fontFamily
-                                    font.pixelSize: Style.fontSizeNormal
-                                    font.weight: Font.Bold
+                                    name: "shuffle"
                                     color: Style.accent
+                                    size: 32
                                 }
                             }
                         }
