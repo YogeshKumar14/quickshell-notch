@@ -152,6 +152,16 @@ Item {
             property bool dragDecided: false
             property bool isHorizontalDrag: false
 
+            // Exit animation — delayRemove prevents instant destruction
+            ListView.onRemove: SequentialAnimation {
+                PropertyAction { target: delegateRoot; property: "ListView.delayRemove"; value: true }
+                ParallelAnimation {
+                    NumberAnimation { target: contentItem; property: "opacity"; to: 0; duration: 250; easing.type: Easing.OutCubic }
+                    NumberAnimation { target: contentItem; property: "x"; to: root.width * 1.5; duration: 400; easing.type: Easing.OutCubic }
+                }
+                PropertyAction { target: delegateRoot; property: "ListView.delayRemove"; value: false }
+            }
+
             // --- Draggable Content Wrapper ---
             Item {
                 id: contentItem
@@ -215,19 +225,6 @@ Item {
                     height: notifLayout.implicitHeight + 32
                     color: "#000000"
                     bottomLeftRadius: delegateRoot.isBottom ? 28 : 0
-
-                    // Urgency accent border (left edge)
-                    Rectangle {
-                        width: 2
-                        height: parent.height
-                        anchors.left: parent.left
-                        radius: 1
-                        color: {
-                            if (model.urgency === 2) return Style.danger;
-                            if (model.urgency === 1) return Style.accent;
-                            return Style.textMuted;
-                        }
-                    }
 
                     ColumnLayout {
                         id: notifLayout
@@ -368,11 +365,11 @@ Item {
                     }
                 }
 
-                // --- TOP LEFT INVERTED EAR (every item except last — connected drip) ---
+                // --- TOP LEFT INVERTED EAR (first item only — bridges to notch) ---
                 Canvas {
                     width: 24; height: 24
                     x: 0; y: 0
-                    visible: !delegateRoot.isBottom
+                    visible: index === 0
 
                     onPaint: {
                         var ctx = getContext("2d");
