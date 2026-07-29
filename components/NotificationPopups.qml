@@ -137,7 +137,7 @@ Item {
             readonly property int notifNid: model.nid
             readonly property bool isBottom: index === popupModel.count - 1
 
-            property bool entered: false
+            property bool earShown: false
             property bool removing: false
             property real dragStartX: 0
 
@@ -155,7 +155,18 @@ Item {
             // Entrance complete — show ear after popup reaches top
             ListView.onAdd: SequentialAnimation {
                 PauseAnimation { duration: 500 }
-                PropertyAction { target: delegateRoot; property: "entered"; value: true }
+                PropertyAction { target: delegateRoot; property: "earShown"; value: true }
+            }
+
+            // Re-animate ear when becoming top item after dismissal
+            Connections {
+                target: popupListView
+                function onCountChanged() {
+                    if (index === 0 && delegateRoot.earShown) {
+                        delegateRoot.earShown = false
+                        Qt.callLater(function() { delegateRoot.earShown = true })
+                    }
+                }
             }
 
             // --- Draggable Content Wrapper ---
@@ -315,8 +326,8 @@ Item {
                     width: 24; height: 24
                     x: 0; y: 0
                     visible: index === 0
-                    opacity: delegateRoot.entered ? 1 : 0
-                    scale: delegateRoot.entered ? 1 : 0
+                    opacity: delegateRoot.earShown ? 1 : 0
+                    scale: delegateRoot.earShown ? 1 : 0
                     transformOrigin: Item.TopRight
 
                     Behavior on opacity {
