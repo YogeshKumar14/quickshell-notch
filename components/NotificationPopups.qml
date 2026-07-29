@@ -139,7 +139,7 @@ Item {
         delegate: Item {
             id: delegateRoot
             width: popupListView.width
-            height: bgRect.height + 24
+            height: bgRect.height + (delegateRoot.isBottom ? 24 : 0)
             clip: false
 
             readonly property bool isBottom: index === popupModel.count - 1
@@ -147,6 +147,7 @@ Item {
             readonly property bool notifExpanded: expanded
 
             property bool expanded: false
+            property bool removing: false
             property real dragStartX: 0
             property real dragStartY: 0
             property bool dragDecided: false
@@ -154,6 +155,7 @@ Item {
 
             // Exit animation — delayRemove prevents instant destruction
             ListView.onRemove: SequentialAnimation {
+                PropertyAction { target: delegateRoot; property: "removing"; value: true }
                 PropertyAction { target: delegateRoot; property: "ListView.delayRemove"; value: true }
                 ParallelAnimation {
                     NumberAnimation { target: contentItem; property: "opacity"; to: 0; duration: 250; easing.type: Easing.OutCubic }
@@ -170,7 +172,7 @@ Item {
                 clip: false
 
                 Behavior on x {
-                    enabled: !dragArea.pressed
+                    enabled: !dragArea.pressed && !delegateRoot.removing
                     NumberAnimation { duration: 400; easing.type: Easing.OutQuint }
                 }
 
