@@ -31,7 +31,7 @@ def get_status():
                         "name": name,
                         "connected": is_connected
                     })
-        return {"power": is_on, "devices": devices[:5]}
+        return {"power": is_on, "devices": devices[:10]}
     except Exception:
         return {"power": False, "devices": []}
 

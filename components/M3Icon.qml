@@ -44,6 +44,7 @@ Item {
             "󰈀": "wifi",
             "󰋊": "hard_drive",
             "󰂚": "notifications",
+            "󰂜": "notifications",
             "󰂛": "notifications_off",
             "󰍉": "search",
             "󰸉": "wallpaper",

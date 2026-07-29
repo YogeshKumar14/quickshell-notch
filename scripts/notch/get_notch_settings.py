@@ -33,7 +33,6 @@ DEFAULTS = {
     "visualizer_timeout": 0,
     "visualizer_bar_count": 12,
     "visualizer_wave_width": 2,
-    "visualizer_dot_size": 4,
     "visualizer_pulsar_scale": 1.2,
     "visualizer_pause_delay": 1000,
     "stats_interval": 2000,

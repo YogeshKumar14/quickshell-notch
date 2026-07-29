@@ -17,6 +17,7 @@ Item {
     property int osdValue: 50
     property real animatedOsdValue: root.osdValue
     property color osdColor: Style.accent
+    property var notifModel: null
 
     Behavior on osdColor {
         ColorAnimation { duration: 250; easing.type: Easing.OutCubic }
@@ -65,7 +66,7 @@ Item {
     property alias notchBoxItem: notchBox
 
     property int currentPage: 0
-    property int totalPages: 5
+    property int totalPages: 4
 
     // Keyboard selection index for grid tabs (-1 = no selection)
     property int selectedIndex: 0
@@ -156,48 +157,6 @@ Item {
     property string pendingPowerCmd: ""
     property string pendingPowerTitle: ""
 
-    Process {
-        id: powerProc
-    }
-
-    Timer {
-        id: powerCountdownTimer
-        interval: 1000
-        repeat: true
-        running: root.isPowerConfirming
-        onTriggered: {
-            if (root.powerCountdown > 1) {
-                root.powerCountdown -= 1;
-            } else {
-                root.powerCountdownTimer.stop();
-                root.executePendingPower();
-            }
-        }
-    }
-
-    function triggerPowerAction(title, cmd) {
-        root.pendingPowerTitle = title;
-        root.pendingPowerCmd = cmd;
-        root.powerCountdown = 5;
-        root.isPowerConfirming = true;
-        powerCountdownTimer.restart();
-    }
-
-    function executePendingPower() {
-        if (root.pendingPowerCmd !== "") {
-            powerProc.command = ["bash", "-c", root.pendingPowerCmd];
-            powerProc.running = true;
-        }
-        root.isPowerConfirming = false;
-        root.isPowerMenuOpen = false;
-        root.isExpanded = false;
-    }
-
-    function cancelPowerAction() {
-        powerCountdownTimer.stop();
-        root.isPowerConfirming = false;
-    }
-
     // Focus management for keyboard input
     focus: true
     Keys.onPressed: function(event) {
@@ -218,6 +177,9 @@ Item {
                 } else {
                     root.isPowerMenuOpen = false;
                 }
+                event.accepted = true;
+            } else if (root.isNotifMenuOpen) {
+                root.isNotifMenuOpen = false;
                 event.accepted = true;
             } else if (root.isExpanded) {
                 root.isExpanded = false;
@@ -645,8 +607,6 @@ Item {
     Component.onCompleted: {
         refreshNotchSettings();
         updateClock();
-        wifiScanner.running = true;
-        btScanner.running = true;
     }
 
     // Fixed root dimensions (624px width allows 32px padding for inverted ears)
@@ -852,6 +812,7 @@ Item {
 
     property bool isWifiMenuOpen: false
     property bool isBluetoothMenuOpen: false
+    property bool isNotifMenuOpen: false
 
     property bool wifiPower: false
     property string wifiActiveSsid: ""
@@ -864,94 +825,6 @@ Item {
     property string wifiPromptSsid: ""
     property string wifiPasswordText: ""
     property bool showWifiPassword: false
-
-    Process {
-        id: wifiScanner
-        command: ["python3", "/home/yogesh/.config/quickshell/scripts/network/manage_wifi.py"]
-        stdout: StdioCollector {
-            onStreamFinished: {
-                try {
-                    var data = JSON.parse(this.text);
-                    root.wifiPower = data.power;
-                    root.wifiActiveSsid = data.active;
-                    root.wifiNetworks = data.networks;
-                } catch(e) {}
-            }
-        }
-    }
-
-    Process {
-        id: btScanner
-        command: ["python3", "/home/yogesh/.config/quickshell/scripts/network/manage_bluetooth.py"]
-        stdout: StdioCollector {
-            onStreamFinished: {
-                try {
-                    var data = JSON.parse(this.text);
-                    root.btPower = data.power;
-                    root.btDevices = data.devices;
-                } catch(e) {}
-            }
-        }
-    }
-
-    Process {
-        id: wifiToggler
-        stdout: StdioCollector {
-            onStreamFinished: {
-                try {
-                    var data = JSON.parse(this.text);
-                    root.wifiPower = data.power;
-                    root.wifiActiveSsid = data.active;
-                    root.wifiNetworks = data.networks;
-                } catch(e) {}
-            }
-        }
-    }
-
-    Process {
-        id: btToggler
-        stdout: StdioCollector {
-            onStreamFinished: {
-                try {
-                    var data = JSON.parse(this.text);
-                    root.btPower = data.power;
-                    root.btDevices = data.devices;
-                } catch(e) {}
-            }
-        }
-    }
-
-    Timer {
-        id: wifiTimer
-        interval: root.networkRefreshIntervalVal
-        running: root.isWifiMenuOpen
-        repeat: true
-        onTriggered: wifiScanner.running = true
-    }
-
-    Timer {
-        id: btTimer
-        interval: root.networkRefreshIntervalVal
-        running: root.isBluetoothMenuOpen
-        repeat: true
-        onTriggered: btScanner.running = true
-    }
-
-    Timer {
-        id: wifiScanTimer
-        interval: 1000
-        running: false
-        repeat: false
-        onTriggered: wifiScanner.running = true
-    }
-
-    Timer {
-        id: btScanTimer
-        interval: 1000
-        running: false
-        repeat: false
-        onTriggered: btScanner.running = true
-    }
 
 
 
@@ -1532,7 +1405,7 @@ Item {
                 anchors.margins: 14
                 spacing: 10
 
-                // Expanded Header: Text Tabs ("Media", "Walls", "Apps", "Notifs") + Gear Icon + Close
+                // Expanded Header: Text Tabs ("Media", "Walls", "Apps", "Stats") + Gear Icon + Close
                 RowLayout {
                     Layout.fillWidth: true
                     spacing: 8
@@ -1714,7 +1587,6 @@ Item {
                                 root.isWifiMenuOpen = !root.isWifiMenuOpen;
                                 root.isBluetoothMenuOpen = false;
                                 root.isPowerMenuOpen = false;
-                                if (root.isWifiMenuOpen) wifiScanner.running = true;
                             }
                         }
                     }
@@ -1745,7 +1617,6 @@ Item {
                                 root.isBluetoothMenuOpen = !root.isBluetoothMenuOpen;
                                 root.isWifiMenuOpen = false;
                                 root.isPowerMenuOpen = false;
-                                if (root.isBluetoothMenuOpen) btScanner.running = true;
                             }
                         }
                     }
@@ -1776,6 +1647,57 @@ Item {
                                 root.isPowerMenuOpen = !root.isPowerMenuOpen;
                                 root.isPowerConfirming = false;
                                 root.powerSelectedIndex = 0;
+                            }
+                        }
+                    }
+
+                    // Gear Icon button with Micro-Animations
+                    Rectangle {
+                        width: 28; height: 28; radius: 14
+                        color: gearM.containsMouse ? Style.cardBgHover : Style.cardBg
+                        border.color: Style.cardBorder
+
+                        scale: (root.buttonAnimsVal && notifM.pressed) ? 0.95 : ((root.buttonAnimsVal && notifM.containsMouse) ? 1.08 : 1.0)
+                        Behavior on scale { enabled: root.buttonAnimsVal; NumberAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
+                        Behavior on color { ColorAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
+
+                        M3Icon {
+                            anchors.centerIn: parent
+                            name: "󰂜"
+                            size: 16
+                            color: root.isNotifMenuOpen ? "#000" : (root.notifCount > 0 ? Style.accent : Style.textSecondary)
+                        }
+
+                        // Notification count badge
+                        Rectangle {
+                            visible: root.notifCount > 0
+                            width: 14; height: 14; radius: 7
+                            color: Style.accent
+                            anchors.top: parent.top
+                            anchors.right: parent.right
+                            anchors.topMargin: -2
+                            anchors.rightMargin: -2
+
+                            Text {
+                                anchors.centerIn: parent
+                                text: root.notifCount > 9 ? "9+" : root.notifCount.toString()
+                                font.family: Style.fontFamily
+                                font.pixelSize: 8
+                                font.weight: Font.Bold
+                                color: "#000"
+                            }
+                        }
+
+                        MouseArea {
+                            id: notifM
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                root.isNotifMenuOpen = !root.isNotifMenuOpen;
+                                root.isWifiMenuOpen = false;
+                                root.isBluetoothMenuOpen = false;
+                                root.isPowerMenuOpen = false;
                             }
                         }
                     }
@@ -2495,7 +2417,7 @@ Item {
                         width: 18; height: 7; radius: 4
                         color: Style.accent
                         anchors.verticalCenter: parent.verticalCenter
-                        x: 4 + (root.currentPage * 19)
+                        x: 14.5 + (root.currentPage * 19)
 
                         Behavior on x {
                             SpringAnimation { spring: 5.0; damping: 0.3 }
@@ -2509,738 +2431,75 @@ Item {
         MouseArea {
             anchors.fill: parent
             z: -1
-            enabled: root.isExpanded
-            onClicked: root.isExpanded = false
+            enabled: root.isExpanded || root.isPowerMenuOpen || root.isWifiMenuOpen || root.isBluetoothMenuOpen || root.isNotifMenuOpen
+            onClicked: {
+                if (root.isPowerMenuOpen) root.isPowerMenuOpen = false;
+                else if (root.isWifiMenuOpen) root.isWifiMenuOpen = false;
+                else if (root.isBluetoothMenuOpen) root.isBluetoothMenuOpen = false;
+                else if (root.isNotifMenuOpen) root.isNotifMenuOpen = false;
+                else if (root.isExpanded) root.isExpanded = false;
+            }
         }
 
         // Integrated Power Menu View Overlay inside notchBox (Morphed State)
-        Item {
+        PowerMenu {
             id: powerMenuOverlay
-            anchors.fill: parent
-            z: 99
-
-            opacity: root.isPowerMenuOpen ? 1.0 : 0.0
-            visible: opacity > 0.01
-
-            Behavior on opacity { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
-
-            ColumnLayout {
-                anchors.fill: parent
-                anchors.margins: 16
-                spacing: 12
-
-                Text {
-                    Layout.alignment: Qt.AlignHCenter
-                    text: root.isPowerConfirming ? "Confirm Action" : "Power Options"
-                    font.family: Style.fontFamily
-                    font.pixelSize: Style.fontSizeLarge
-                    font.weight: Font.Bold
-                    color: Style.textPrimary
-                }
-
-                // Stacked View Container for Smooth Jitter-Free Transitions
-                Item {
-                    Layout.fillWidth: true
-                    Layout.fillHeight: true
-
-                    // Normal 2x2 Grid View
-                    GridLayout {
-                        anchors.fill: parent
-                        columns: 2
-                        rowSpacing: 10
-                        columnSpacing: 10
-
-                        opacity: root.isPowerConfirming ? 0.0 : 1.0
-                        scale: root.isPowerConfirming ? 0.94 : 1.0
-                        visible: opacity > 0.01
-
-                        Behavior on opacity { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
-                        Behavior on scale { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
-
-                        Repeater {
-                            model: [
-                                { title: "Shutdown", icon: "󰐥", color: Style.danger, cmd: "systemctl poweroff" },
-                                { title: "Reboot", icon: "󰑐", color: Style.warning, cmd: "systemctl reboot" },
-                                { title: "Sleep", icon: "󰤄", color: Style.teal, cmd: "systemctl suspend" },
-                                { title: "Logout", icon: "󰍃", color: Style.purple, cmd: "hyprctl dispatch exit" }
-                            ]
-
-                            Rectangle {
-                                Layout.fillWidth: true
-                                Layout.fillHeight: true
-                                radius: Style.radiusMedium
-                                color: index === root.powerSelectedIndex ? "#1C1C1E" : (pCardM.containsMouse ? "#121214" : "#0D0D0F")
-                                border.color: index === root.powerSelectedIndex ? modelData.color : "#222225"
-                                border.width: index === root.powerSelectedIndex ? 2 : 1
-                                scale: index === root.powerSelectedIndex ? 1.04 : 1.0
-
-                                Behavior on scale { NumberAnimation { duration: 180; easing.type: Easing.OutBack } }
-                                Behavior on color { ColorAnimation { duration: 150 } }
-                                Behavior on border.color { ColorAnimation { duration: 150 } }
-
-                                ColumnLayout {
-                                    anchors.centerIn: parent
-                                    spacing: 6
-
-                                    Rectangle {
-                                        Layout.alignment: Qt.AlignHCenter
-                                        width: 38; height: 38; radius: 19
-                                        color: Qt.alpha(modelData.color, index === root.powerSelectedIndex ? 0.25 : 0.15)
-                                        border.color: Qt.alpha(modelData.color, 0.4)
-                                        border.width: 1
-
-                                        M3Icon {
-                                            anchors.centerIn: parent
-                                            name: modelData.icon
-                                            size: 24
-                                            color: modelData.color
-                                        }
-                                    }
-
-                                    Text {
-                                        Layout.alignment: Qt.AlignHCenter
-                                        text: modelData.title
-                                        font.family: Style.fontFamily
-                                        font.pixelSize: Style.fontSizeSmall
-                                        font.weight: Font.Bold
-                                        color: Style.textPrimary
-                                    }
-                                }
-
-                                MouseArea {
-                                    id: pCardM
-                                    anchors.fill: parent
-                                    hoverEnabled: true
-                                    cursorShape: Qt.PointingHandCursor
-                                    onEntered: root.powerSelectedIndex = index
-                                    onClicked: root.triggerPowerAction(modelData.title, modelData.cmd)
-                                }
-                            }
-                        }
-                    }
-
-                    // Confirmation Step View
-                    ColumnLayout {
-                        anchors.fill: parent
-                        Layout.alignment: Qt.AlignCenter
-                        spacing: 12
-
-                        opacity: root.isPowerConfirming ? 1.0 : 0.0
-                        scale: root.isPowerConfirming ? 1.0 : 1.06
-                        visible: opacity > 0.01
-
-                        Behavior on opacity { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
-                        Behavior on scale { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
-
-                        Text {
-                            Layout.alignment: Qt.AlignHCenter
-                            text: root.pendingPowerTitle + "?"
-                            font.family: Style.fontFamily
-                            font.pixelSize: Style.fontSizeTitle
-                            font.weight: Font.Bold
-                            color: Style.textPrimary
-                        }
-
-                        Text {
-                            Layout.alignment: Qt.AlignHCenter
-                            text: "Executing in " + root.powerCountdown + "s"
-                            font.family: Style.fontFamily
-                            font.pixelSize: Style.fontSizeNormal
-                            color: Style.accent
-                        }
-
-                        RowLayout {
-                            Layout.alignment: Qt.AlignHCenter
-                            spacing: 12
-
-                            // Cancel Button
-                            Rectangle {
-                                implicitWidth: 100
-                                implicitHeight: 36
-                                radius: 18
-                                color: pCancelM.containsMouse ? "#2C2C2E" : "#1C1C1E"
-                                border.color: "#3A3A3C"
-
-                                Text {
-                                    anchors.centerIn: parent
-                                    text: "Cancel"
-                                    font.family: Style.fontFamily
-                                    font.pixelSize: Style.fontSizeNormal
-                                    font.weight: Font.Bold
-                                    color: Style.textPrimary
-                                }
-
-                                MouseArea {
-                                    id: pCancelM
-                                    anchors.fill: parent
-                                    hoverEnabled: true
-                                    cursorShape: Qt.PointingHandCursor
-                                    onClicked: root.cancelPowerAction()
-                                }
-                            }
-
-                            // Confirm Button
-                            Rectangle {
-                                implicitWidth: 100
-                                implicitHeight: 36
-                                radius: 18
-                                color: Style.danger
-
-                                Text {
-                                    anchors.centerIn: parent
-                                    text: "Confirm"
-                                    font.family: Style.fontFamily
-                                    font.pixelSize: Style.fontSizeNormal
-                                    font.weight: Font.Bold
-                                    color: "#FFFFFF"
-                                }
-
-                                MouseArea {
-                                    id: pConfirmM
-                                    anchors.fill: parent
-                                    hoverEnabled: true
-                                    cursorShape: Qt.PointingHandCursor
-                                    onClicked: root.executePendingPower()
-                                }
-                            }
-                        }
-                    }
-                }
+            isOpen: root.isPowerMenuOpen
+            isConfirming: root.isPowerConfirming
+            selectedIndex: root.powerSelectedIndex
+            pendingTitle: root.pendingPowerTitle
+            countdown: root.powerCountdown
+            pendingCmd: root.pendingPowerCmd
+            onTriggered: function(title, cmd) {
+                root.pendingPowerTitle = title;
+                root.pendingPowerCmd = cmd;
+                root.powerCountdown = 5;
+                root.isPowerConfirming = true;
+            }
+            onCancelled: root.isPowerConfirming = false
+            onExecuted: {
+                root.isPowerConfirming = false;
+                root.isPowerMenuOpen = false;
+                root.isExpanded = false;
             }
         }
 
         // Integrated WiFi Menu View Overlay inside notchBox (Morphed State)
-        Item {
+        WifiMenu {
             id: wifiMenuOverlay
-            anchors.fill: parent
-            z: 99
-
-            opacity: root.isWifiMenuOpen ? 1.0 : 0.0
-            visible: opacity > 0.01
-
-            Behavior on opacity { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
-
-            ColumnLayout {
-                anchors.fill: parent
-                anchors.margins: 14
-                spacing: 8
-
-                RowLayout {
-                    Layout.fillWidth: true
-                    spacing: 8
-
-
-                    Text {
-                        text: root.isWifiPasswordPromptOpen ? "Enter Password" : "Wi-Fi Network"
-                        font.family: Style.fontFamily
-                        font.pixelSize: Style.fontSizeLarge
-                        font.weight: Font.Bold
-                        color: Style.textPrimary
-                    }
-
-                    Item { Layout.fillWidth: true }
-
-                    // Manual Scan Refresh Button with rotation animation
-                    Rectangle {
-                        width: 24; height: 24; radius: 12
-                        color: wifiRefM.containsMouse ? Style.cardBgHover : Style.cardBg
-                        border.color: Style.cardBorder
-                        visible: !root.isWifiPasswordPromptOpen && root.wifiPower
-                        M3Icon {
-                            id: wifiRefText
-                            anchors.centerIn: parent
-                            name: "restart_alt"
-                            size: 14
-                            color: Style.textPrimary
-
-                            transformOrigin: Item.Center
-                            RotationAnimation on rotation {
-                                running: wifiScanner.running || wifiToggler.running
-                                from: 0; to: 360; loops: Animation.Infinite; duration: 1000
-                            }
-                        }
-                        MouseArea {
-                            id: wifiRefM; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
-                            onClicked: {
-                                wifiScanner.running = false;
-                                wifiScanner.running = true;
-                            }
-                        }
-                    }
-
-                    CustomSwitch {
-                        visible: !root.isWifiPasswordPromptOpen
-                        checked: root.wifiPower
-                        onToggled: function(val) {
-                            root.wifiPower = val;
-                            wifiToggler.running = false;
-                            wifiToggler.command = ["python3", "/home/yogesh/.config/quickshell/scripts/network/manage_wifi.py", val ? "on" : "off"];
-                            wifiToggler.running = true;
-                            wifiScanTimer.restart();
-                        }
-                    }
-                }
-
-                // Shared Container for transitioning scan lists and password text fields
-                Item {
-                    Layout.fillWidth: true; Layout.fillHeight: true
-
-                    // View A: Password Entry View (Native inside Notch)
-                    ColumnLayout {
-                        anchors.fill: parent
-                        spacing: 12
-                        opacity: root.isWifiPasswordPromptOpen ? 1.0 : 0.0
-                        scale: root.isWifiPasswordPromptOpen ? 1.0 : 0.92
-                        visible: opacity > 0.01
-
-                        Behavior on opacity { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
-                        Behavior on scale { NumberAnimation { duration: 250; easing.type: Easing.OutCubic } }
-
-                        Text {
-                            Layout.alignment: Qt.AlignLeft
-                            text: "Connecting to: " + root.wifiPromptSsid
-                            font.family: Style.fontFamily
-                            font.pixelSize: Style.fontSizeNormal
-                            font.weight: Font.DemiBold
-                            color: Style.textSecondary
-                        }
-
-                        Rectangle {
-                            Layout.fillWidth: true
-                            height: 40
-                            radius: Style.radiusSmall
-                            color: "#0E0E10"
-                            border.color: wifiPasswordInput.activeFocus ? Style.accent : "#222225"
-                            border.width: 1
-
-                            RowLayout {
-                                anchors.fill: parent
-                                anchors.leftMargin: 10; anchors.rightMargin: 10
-                                spacing: 8
-
-                                M3Icon {
-                                    name: "lock"
-                                    color: Style.textMuted
-                                    size: 16
-                                }
-
-                                TextInput {
-                                    id: wifiPasswordInput
-                                    Layout.fillWidth: true
-                                    Layout.fillHeight: true
-                                    font.family: Style.fontFamily
-                                    font.pixelSize: Style.fontSizeNormal
-                                    color: Style.textPrimary
-                                    selectByMouse: true
-                                    echoMode: root.showWifiPassword ? TextInput.Normal : TextInput.Password
-                                    text: root.wifiPasswordText
-                                    focus: root.isWifiPasswordPromptOpen
-                                    onTextChanged: root.wifiPasswordText = text
-                                    verticalAlignment: TextInput.AlignVCenter
-
-                                    Keys.onPressed: function(event) {
-                                        if (event.key === Qt.Key_Escape) {
-                                            root.isWifiPasswordPromptOpen = false;
-                                            root.forceActiveFocus();
-                                            event.accepted = true;
-                                        }
-                                    }
-
-                                    KeyNavigation.tab: wifiCancelBtn
-
-                                    onAccepted: {
-                                        wifiToggler.running = false;
-                                        wifiToggler.command = ["python3", "/home/yogesh/.config/quickshell/scripts/network/manage_wifi.py", "connect", root.wifiPromptSsid, root.wifiPasswordText];
-                                        wifiToggler.running = true;
-                                        root.isWifiPasswordPromptOpen = false;
-                                        wifiScanTimer.restart();
-                                    }
-                                }
-
-                                Rectangle {
-                                    width: 24; height: 24; radius: 12
-                                    color: "transparent"
-                                    M3Icon {
-                                        anchors.centerIn: parent
-                                        name: root.showWifiPassword ? "visibility" : "visibility_off"
-                                        size: 16
-                                        color: wifiEyeM.containsMouse ? Style.textPrimary : Style.textMuted
-                                    }
-                                    MouseArea {
-                                        id: wifiEyeM; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
-                                        onClicked: root.showWifiPassword = !root.showWifiPassword
-                                    }
-                                }
-                            }
-                        }
-
-                        RowLayout {
-                            Layout.fillWidth: true
-                            Layout.alignment: Qt.AlignRight
-                            spacing: 10
-
-                            Rectangle {
-                                id: wifiCancelBtn
-                                implicitWidth: 80; implicitHeight: 32; radius: 16
-                                color: wifiCancelM.containsMouse ? "#2C2C2E" : "#1C1C1E"
-                                border.color: "#3A3A3C"
-
-                                Text {
-                                    anchors.centerIn: parent
-                                    text: "Cancel"
-                                    font.family: Style.fontFamily; font.pixelSize: Style.fontSizeSmall; font.weight: Font.Bold
-                                    color: Style.textPrimary
-                                }
-                                MouseArea {
-                                    id: wifiCancelM; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
-                                    onClicked: {
-                                        root.isWifiPasswordPromptOpen = false;
-                                        root.forceActiveFocus();
-                                    }
-                                }
-                            }
-
-                            Rectangle {
-                                implicitWidth: 80; implicitHeight: 32; radius: 16
-                                color: Style.accent
-
-                                Text {
-                                    anchors.centerIn: parent
-                                    text: "Connect"
-                                    font.family: Style.fontFamily; font.pixelSize: Style.fontSizeSmall; font.weight: Font.Bold; color: "#000000"
-                                }
-                                MouseArea {
-                                    anchors.fill: parent; cursorShape: Qt.PointingHandCursor
-                                    onClicked: {
-                                        wifiToggler.running = false;
-                                        wifiToggler.command = ["python3", "/home/yogesh/.config/quickshell/scripts/network/manage_wifi.py", "connect", root.wifiPromptSsid, root.wifiPasswordText];
-                                        wifiToggler.running = true;
-                                        root.isWifiPasswordPromptOpen = false;
-                                        wifiScanTimer.restart();
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    // View B: Standard Wifi List View
-                    ColumnLayout {
-                        anchors.fill: parent
-                        spacing: 6
-                        opacity: root.isWifiPasswordPromptOpen ? 0.0 : 1.0
-                        scale: root.isWifiPasswordPromptOpen ? 0.92 : 1.0
-                        visible: opacity > 0.01
-
-                        Behavior on opacity { NumberAnimation { duration: 220; easing.type: Easing.OutCubic } }
-                        Behavior on scale { NumberAnimation { duration: 250; easing.type: Easing.OutCubic } }
-
-                        // Connected or Connecting Network indicator Card
-                        Rectangle {
-                            Layout.fillWidth: true
-                            height: 36
-                            radius: Style.radiusSmall
-                            color: "#0F0F12"
-                            border.color: Style.accent
-                            border.width: 1
-                            visible: root.wifiPower && (root.wifiActiveSsid !== "" || wifiToggler.running)
-
-                            RowLayout {
-                                anchors.fill: parent
-                                anchors.leftMargin: 10; anchors.rightMargin: 10
-                                spacing: 8
-                                    M3Icon {
-                                        id: wifiActiveIcon
-                                        name: wifiToggler.running ? "restart_alt" : "wifi"
-                                        color: Style.accent; size: 16
-                                        transformOrigin: Item.Center
-                                        RotationAnimation on rotation {
-                                            running: wifiToggler.running
-                                            from: 0; to: 360; loops: Animation.Infinite; duration: 1000
-                                            onRunningChanged: {
-                                                if (!running) wifiActiveIcon.rotation = 0;
-                                            }
-                                        }
-                                    }
-                                Text {
-                                    text: wifiToggler.running ? "Connecting to: " + root.wifiPromptSsid : "Connected: " + root.wifiActiveSsid
-                                    font.family: Style.fontFamily; font.pixelSize: Style.fontSizeNormal
-                                    font.weight: Font.Bold
-                                    color: Style.textPrimary
-                                    Layout.fillWidth: true
-                                    elide: Text.ElideRight
-                                }
-                                M3Icon { name: wifiToggler.running ? "" : "done"; color: Style.accent; size: 16 }
-                            }
-                        }
-
-                        Rectangle {
-                            Layout.fillWidth: true; Layout.fillHeight: true
-                            color: "transparent"
-                            visible: !root.wifiPower || root.wifiNetworks.length === 0
-
-                            Column {
-                                anchors.centerIn: parent
-                                spacing: 8
-                                M3Icon {
-                                    anchors.horizontalCenter: parent.horizontalCenter
-                                    name: !root.wifiPower ? "wifi_off" : "restart_alt"
-                                    size: 32
-                                    color: Style.textMuted
-                                }
-                                Text {
-                                    anchors.horizontalCenter: parent.horizontalCenter
-                                    text: !root.wifiPower ? "Wi-Fi is Powered Off" : "Scanning networks..."
-                                    font.family: Style.fontFamily; font.pixelSize: Style.fontSizeNormal
-                                    color: Style.textSecondary
-                                }
-                            }
-                        }
-
-                        ListView {
-                            id: wifiList
-                            Layout.fillWidth: true; Layout.fillHeight: true
-                            model: root.wifiPower ? root.wifiNetworks : []
-                            clip: true
-                            spacing: 4
-                            visible: root.wifiPower && root.wifiNetworks.length > 0
-
-                            delegate: Rectangle {
-                                width: wifiList.width; height: 32; radius: Style.radiusSmall
-                                color: modelData.active ? "#1C1C1E" : (netM.containsMouse ? "#121214" : "#0A0A0C")
-                                border.color: modelData.active ? Style.accent : "#222225"
-                                border.width: 1
-
-                                RowLayout {
-                                    anchors.fill: parent
-                                    anchors.leftMargin: 8; anchors.rightMargin: 8
-                                    spacing: 8
-
-                                    M3Icon {
-                                        name: "wifi"
-                                        color: modelData.active ? Style.accent : Style.textSecondary
-                                        size: 16
-                                        opacity: modelData.signal > 75 ? 1.0 : (modelData.signal > 50 ? 0.75 : (modelData.signal > 25 ? 0.5 : 0.25))
-                                    }
-
-                                    Text {
-                                        text: modelData.ssid
-                                        font.family: Style.fontFamily; font.pixelSize: Style.fontSizeSmall
-                                        color: Style.textPrimary
-                                        Layout.fillWidth: true
-                                        elide: Text.ElideRight
-                                    }
-
-                                    M3Icon {
-                                        name: modelData.active ? "done" : (modelData.security ? "lock" : "")
-                                        color: modelData.active ? Style.accent : Style.textMuted
-                                        size: 16
-                                    }
-                                }
-
-                                MouseArea {
-                                    id: netM; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
-                                    onClicked: {
-                                        if (modelData.security && modelData.security !== "--" && !modelData.active && !modelData.saved) {
-                                            root.wifiPromptSsid = modelData.ssid;
-                                            root.wifiPasswordText = "";
-                                            root.showWifiPassword = false;
-                                            root.isWifiPasswordPromptOpen = true;
-                                            wifiPasswordInput.forceActiveFocus();
-                                        } else {
-                                            wifiToggler.running = false;
-                                            wifiToggler.command = ["python3", "/home/yogesh/.config/quickshell/scripts/network/manage_wifi.py", "connect", modelData.ssid];
-                                            wifiToggler.running = true;
-                                            wifiScanTimer.restart();
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+            isOpen: root.isWifiMenuOpen
+            wifiPower: root.wifiPower
+            wifiActiveSsid: root.wifiActiveSsid
+            wifiNetworks: root.wifiNetworks
+            isPasswordPromptOpen: root.isWifiPasswordPromptOpen
+            promptSsid: root.wifiPromptSsid
+            passwordText: root.wifiPasswordText
+            showPassword: root.showWifiPassword
+            onWifiPowerChanged: root.wifiPower = wifiMenuOverlay.wifiPower
+            onWifiActiveSsidChanged: root.wifiActiveSsid = wifiMenuOverlay.wifiActiveSsid
+            onWifiNetworksChanged: root.wifiNetworks = wifiMenuOverlay.wifiNetworks
+            onIsPasswordPromptOpenChanged: root.isWifiPasswordPromptOpen = wifiMenuOverlay.isPasswordPromptOpen
+            onPromptSsidChanged: root.wifiPromptSsid = wifiMenuOverlay.promptSsid
+            onPasswordTextChanged: root.wifiPasswordText = wifiMenuOverlay.passwordText
+            onShowPasswordChanged: root.showWifiPassword = wifiMenuOverlay.showPassword
         }
 
         // Integrated Bluetooth Menu View Overlay inside notchBox (Morphed State)
-        Item {
+        BluetoothMenu {
             id: bluetoothMenuOverlay
-            anchors.fill: parent
-            z: 99
+            isOpen: root.isBluetoothMenuOpen
+            btPower: root.btPower
+            btDevices: root.btDevices
+            onBtPowerChanged: root.btPower = bluetoothMenuOverlay.btPower
+            onBtDevicesChanged: root.btDevices = bluetoothMenuOverlay.btDevices
+        }
 
-            opacity: root.isBluetoothMenuOpen ? 1.0 : 0.0
-            visible: opacity > 0.01
-
-            Behavior on opacity { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
-
-            ColumnLayout {
-                anchors.fill: parent
-                anchors.margins: 14
-                spacing: 8
-
-                RowLayout {
-                    Layout.fillWidth: true
-                    spacing: 8
-
-
-                    Text {
-                        text: "Bluetooth"
-                        font.family: Style.fontFamily
-                        font.pixelSize: Style.fontSizeLarge
-                        font.weight: Font.Bold
-                        color: Style.textPrimary
-                    }
-
-                    Item { Layout.fillWidth: true }
-
-                    // Manual Scan Refresh Button with rotation animation
-                    Rectangle {
-                        width: 24; height: 24; radius: 12
-                        color: btRefM.containsMouse ? Style.cardBgHover : Style.cardBg
-                        border.color: Style.cardBorder
-                        visible: root.btPower
-                        M3Icon {
-                            id: btRefText
-                            anchors.centerIn: parent
-                            name: "restart_alt"
-                            size: 14
-                            color: Style.textPrimary
-
-                            transformOrigin: Item.Center
-                            RotationAnimation on rotation {
-                                running: btScanner.running || btToggler.running
-                                from: 0; to: 360; loops: Animation.Infinite; duration: 1000
-                            }
-                        }
-                        MouseArea {
-                            id: btRefM; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
-                            onClicked: {
-                                btScanner.running = false;
-                                btScanner.running = true;
-                            }
-                        }
-                    }
-
-                    CustomSwitch {
-                        checked: root.btPower
-                        onToggled: function(val) {
-                            root.btPower = val;
-                            btToggler.running = false;
-                            btToggler.command = ["python3", "/home/yogesh/.config/quickshell/scripts/network/manage_bluetooth.py", val ? "on" : "off"];
-                            btToggler.running = true;
-                            btScanTimer.restart();
-                        }
-                    }
-                }
-
-                // Connecting Device Indicator Card
-                Rectangle {
-                    Layout.fillWidth: true
-                    height: 36
-                    radius: Style.radiusSmall
-                    color: "#0F0F12"
-                    border.color: Style.accent
-                    border.width: 1
-                    visible: root.btPower && btToggler.running
-
-                    RowLayout {
-                        anchors.fill: parent
-                        anchors.leftMargin: 10; anchors.rightMargin: 10
-                        spacing: 8
-                        M3Icon {
-                            id: btActiveIcon
-                            name: "restart_alt"
-                            color: Style.accent; size: 16
-                            transformOrigin: Item.Center
-                            RotationAnimation on rotation {
-                                running: btToggler.running
-                                from: 0; to: 360; loops: Animation.Infinite; duration: 1000
-                            }
-                        }
-                        Text {
-                            text: "Updating connection..."
-                            font.family: Style.fontFamily; font.pixelSize: Style.fontSizeNormal
-                            font.weight: Font.Bold
-                            color: Style.textPrimary
-                            Layout.fillWidth: true
-                        }
-                    }
-                }
-
-                Rectangle {
-                    Layout.fillWidth: true; Layout.fillHeight: true
-                    color: "transparent"
-                    visible: !root.btPower || root.btDevices.length === 0
-
-                    Column {
-                        anchors.centerIn: parent
-                        spacing: 8
-                        M3Icon {
-                            anchors.horizontalCenter: parent.horizontalCenter
-                            name: !root.btPower ? "bluetooth_disabled" : "restart_alt"
-                            size: 32
-                            color: Style.textMuted
-                        }
-                        Text {
-                            anchors.horizontalCenter: parent.horizontalCenter
-                            text: !root.btPower ? "Bluetooth is Powered Off" : "No devices found"
-                            font.family: Style.fontFamily; font.pixelSize: Style.fontSizeNormal
-                            color: Style.textSecondary
-                        }
-                    }
-                }
-
-                ListView {
-                    id: btList
-                    Layout.fillWidth: true; Layout.fillHeight: true
-                    model: root.btPower ? root.btDevices : []
-                    clip: true
-                    spacing: 4
-                    visible: root.btPower && root.btDevices.length > 0
-
-                    delegate: Rectangle {
-                        width: btList.width; height: 32; radius: Style.radiusSmall
-                        color: modelData.connected ? "#1C1C1E" : (devM.containsMouse ? "#121214" : "#0A0A0C")
-                        border.color: modelData.connected ? Style.accent : "#222225"
-                        border.width: 1
-
-                        RowLayout {
-                            anchors.fill: parent
-                            anchors.leftMargin: 8; anchors.rightMargin: 8
-                            spacing: 8
-
-                            M3Icon {
-                                name: "bluetooth"
-                                color: modelData.connected ? Style.accent : Style.textSecondary
-                                size: 16
-                            }
-
-                            Text {
-                                text: modelData.name
-                                font.family: Style.fontFamily; font.pixelSize: Style.fontSizeSmall
-                                color: Style.textPrimary
-                                Layout.fillWidth: true
-                                elide: Text.ElideRight
-                            }
-
-                            M3Icon {
-                                name: modelData.connected ? "done" : ""
-                                color: Style.accent
-                                size: 16
-                            }
-                        }
-
-                        MouseArea {
-                            id: devM; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor
-                            onClicked: {
-                                btToggler.running = false;
-                                btToggler.command = ["python3", "/home/yogesh/.config/quickshell/scripts/network/manage_bluetooth.py", "toggle_conn", modelData.mac];
-                                btToggler.running = true;
-                                btScanTimer.restart();
-                            }
-                        }
-                    }
-                }
-            }
+        // Integrated Notification History View Overlay inside notchBox (Morphed State)
+        NotificationHistory {
+            id: notifHistoryOverlay
+            isOpen: root.isNotifMenuOpen
+            notifModel: root.notifModel
+            onNotifCountChanged: root.notifCount = notifHistoryOverlay.notifCount
         }
     }
 }

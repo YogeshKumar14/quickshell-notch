@@ -89,17 +89,17 @@ Item {
             }
         }
 
-        // Slide out to the right on removal
+        // Slide out to the right on removal with spring
         remove: Transition {
             ParallelAnimation {
                 NumberAnimation { property: "opacity"; to: 0; duration: 200; easing.type: Easing.OutCubic }
-                NumberAnimation { property: "x"; to: 374; duration: 200; easing.type: Easing.OutCubic }
+                SpringAnimation { property: "x"; spring: 3.5; damping: 0.75; velocity: 800 }
             }
         }
 
-        // Smooth eased repositioning when items shift (NOT spring — avoids overshoot on the ear)
+        // Spring-based repositioning when items shift for dynamic reflow
         displaced: Transition {
-            NumberAnimation { properties: "y"; duration: 300; easing.type: Easing.OutCubic }
+            SpringAnimation { properties: "y"; spring: 4.0; damping: 0.7 }
         }
 
         delegate: Item {

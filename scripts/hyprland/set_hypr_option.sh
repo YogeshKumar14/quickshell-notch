@@ -75,6 +75,30 @@ case "$TYPE" in
     reset_defaults)
         rm -f "$LUA_OVERRIDE"
         rm -f "$HOME/.config/hypr/quickshell/quickshell_hypr.lua"
+        # Restore notch_settings.json to defaults
+        NOTCH_CFG="$HOME/.config/quickshell/notch_settings.json"
+        if [ -f "$NOTCH_CFG" ]; then
+            python3 -c "
+import json, os
+cfg = os.path.expanduser('~/.config/quickshell/notch_settings.json')
+defaults = {
+    'always_ontop': True, 'notch_radius': 12, 'show_battery': True,
+    'show_network': True, 'show_bluetooth': True, 'show_media': True,
+    'expanded_height': 420, 'workspace_mode': 'dots', 'workspace_count': 10,
+    'workspace_sort': 'name', 'wallpaper_dir': '~/Pictures/Wallpapers',
+    'wallpaper_cols': 3, 'wallpaper_use_swww': True, 'wallpaper_fill_mode': 'fit',
+    'visualizer_enabled': True, 'visualizer_style': 'bars',
+    'visualizer_height': 16, 'visualizer_timeout': 0,
+    'visualizer_bar_count': 12, 'visualizer_wave_width': 2,
+    'visualizer_pulsar_scale': 1.2, 'visualizer_pause_delay': 1000,
+    'stats_interval': 2000, 'network_refresh': 5000, 'osd_timeout': 2000,
+    'clock_format': 'h:mm A', 'clock_font_size': 14,
+    'battery_warning_threshold': 20
+}
+with open(cfg, 'w') as f:
+    json.dump(defaults, f, indent=4)
+"
+        fi
         hyprctl reload
         exit 0
         ;;

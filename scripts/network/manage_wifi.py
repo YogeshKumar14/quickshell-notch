@@ -43,7 +43,7 @@ def get_status():
             # Sort networks so the active one floats to the top
             networks.sort(key=lambda x: not x["active"])
             
-        return {"power": is_on, "active": active_ssid, "networks": networks[:6]}
+        return {"power": is_on, "active": active_ssid, "networks": networks[:12]}
     except Exception:
         return {"power": False, "active": "", "networks": []}
 

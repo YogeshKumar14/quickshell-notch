@@ -82,13 +82,14 @@ Scope {
         TopNotch {
             id: notchComp
             anchors.fill: parent
+            notifModel: notifHistoryModel
             onOpenFullSettings: settingsModal.toggle()
         }
     }
 
     HyprlandFocusGrab {
         id: focusGrab
-        active: notchComp.isExpanded || notchComp.isPowerMenuOpen || notchComp.isWifiMenuOpen || notchComp.isBluetoothMenuOpen
+        active: notchComp.isExpanded || notchComp.isPowerMenuOpen || notchComp.isWifiMenuOpen || notchComp.isBluetoothMenuOpen || notchComp.isNotifMenuOpen
         windows: [notchWindow]
     }
 
