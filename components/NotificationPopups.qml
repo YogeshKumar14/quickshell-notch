@@ -221,6 +221,7 @@ Item {
                     anchors.right: parent.right
                     height: notifLayout.implicitHeight + 32
                     color: "#000000"
+                    bottomLeftRadius: index === popupModel.count - 1 ? Style.radiusMedium : 0
 
                     ColumnLayout {
                         id: notifLayout
@@ -333,7 +334,18 @@ Item {
                 Canvas {
                     width: 24; height: 24
                     x: 0; y: 0
-                    visible: index === 0 && delegateRoot.entered
+                    visible: index === 0
+                    opacity: delegateRoot.entered ? 1 : 0
+                    scale: delegateRoot.entered ? 1 : 0
+                    transformOrigin: Item.BottomRight
+
+                    Behavior on opacity {
+                        NumberAnimation { duration: 300; easing.type: Easing.OutCubic }
+                    }
+
+                    Behavior on scale {
+                        NumberAnimation { duration: 400; easing.type: Easing.OutBack }
+                    }
 
                     onPaint: {
                         var ctx = getContext("2d");
