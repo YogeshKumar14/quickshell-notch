@@ -294,8 +294,18 @@ Item {
 
     // Audio Visualizer IPC State
     property var visualizerBars: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    property var visualizerFrame: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
     property bool isAudioActive: false
     property bool isVisualizerActive: false
+
+    // Throttle frame propagation: runs when any visualizer consumer is potentially visible
+    Timer {
+        id: visFrameTimer
+        interval: 66
+        repeat: true
+        running: root.isVisualizerActive || (root.isExpanded && root.currentPage === 0)
+        onTriggered: root.visualizerFrame = root.visualizerBars
+    }
 
     // Evaluated Visualizer Display State
     property bool showVisualizer: root.visualizerEnabledVal && root.isVisualizerActive && !root.isWorkspaceActive && !root.isOsdActive
@@ -361,10 +371,7 @@ Item {
                 try {
                     var parsed = JSON.parse(data.trim());
                     if (parsed.bars !== undefined) {
-                        // OPTIMIZATION: Only propagate bindings if visualizer is actually visible
-                        if (root.showVisualizer || notchWindow.height > Style.notchHeightCompact + 10) {
-                            root.visualizerBars = parsed.bars;
-                        }
+                        root.visualizerBars = parsed.bars;
                     }
                     if (parsed.active !== undefined) {
                         var wasActive = root.isAudioActive;
@@ -386,37 +393,33 @@ Item {
         }
     }
 
-    // Workspace native QML state
+    // Workspace native QML state (occupiedWorkspaces is a reactive binding — no manual refresh needed)
     property int activeWorkspace: 1
     property var occupiedWorkspaces: [1]
-    property bool isWorkspaceActive: false
-    onIsWorkspaceActiveChanged: { if (isWorkspaceActive) root.isOsdActive = false; }
 
-    // High-speed direct Hyprland IPC poll for accurate occupied workspace array
-    Process {
-        id: occupiedProc
-        command: ["bash", "-c", "hyprctl workspaces | awk 'BEGIN {printf \"[\"} /^workspace ID/ {id=$3} /windows:/ {if($2>0) {if(c++) printf \",\"; printf id}} END {print \"]\"}'"]
-        stdout: StdioCollector {
-            onStreamFinished: {
-                try {
-                    root.occupiedWorkspaces = JSON.parse(this.text.trim());
-                } catch(e) {}
+    function refreshOccupied() {
+        var list = [];
+        for (var i = 0; i < Hyprland.workspaces.count; i++) {
+            var ws = Hyprland.workspaces.get(i);
+            if (ws && ws.toplevels && ws.toplevels.count > 0) {
+                list.push(ws.id);
             }
         }
+        root.occupiedWorkspaces = list;
     }
 
     Timer {
-        id: occupiedPoller
         interval: 500
         repeat: true
         running: true
-        onTriggered: {
-            if (!occupiedProc.running) {
-                occupiedProc.running = true;
-            }
-        }
+        onTriggered: root.refreshOccupied()
     }
 
+    Component.onCompleted: root.refreshOccupied()
+    property bool isWorkspaceActive: false
+    onIsWorkspaceActiveChanged: { if (isWorkspaceActive) root.isOsdActive = false; }
+
+    // Reactive workspace overlay via focused workspace changes
     Connections {
         target: Hyprland
 
@@ -1222,7 +1225,7 @@ Item {
                                 x: index * (barContainer.barW + barContainer.barSpacing)
                                 anchors.verticalCenter: parent.verticalCenter
 
-                                property real val: (root.visualizerBars && index < root.visualizerBars.length) ? root.visualizerBars[index] : 0
+                                property real val: (root.visualizerFrame && index < root.visualizerFrame.length) ? root.visualizerFrame[index] : 0
                                 height: Math.max(2, Math.min(root.visualizerHeightVal, (val / 100.0) * root.visualizerHeightVal))
                                 radius: 1
                                 color: Style.accent
@@ -1245,11 +1248,11 @@ Item {
                             ctx.lineWidth = root.visualizerWaveWidthVal;
                             ctx.beginPath();
 
-                            var count = root.visualizerBars ? root.visualizerBars.length : 10;
+                            var count = root.visualizerFrame ? root.visualizerFrame.length : 10;
                             var step = width / Math.max(1, count - 1);
                             for (var i = 0; i < count; i++) {
                                 var x = i * step;
-                                var val = root.visualizerBars[i] || 0;
+                                var val = root.visualizerFrame[i] || 0;
                                 var amp = (val / 100.0) * (root.visualizerHeightVal / 2);
                                 var y = (height / 2) + (i % 2 === 0 ? -amp : amp);
                                 if (i === 0) ctx.moveTo(x, y);
@@ -1260,7 +1263,7 @@ Item {
 
                         Connections {
                             target: root
-                            function onVisualizerBarsChanged() {
+                            function onVisualizerFrameChanged() {
                                 if (root.showVisualizer && root.visualizerStyleVal === "wave") {
                                     waveCanvas.requestPaint();
                                 }
@@ -1275,42 +1278,42 @@ Item {
                         Layout.alignment: Qt.AlignVCenter
                         visible: root.visualizerStyleVal === "pulsar"
 
-                        property real avgAmp: {
-                            if (!root.visualizerBars || root.visualizerBars.length === 0) return 0;
+                        function calcAvgAmp() {
+                            if (!root.visualizerFrame || root.visualizerFrame.length === 0) return 0;
                             var sum = 0;
-                            for (var i = 0; i < root.visualizerBars.length; i++) sum += root.visualizerBars[i];
-                            return Math.min(1.0, ((sum / root.visualizerBars.length) / 100.0) * root.visualizerPulsarScaleVal);
+                            for (var i = 0; i < root.visualizerFrame.length; i++) sum += root.visualizerFrame[i];
+                            return Math.min(1.0, ((sum / root.visualizerFrame.length) / 100.0) * root.visualizerPulsarScaleVal);
                         }
 
                         // Outer Concentric Glow Ring 2
                         Rectangle {
                             anchors.centerIn: parent
-                            width: Math.max(20, 78 * parent.avgAmp)
-                            height: Math.max(6, (root.visualizerHeightVal + 4) * parent.avgAmp)
+                            width: Math.max(20, 78 * parent.calcAvgAmp())
+                            height: Math.max(6, (root.visualizerHeightVal + 4) * parent.calcAvgAmp())
                             radius: height / 2
                             color: "transparent"
                             border.color: Style.accent
                             border.width: 1
-                            opacity: 0.35 * parent.avgAmp
+                            opacity: 0.35 * parent.calcAvgAmp()
                         }
 
                         // Outer Concentric Glow Ring 1
                         Rectangle {
                             anchors.centerIn: parent
-                            width: Math.max(16, 60 * parent.avgAmp)
-                            height: Math.max(5, (root.visualizerHeightVal + 2) * parent.avgAmp)
+                            width: Math.max(16, 60 * parent.calcAvgAmp())
+                            height: Math.max(5, (root.visualizerHeightVal + 2) * parent.calcAvgAmp())
                             radius: height / 2
                             color: "transparent"
                             border.color: Style.accent
                             border.width: 1.5
-                            opacity: 0.6 * parent.avgAmp
+                            opacity: 0.6 * parent.calcAvgAmp()
                         }
 
                         // Inner Solid Glowing Core Pill
                         Rectangle {
                             anchors.centerIn: parent
-                            width: Math.max(14, 46 * parent.avgAmp)
-                            height: Math.max(4, root.visualizerHeightVal * parent.avgAmp)
+                            width: Math.max(14, 46 * parent.calcAvgAmp())
+                            height: Math.max(4, root.visualizerHeightVal * parent.calcAvgAmp())
                             radius: height / 2
                             color: Style.accent
                         }
@@ -1780,8 +1783,9 @@ Item {
 
                                 // MPRIS Track Card (Dynamic Island Card Style)
                                 Rectangle {
+                                    id: mprisCard
                                     Layout.fillWidth: true
-                                    implicitHeight: 90
+                                    implicitHeight: mprisContent.implicitHeight + 28
                                     radius: Style.radiusMedium // Matches the volume and mic cards
 
                                     color: Style.cardBg
@@ -1793,92 +1797,107 @@ Item {
                                         hoverEnabled: true
                                     }
 
-                                    RowLayout {
+                                    ColumnLayout {
+                                        id: mprisContent
                                         anchors.fill: parent
                                         anchors.margins: 14
-                                        spacing: 16
 
-                                        // Left: Circular Album Art (Spinning Vinyl) + Visualizer
-                                        Item {
-                                            width: 80; height: 80
-                                            anchors.verticalCenter: parent.verticalCenter
-                                            
-                                            // Circular Visualizer
-                                            Repeater {
-                                                model: 24
-                                                Item {
-                                                    width: 4
-                                                    height: 40 // Center to top edge
-                                                    x: 38 // 40 - width/2
-                                                    y: 0
-                                                    
-                                                    transformOrigin: Item.Bottom
-                                                    rotation: (360 / 24) * index
-                                                    
-                                                    Rectangle {
-                                                        property real val: (root.visualizerBars && root.visualizerBars.length > 0) ? root.visualizerBars[index % root.visualizerBars.length] : 0
-                                                        width: 4
-                                                        height: Math.max(4, (val / 100.0) * 16)
-                                                        radius: 2
-                                                        color: Style.accent
-                                                        anchors.bottom: parent.bottom
-                                                        anchors.bottomMargin: 36 // 36px offset from the center (vinyl radius)
-                                                    }
-                                                }
-                                            }
+                                        RowLayout {
+                                            Layout.fillWidth: true
+                                            Layout.alignment: Qt.AlignVCenter
+                                            spacing: 16
 
-                                            Rectangle {
-                                                width: 62; height: 62; radius: 31
-                                                anchors.centerIn: parent
-                                                color: Style.cardBgHover
-                                                border.color: Style.cardBorder
-                                                clip: true
+                                        // Left: Circular Album Art (Spinning Vinyl) + Visualizer (lazy-loaded when media tab active)
+                                        Loader {
+                                            Layout.alignment: Qt.AlignVCenter
+                                            Layout.preferredWidth: 80
+                                            Layout.preferredHeight: 80
+                                            Layout.minimumHeight: 80
+                                            active: root.currentPage === 0
+                                            sourceComponent: Item {
+                                                width: 80; height: 80
+
+                                                property real avgAmp: (root.visualizerFrame && root.visualizerFrame.length > 0)
+                                                    ? root.visualizerFrame.reduce(function(sum, v) { return sum + v; }, 0) / root.visualizerFrame.length / 100.0
+                                                    : 0
                                                 
-                                                // The rotating vinyl container
-                                                Item {
-                                                    anchors.fill: parent
-                                                    visible: dynamicAlbumArt.source.toString() !== ""
-
-                                                    RotationAnimation on rotation {
-                                                        from: 0
-                                                        to: 360
-                                                        duration: 10000 // 10 seconds for a full vinyl rotation
-                                                        loops: Animation.Infinite
-                                                        running: true
-                                                        paused: !root.isPlaying
-                                                    }
-
-                                                    Image {
-                                                        id: dynamicAlbumArt
-                                                        anchors.fill: parent
-                                                        source: (root.activePlayer && root.activePlayer.trackArtUrl) ? root.activePlayer.trackArtUrl : ""
-                                                        fillMode: Image.PreserveAspectCrop
-                                                        visible: false
-                                                    }
-
-                                                    OpacityMask {
-                                                        anchors.fill: parent
-                                                        source: dynamicAlbumArt
-                                                        maskSource: Rectangle {
-                                                            width: 62; height: 62; radius: 31
+                                                // Circular Visualizer
+                                                Repeater {
+                                                    model: 24
+                                                    Item {
+                                                        width: 4
+                                                        height: 40
+                                                        x: 38
+                                                        y: 0
+                                                        
+                                                        transformOrigin: Item.Bottom
+                                                        rotation: (360 / 24) * index
+                                                        
+                                                        Rectangle {
+                                                            property real val: (root.visualizerFrame && root.visualizerFrame.length > 0) ? root.visualizerFrame[index % root.visualizerFrame.length] : 0
+                                                            width: 4
+                                                            height: Math.max(4, (val / 100.0) * root.visualizerHeightVal)
+                                                            radius: 2
+                                                            color: Style.accent
+                                                            anchors.bottom: parent.bottom
+                                                            anchors.bottomMargin: 36
                                                         }
                                                     }
                                                 }
 
-                                                // Vinyl Center Hole Cutout (Static over the rotating image)
                                                 Rectangle {
-                                                    width: 14; height: 14; radius: 7
+                                                    width: 62; height: 62; radius: 31
                                                     anchors.centerIn: parent
-                                                    color: Style.background
-                                                    visible: dynamicAlbumArt.source.toString() !== ""
-                                                }
+                                                    color: Style.cardBgHover
+                                                    border.color: Style.cardBorder
+                                                    clip: true
+                                                    scale: 1.0 + (avgAmp * 0.06)
+                                                    Behavior on scale { NumberAnimation { duration: 120; easing.type: Easing.OutQuad } }
+                                                    
+                                                    Item {
+                                                        anchors.fill: parent
+                                                        visible: dynamicAlbumArt.source.toString() !== ""
 
-                                                M3Icon {
-                                                    anchors.centerIn: parent
-                                                    name: "music_note"
-                                                    size: 24
-                                                    color: Style.accent
-                                                    visible: !(root.activePlayer && root.activePlayer.trackArtUrl && root.activePlayer.trackArtUrl !== "")
+                                                        RotationAnimation on rotation {
+                                                            from: 0
+                                                            to: 360
+                                                            duration: 10000
+                                                            loops: Animation.Infinite
+                                                            running: true
+                                                            paused: !root.isPlaying
+                                                        }
+
+                                                        Image {
+                                                            id: dynamicAlbumArt
+                                                            anchors.fill: parent
+                                                            source: (root.activePlayer && root.activePlayer.trackArtUrl) ? root.activePlayer.trackArtUrl : ""
+                                                            fillMode: Image.PreserveAspectCrop
+                                                            visible: false
+                                                        }
+
+                                                        OpacityMask {
+                                                            anchors.fill: parent
+                                                            source: dynamicAlbumArt
+                                                            maskSource: Rectangle {
+                                                                width: 62; height: 62; radius: 31
+                                                            }
+                                                        }
+                                                    }
+
+                                                    Rectangle {
+                                                        width: 14; height: 14; radius: 7
+                                                        anchors.centerIn: parent
+                                                        color: Style.background
+                                                        visible: dynamicAlbumArt.source.toString() !== ""
+                                                    }
+
+                                                    M3Icon {
+                                                        anchors.centerIn: parent
+                                                        name: "music_note"
+                                                        size: 24
+                                                        color: Style.accent
+                                                        visible: !(root.activePlayer && root.activePlayer.trackArtUrl && root.activePlayer.trackArtUrl !== "")
+                                                    }
                                                 }
                                             }
                                         }
@@ -1911,8 +1930,10 @@ Item {
 
                                         // Right: Playback Controls (Always Visible)
                                         Item {
-                                            width: 140
-                                            height: 60
+                                            Layout.alignment: Qt.AlignVCenter
+                                            Layout.preferredWidth: 140
+                                            Layout.preferredHeight: 60
+                                            Layout.minimumHeight: 60
 
                                             RowLayout {
                                                 anchors.fill: parent
@@ -1958,6 +1979,7 @@ Item {
                                             }
                                         }
                                     }
+                                }
                                 }
 
                                 // Master Volume Card with CustomSlider
