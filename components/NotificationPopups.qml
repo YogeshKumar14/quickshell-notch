@@ -1,5 +1,6 @@
 import QtQuick
 import QtQuick.Layouts
+import Qt5Compat.GraphicalEffects
 import Quickshell
 import Quickshell.Services.Notifications
 import "../theme"
@@ -11,63 +12,95 @@ Item {
     implicitHeight: popupListView.contentHeight + 72
 
     // --- Data Layer ---
-    // ListModel stores SCALAR properties only (strings, ints).
-    // QObject refs are kept in a separate JS map to avoid ListModel silently dropping them.
-    ListModel {
-        id: popupModel
-    }
+    ListModel { id: popupModel }
 
     property var notifObjectMap: ({})
+    property var timerMap: ({})
     property int nextNotifId: 0
 
     function addNotification(notif) {
         var nid = root.nextNotifId++;
-        var map = root.notifObjectMap;
-        map[nid] = notif;
-        root.notifObjectMap = map;
 
+        // Store QObject ref
+        var omap = root.notifObjectMap;
+        omap[nid] = notif;
+        root.notifObjectMap = omap;
+
+        // Insert at top (newest first)
         popupModel.insert(0, {
             nid: nid,
             summary: notif.summary || "",
             body: notif.body || "",
-            appName: notif.appName || "System"
+            appName: notif.appName || "System",
+            appIcon: notif.appIcon || "",
+            urgency: notif.urgency || 0
         });
 
-        // Auto-dismiss after 5 seconds
-        var timer = Qt.createQmlObject("import QtQuick; Timer { interval: 5000; running: true }", root);
+        // Enforce max 4 visible — push out oldest
+        if (popupModel.count > 4) {
+            var oldestIdx = popupModel.count - 1;
+            var oldestNid = popupModel.get(oldestIdx).nid;
+            popupModel.remove(oldestIdx, 1);
+            dismissAndCleanup(oldestNid);
+        }
+
+        // Auto-dismiss timer (5s, pauses on hover)
+        var timer = Qt.createQmlObject(
+            "import QtQuick; Timer { interval: 5000; running: true; repeat: false }",
+            root
+        );
+        var tmap = root.timerMap;
+        tmap[nid] = timer;
+        root.timerMap = tmap;
+
         var capturedNid = nid;
         timer.triggered.connect(function() {
-            root.removeNotificationById(capturedNid);
-            timer.destroy();
+            root.removeById(capturedNid);
         });
     }
 
-    function removeNotificationById(nid) {
+    function removeById(nid) {
         for (var i = 0; i < popupModel.count; i++) {
             if (popupModel.get(i).nid === nid) {
                 popupModel.remove(i, 1);
                 break;
             }
         }
-        var map = root.notifObjectMap;
-        if (map[nid]) {
-            map[nid].dismiss();
-            delete map[nid];
-            root.notifObjectMap = map;
-        }
+        dismissAndCleanup(nid);
     }
 
-    function removeNotificationAtIndex(idx) {
+    function removeAtIndex(idx) {
         if (idx >= 0 && idx < popupModel.count) {
             var nid = popupModel.get(idx).nid;
             popupModel.remove(idx, 1);
-            var map = root.notifObjectMap;
-            if (map[nid]) {
-                map[nid].dismiss();
-                delete map[nid];
-                root.notifObjectMap = map;
-            }
+            dismissAndCleanup(nid);
         }
+    }
+
+    function dismissAndCleanup(nid) {
+        var omap = root.notifObjectMap;
+        if (omap[nid]) {
+            omap[nid].dismiss();
+            delete omap[nid];
+            root.notifObjectMap = omap;
+        }
+        var tmap = root.timerMap;
+        if (tmap[nid]) {
+            tmap[nid].stop();
+            tmap[nid].destroy();
+            delete tmap[nid];
+            root.timerMap = tmap;
+        }
+    }
+
+    function pauseTimer(nid) {
+        var tmap = root.timerMap;
+        if (tmap[nid]) tmap[nid].stop();
+    }
+
+    function resumeTimer(nid) {
+        var tmap = root.timerMap;
+        if (tmap[nid]) tmap[nid].restart();
     }
 
     // --- View Layer ---
@@ -76,41 +109,48 @@ Item {
         width: parent.width
         height: contentHeight
         interactive: false
-        spacing: -2
+        spacing: 0
         clip: true
+        cacheBuffer: 400
 
         model: popupModel
 
-        // Slide in from the right with a spring bounce
+        // Entrance: slide in from right with expressive decel
         add: Transition {
             ParallelAnimation {
-                NumberAnimation { property: "opacity"; from: 0; to: 1; duration: 250; easing.type: Easing.OutCubic }
-                SpringAnimation { property: "x"; spring: 3.5; damping: 0.75; from: 374; to: 0 }
+                NumberAnimation { property: "opacity"; from: 0; to: 1; duration: 300; easing.type: Easing.OutCubic }
+                NumberAnimation { property: "x"; from: root.width; to: 0; duration: 500; easing.type: Easing.OutQuint }
             }
         }
 
-        // Slide out to the right on removal with spring
+        // Exit: slide out to the right
         remove: Transition {
             ParallelAnimation {
-                NumberAnimation { property: "opacity"; to: 0; duration: 200; easing.type: Easing.OutCubic }
-                SpringAnimation { property: "x"; spring: 3.5; damping: 0.75; velocity: 800 }
+                NumberAnimation { property: "opacity"; to: 0; duration: 250; easing.type: Easing.OutCubic }
+                NumberAnimation { property: "x"; to: root.width * 1.5; duration: 400; easing.type: Easing.OutCubic }
             }
         }
 
-        // Spring-based repositioning when items shift for connected drip reflow
+        // Smooth reflow when items shift
         displaced: Transition {
-            SpringAnimation { properties: "y"; spring: 5.0; damping: 0.65 }
+            NumberAnimation { property: "y"; duration: 500; easing.type: Easing.OutQuint }
         }
 
         delegate: Item {
             id: delegateRoot
             width: popupListView.width
-            // Last item is 24px taller to house the bottom-right ear inside its bounds
             height: bgRect.height + 24
             clip: false
 
-            property bool isTop: index === 0
-            property bool isBottom: index === popupModel.count - 1
+            readonly property bool isBottom: index === popupModel.count - 1
+            readonly property int notifNid: model.nid
+            readonly property bool notifExpanded: expanded
+
+            property bool expanded: false
+            property real dragStartX: 0
+            property real dragStartY: 0
+            property bool dragDecided: false
+            property bool isHorizontalDrag: false
 
             // --- Draggable Content Wrapper ---
             Item {
@@ -119,29 +159,51 @@ Item {
                 height: delegateRoot.height
                 clip: false
 
-                // Spring snap-back when not actively dragging
                 Behavior on x {
-                    enabled: !dragArea.drag.active
-                    SpringAnimation { spring: 4.0; damping: 0.7 }
+                    enabled: !dragArea.pressed
+                    NumberAnimation { duration: 400; easing.type: Easing.OutQuint }
                 }
 
                 MouseArea {
                     id: dragArea
-                    // Cover only the visible notification body for dragging
                     width: bgRect.width
                     height: bgRect.height
                     anchors.right: parent.right
                     drag.target: contentItem
-                    drag.axis: Drag.XAxis
+                    drag.axis: Drag.XAndYAxis
                     drag.minimumX: 0
-                    drag.maximumX: root.width
+                    drag.maximumX: root.width * 1.5
+                    drag.minimumY: delegateRoot.expanded ? -1 : -200
+                    drag.maximumY: delegateRoot.expanded ? 200 : 0
 
-                    onReleased: {
-                        if (contentItem.x > 100) {
-                            root.removeNotificationAtIndex(index);
-                        } else {
-                            contentItem.x = 0;
+                    onEntered: root.pauseTimer(delegateRoot.notifNid)
+                    onExited: root.resumeTimer(delegateRoot.notifNid)
+
+                    onPressed: function(mouse) {
+                        delegateRoot.dragStartX = contentItem.x;
+                        delegateRoot.dragStartY = contentItem.y;
+                        delegateRoot.dragDecided = false;
+                        delegateRoot.isHorizontalDrag = false;
+                    }
+
+                    onReleased: function(mouse) {
+                        var deltaX = contentItem.x - delegateRoot.dragStartX;
+                        var deltaY = contentItem.y - delegateRoot.dragStartY;
+
+                        // Horizontal dismiss threshold
+                        if (deltaX > 80) {
+                            root.removeAtIndex(index);
+                            return;
                         }
+
+                        // Vertical expand/collapse
+                        if (Math.abs(deltaY) > 40 && Math.abs(deltaY) > Math.abs(deltaX)) {
+                            delegateRoot.expanded = !delegateRoot.expanded;
+                        }
+
+                        // Snap back
+                        contentItem.x = 0;
+                        contentItem.y = 0;
                     }
                 }
 
@@ -151,77 +213,147 @@ Item {
                     width: 350
                     anchors.right: parent.right
                     height: notifLayout.implicitHeight + 32
-
                     color: "#000000"
                     bottomLeftRadius: delegateRoot.isBottom ? 28 : 0
+
+                    // Urgency accent border (left edge)
+                    Rectangle {
+                        width: 2
+                        height: parent.height
+                        anchors.left: parent.left
+                        radius: 1
+                        color: {
+                            if (model.urgency === 2) return Style.danger;
+                            if (model.urgency === 1) return Style.accent;
+                            return Style.textMuted;
+                        }
+                    }
 
                     ColumnLayout {
                         id: notifLayout
                         anchors.left: parent.left
                         anchors.right: parent.right
                         anchors.top: parent.top
-                        anchors.margins: 16
+                        anchors.leftMargin: 14
+                        anchors.rightMargin: 14
+                        anchors.topMargin: 14
                         spacing: 4
 
-                        // Header: App Name + Close
+                        // Header row: app icon + app name + timestamp + expand chevron
                         RowLayout {
                             Layout.fillWidth: true
                             spacing: 8
 
-                            M3Icon {
-                                name: "notifications"
-                                color: Style.accent
-                                size: 14
+                            // App icon (circular)
+                            Rectangle {
+                                width: 24; height: 24
+                                radius: 12
+                                color: Style.cardBg
+                                visible: model.appIcon.length > 0
+
+                                Image {
+                                    anchors.fill: parent
+                                    source: model.appIcon
+                                    fillMode: Image.PreserveAspectCrop
+                                    layer.enabled: true
+                                    layer.effect: OpacityMask {
+                                        maskSource: Rectangle {
+                                            width: 24; height: 24
+                                            radius: 12
+                                        }
+                                    }
+                                }
+
+                                // Fallback icon when no image
+                                M3Icon {
+                                    anchors.centerIn: parent
+                                    name: "notifications"
+                                    color: {
+                                        if (model.urgency === 2) return Style.danger;
+                                        if (model.urgency === 1) return Style.accent;
+                                        return Style.textSecondary;
+                                    }
+                                    size: 14
+                                    visible: !parent.visible
+                                }
                             }
 
+                            // Fallback icon when no app icon
+                            M3Icon {
+                                name: "notifications"
+                                color: {
+                                    if (model.urgency === 2) return Style.danger;
+                                    if (model.urgency === 1) return Style.accent;
+                                    return Style.textSecondary;
+                                }
+                                size: 14
+                                visible: model.appIcon.length === 0
+                            }
+
+                            // App name
                             Text {
                                 text: model.appName
                                 font.family: Style.fontFamily
-                                font.pixelSize: 11
-                                color: Style.accent
+                                font.pixelSize: Style.fontSizeSmall
+                                color: {
+                                    if (model.urgency === 2) return Style.danger;
+                                    if (model.urgency === 1) return Style.accent;
+                                    return Style.textSecondary;
+                                }
                                 font.weight: Font.Bold
                                 Layout.fillWidth: true
+                                elide: Text.ElideRight
                             }
 
-                            // Close button
-                            MouseArea {
-                                width: 16; height: 16
-                                cursorShape: Qt.PointingHandCursor
-                                onClicked: root.removeNotificationAtIndex(index)
+                            // Timestamp
+                            Text {
+                                text: " · "
+                                font.family: Style.fontFamily
+                                font.pixelSize: Style.fontSizeSmall
+                                color: Style.textMuted
+                            }
 
-                                M3Icon {
-                                    anchors.centerIn: parent
-                                    name: "close"
-                                    color: Style.textSecondary
-                                    size: 14
+                            // Expand chevron (only if body exists)
+                            M3Icon {
+                                name: delegateRoot.expanded ? "expand_less" : "expand_more"
+                                color: Style.textMuted
+                                size: 16
+                                visible: model.body.length > 0
+
+                                rotation: delegateRoot.expanded ? 180 : 0
+
+                                Behavior on rotation {
+                                    NumberAnimation { duration: 250; easing.type: Easing.OutCubic }
                                 }
                             }
                         }
 
-                        // Title
+                        // Summary (title)
                         Text {
                             text: model.summary
                             font.family: Style.fontFamily
-                            font.pixelSize: 14
-                            color: "#FFFFFF"
+                            font.pixelSize: Style.fontSizeNormal
+                            color: Style.textPrimary
                             font.weight: Font.Bold
                             Layout.fillWidth: true
-                            wrapMode: Text.Wrap
-                            maximumLineCount: 2
+                            wrapMode: delegateRoot.expanded ? Text.Wrap : Text.NoWrap
+                            maximumLineCount: delegateRoot.expanded ? 10 : 2
                             elide: Text.ElideRight
+                            Layout.topMargin: 2
                         }
 
-                        // Body
+                        // Body (preview when collapsed, full when expanded)
                         Text {
                             text: model.body
                             font.family: Style.fontFamily
-                            font.pixelSize: 13
-                            color: "#AAAAAA"
+                            font.pixelSize: Style.fontSizeSmall
+                            color: Style.textSecondary
                             Layout.fillWidth: true
                             wrapMode: Text.Wrap
-                            maximumLineCount: 3
+                            maximumLineCount: delegateRoot.expanded ? 20 : 1
                             elide: Text.ElideRight
                             visible: model.body.length > 0
+                            Layout.topMargin: 2
                         }
                     }
 
@@ -236,7 +368,7 @@ Item {
                     }
                 }
 
-                // --- TOP LEFT INVERTED EAR (every item except last — creates connected drip) ---
+                // --- TOP LEFT INVERTED EAR (every item except last — connected drip) ---
                 Canvas {
                     width: 24; height: 24
                     x: 0; y: 0
@@ -259,8 +391,6 @@ Item {
                 }
 
                 // --- BOTTOM RIGHT INVERTED EAR (last item only, INSIDE delegate) ---
-                // By living inside the delegate, it inherits the displaced animation
-                // and can never detach or jump ahead.
                 Canvas {
                     width: 24; height: 24
                     anchors.top: bgRect.bottom
