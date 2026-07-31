@@ -414,19 +414,24 @@ Item {
         onTriggered: visualizerStreamProc.running = true
     }
 
-    // Workspace native QML state (occupiedWorkspaces is a reactive binding — no manual refresh needed)
+    // Workspace native QML state (occupiedWorkspaces refreshed on overlay entry + polled)
     property int activeWorkspace: 1
     property var occupiedWorkspaces: [1]
 
     function refreshOccupied() {
-        var list = [];
-        for (var i = 0; i < Hyprland.workspaces.count; i++) {
-            var ws = Hyprland.workspaces.get(i);
-            if (ws && ws.toplevels && ws.toplevels.count > 0) {
-                list.push(ws.id);
+        try {
+            var list = [];
+            var wsList = Hyprland.workspaces.values;
+            for (var i = 0; i < wsList.length; i++) {
+                var ws = wsList[i];
+                if (ws && ws.toplevels && ws.toplevels.values.length > 0) {
+                    list.push(ws.id);
+                }
             }
+            root.occupiedWorkspaces = list;
+        } catch (e) {
+            console.warn("refreshOccupied failed:", e);
         }
-        root.occupiedWorkspaces = list;
     }
 
     // Poll occupancy only while the workspace overlay or the expanded notch
