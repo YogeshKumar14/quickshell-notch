@@ -1,10 +1,10 @@
 # STATE.md — QuickShell Notch Project
 
-Handoff document. Last updated: 2026-07-29.
+Handoff document. Last updated: 2026-07-31 (end of "audit & remediation" session).
 
 ---
 
-## 1. Project Architecture & Stack
+## 1. Current Architecture & Stack
 
 QuickShell (QML) notch/status bar for Hyprland with Python/Bash backends.
 Entry point: `shell.qml` — orchestrates 3 PanelWindow surfaces + IPC socket.
@@ -21,9 +21,9 @@ Entry point: `shell.qml` — orchestrates 3 PanelWindow surfaces + IPC socket.
 **Architecture tree:**
 ```
 shell.qml
-├── NotificationServer (D-Bus) → notifHistoryModel (ListModel)
+├── notifHistoryModel (ListModel) ← NotificationServer (D-Bus)
 ├── PanelWindow (Overlay) → NotificationPopups (dripping ear popups, swipe/tap dismiss)
-├── PanelWindow (Overlay) → TopNotch (~2500 lines)
+├── PanelWindow (Overlay) → TopNotch (~2530 lines)
 │   ├── Compact: clock, workspace dots, audio visualizer, OSD
 │   ├── Expanded: Media, Walls, Apps, Stats (4 tabs)
 │   ├── Menus: PowerMenu, WifiMenu, BluetoothMenu
@@ -33,260 +33,120 @@ shell.qml
 └── SettingsWindow → settings panel
 ```
 
-**IPC protocol:** `toggle`, `close`, `walls`, `apps`, `osd:vol:{0-100}`, `osd:bri:{0-100}`
+**IPC protocol:** `toggle`, `close`, `walls`, `apps`, `osd:vol:{0-100}`, `osd:bri:{0-100}` (one command per socket connection).
 
 **Notch morphing dimensions:**
 | State | Width | Height |
 |-------|-------|--------|
 | Compact (default) | 130 | 30 |
 | OSD active | 280 | 30 |
-| Power/WiFi/BT/Notif menu | 320 | 320 |
-| Expanded (4 tabs) | 560 | 420 |
-| Visualizer overlay | 230–360 (dynamic) | 30 |
+| Power/WiFi/BT/Notif menu | 320 | 260–320 |
+| Expanded (4 tabs) | 560 | `expandedHeightVal` (350–480, default 420) |
 
 ---
 
-## 2. Notification Popup System
+## 2. Recent Modifications
 
-File: `components/NotificationPopups.qml` (committed).
-
-**Architecture:**
-- `ListModel` (`popupModel`) stores scalar fields only
-- Parallel `notifObjectMap` holds raw QObject refs (ListModel drops non-scalars)
-- Shared single `dismissTimer` (1s interval, checks timestamps) — replaces per-notification QML Timers
-- `notifTimestamps` + `pausedTimestamps` dicts for auto-dismiss management
-- `ListView` with `spacing: -24` (overlapping delegates)
-- `mask: Region { item: popupsComp.popupArea }` on PanelWindow for input passthrough
-
-**Delegate:**
-```
-Item (delegateRoot)
-├── Item (contentItem) — draggable wrapper
-│   ├── MouseArea (drag.target: contentItem, Drag.XAxis only)
-│   │   ├── Tap → dismiss (deltaX < 10)
-│   │   ├── Swipe right > 80px → dismiss
-│   │   ├── Hover → pause/resume auto-dismiss timer
-│   │   └── Snap back to x: 0
-│   ├── Rectangle (bgRect) — 350px wide, anchored right
-│   │   └── ColumnLayout: app icon + name, summary, body preview
-│   ├── Canvas (top-left ear) — visible: index === 0, animated by earShown
-│   └── Canvas (bottom-right ear) — animated by isBottom
-```
-
-**Transitions:** Add (300ms OutCubic + 500ms OutQuint), Displaced (500ms OutQuint), Remove (250ms OutCubic + 400ms OutCubic), Ear (300ms OutCubic + 400ms OutBack).
-
----
-
-## 3. Recent Modifications — BOTH SESSIONS
-
-### Session 1 (committed, NotificationPopups work)
-
-Commits on `main` (newest first):
+### Session commits (12, all local — origin is 12 commits behind)
 
 | Commit | Description |
 |--------|-------------|
-| `0364a6c` | Fix: ear re-animation when notification becomes top after dismissal |
-| `910544d` | Fix missing isBottom + remove dead code |
-| `68decc0` | Fix ear animations — direction + bottom-right ear entrance |
-| `9aa546c` | Animate ear entrance + bottom-left corner radius |
-| `1f3cbad` | Fix: popup input passthrough — mask PanelWindow to bgRect only |
-| `9bf2586` | Fix popup: ear timing, jitter, click dismiss, X-axis drag |
-| `ef1663b` | Fix popup gaps and exit jitter |
-| `6322c87` | Fix popup bugs: ear placement, remove border, exit animation |
-| `a84efc1` | Rewrite NotificationPopups — Celestia-inspired with connected drip ears |
-| `f8cf193` | Fix: connected drip popups — stable layout at rapid arrival rate |
-| `0d9a827` | Fix: bell/gear cross-highlight, connected drip popups, smooth clear-all |
+| `60edda0` | Fix: quote layout value in legacy conf output (injection guard) |
+| `e3fb959` | **Phase 5 — dead code**: removed dead Process objects/badge/props/Style tokens, extracted `SparklineCanvas`, deleted 4 orphan scripts, hardened launcher/validator, README path fix |
+| `f805ea2` | **Phase 4 — poll gating**: device/workspace polls gated to visible states, visualizer honors enable toggle, notification dismiss race fix |
+| `d227371` | **Phase 3 — settings correctness**: validation before write, `hyprctl eval` fallback for lua parser, apply feedback, notification history fixes |
+| `7349959` | Chore: gitignore `cava_config.*` (per-instance cava configs) |
+| `13e8285` | **Phase 2 — data integrity**: atomic writes everywhere, corruption-safe settings, hardened visualizer, single-source defaults |
+| `68dfcea` | **Phase 1 — safety**: PowerMenu shutdown-bug fix, keyboard flow wiring, PID-targeted sandbox |
 
-**Committed files:** `components/NotificationPopups.qml`, `shell.qml`
+### Committed earlier (still unpushed, context for the 12-commit gap)
+`4462132` (refreshOccupied dedup + cava ALSA source), `7976b51` (SVG icons), `3e4e278` (workspace binding/MPRIS/throttle/hyprctl keyword feat), `f3ff998` (Timer-based workspace refresh), `0364a6c` + 4 earlier notification-popup fixes.
 
-### Session 2 (uncommitted — multiple feature areas)
+### Working tree: CLEAN except STATE.md (this file)
 
-All changes below are **unstaged/uncommitted** in the working tree.
+All 5 phases are committed and runtime-tested (see §3).
 
-#### a) Visualizer Frame Throttling (`TopNotch.qml`)
-- Added `visualizerFrame` intermediate property with a 66ms `visFrameTimer` that copies `visualizerBars` → `visualizerFrame` at throttled rate
-- All visualizer consumers (bars Repeater, wave Canvas, pulsar) now read from `visualizerFrame` instead of `visualizerBars`
-- Removed the conditional `if (showVisualizer || ...)` guard on `visualizerBars` writes — bars are now always captured from the Python process
-- Pulsar visualizer: changed `avgAmp` (property binding) to `calcAvgAmp()` (function) to avoid binding evaluation loops
+### Phase 3–5 details (committed)
 
-#### b) Workspace Occupancy Reactive Binding (`TopNotch.qml:398-407`)
-- **Replaced** `property var occupiedWorkspaces: [1]` (static placeholder) with a **reactive QML property binding**:
-  ```qml
-  property var occupiedWorkspaces: {
-      var list = [];
-      for (var i = 0; i < Hyprland.workspaces.count; i++) {
-          var ws = Hyprland.workspaces.get(i);
-          if (ws && ws.toplevels && ws.toplevels.count > 0)
-              list.push(ws.id);
-      }
-      return list;
-  }
-  ```
-- **Removed:** `refreshOccupied()` function (iterated `Hyprland.toplevels` checking `win.workspace.id`)
-- **Removed:** `onRawEvent` handler for `createworkspace/destroyworkspace/openwindow/closewindow/movewindow`
-- **Removed:** `hyprctl workspaces` polling Process + 500ms `occupiedPoller` timer
-- **Removed:** `Qt.callLater(refreshOccupied)` from `onFocusedWorkspaceChanged`
-- **Removed:** `root.refreshOccupied()` + double `Qt.callLater` from `Component.onCompleted`
-- **Kept:** `Connections { onFocusedWorkspaceChanged }` for overlay trigger logic (`isWorkspaceActive`)
-- **Rationale:** Each `HyprlandWorkspace.toplevels` sub-model is maintained by QuickShell's IPC event system; the binding auto-updates when toplevels are added/removed — no polling, no manual refresh.
+**Phase 3 (correctness) — `d227371`:**
+- `scripts/hyprland/apply_all_settings.py`: validates/converts ALL values BEFORE writing (aborts with error payload on bad values); `active_border`/`inactive_border` in KEYWORD_MAP; partial payloads MERGE into existing state (previously reset unset keys to defaults); accepts flat payloads; per-key live failures → `{"status": "partial", "errors": [...]}`; syncs `~/.cache/quickshell/hypr_state.json`.
+- NEW `scripts/hyprland/apply_hypr_option.py` (shared live-apply helper): `hyprctl keyword` **silently no-ops on non-legacy (lua) parsers** (exits 0, applies nothing) → detects and falls back to `hyprctl eval 'hl.config({...})'` (merges, does not reset other settings). `normalize_color()` (bare 8-hex AARRGGBB canonical), `swap_color()` (aarrggbb↔rrggbbaa). Color formats probed: lua eval accepts `"rgba(rrggbbaa)"`/`"rgba(aarrggbb)"`/`"0x..."`, rejects bare 8-hex; legacy conf needs `rgba(aarrggbb)`.
+- `set_hypr_option.sh`: delegates live apply to `apply_hypr_option.py`; persists only on successful live apply.
+- `persist_hypr_state.py`: colors normalized to canonical; lua file emits RGBA byte order; legacy conf emits AARRGGBB; layout value quoted in conf (injection guard, `60edda0`).
+- `stream_audio_visualizer.py`: `sweep_stale_configs()` startup cleanup of dead `cava_config.<pid>` files.
+- SettingsWindow apply feedback (onExited + stdout status, `isApplyFailed`), CustomSwitch binding-preserving toggles, NotificationHistory typed ListModel + Clear All `remove(0)`, MPRIS pause→cava resurrection guard, dynamic implicitHeight (no clip), network script timeouts + PDEATHSIG, apply_wallpaper awww wait loop, spinner rotation reset, osd.sh socket timeouts.
 
-#### c) CAVA Audio Source Change (`cava_config`)
-- Changed audio source from `alsa_output.pci-0000_00_09.2.analog-stereo.monitor` to `bluez_output.41_42_FF_86_FD_A2.1.monitor` (Bluetooth sink)
+**Phase 4 (poll gating) — `f805ea2`:**
+- `workspacePollTimer` (500ms) gated on `isWorkspaceActive || isExpanded`, `refreshOccupied()` on entry; `devicePollTimer` (3s) gated on `isExpanded || isOsdActive`, `refreshDeviceLevels()` on entry (verified: refresh on expand/OSD, 3s beats while visible, immediate stop on collapse/dismiss).
+- `visualizerStreamProc.running: root.visualizerEnabledVal`; bar-count change restarts the stream live.
+- Deleted dead `isInhibited` 10s swaync poll.
+- NotificationPopups: removal by nid (`removeById`), guarded `dismiss()` (try/catch) — fixes stale-index TypeError race.
+- **Process restart semantics (verified live)**: Timer-driven `proc.running = true` DOES restart finished Processes (earlier "single-shot" conclusion was a sampling artifact — wpctl exits in ~5ms, 50ms-spaced pgrep sampling missed it).
 
-#### d) stream_audio_visualizer.py Simplification
-- Removed periodic config monitoring loop (`get_bar_count()`, `write_cava_config()`, `last_mtime`)
-- Removed inner break/restart logic that re-spawned CAVA when config changed
-- `get_default_monitor()` renamed to `get_monitor()`
-- Outer sleep changed from 0.5s → 1.0s
-
-#### e) apply_all_settings.py — Targeted hyprctl keyword (no reload)
-- Replaced `subprocess.run(["hyprctl", "reload"])` with targeted `hyprctl keyword` calls per-setting
-- Added `KEYWORD_MAP` dictionary mapping setting name → (`hyprctl_key`, `converter`)
-- Added `apply_hyprctl_keyword()` helper function
-- Now applies live changes instantly without full config reload
-
-#### f) set_hypr_option.sh — hyprctl keyword + persist delegation
-- Replaced Lua REPL (`hyprctl repl "hl.config({...})"`) calls with `hyprctl keyword` for all option types
-- Replaced inline Python persistence script with delegation to `persist_hypr_state.py`:
-  ```bash
-  python3 "$PERSIST_SCRIPT" "$TYPE" "$VAL"
-  ```
-- Added explicit `exit 1` on unknown type (was silently fallthrough)
-
-#### g) persist_hypr_state.py (NEW FILE)
-- Extracted from inline Python in `set_hypr_option.sh`
-- Handles dual-write to `quickshell_hypr.lua` + `quickshell_hypr.conf`
-- Manages `~/.cache/quickshell/hypr_state.json` for state tracking
-- Auto-appends `dofile`/`source` lines to main Hyprland config files
-
-#### h) launch_quickshell.sh — Path-prefixed pkill
-- Changed `pkill -9 -f cava` → `pkill -9 -f "/stream_audio_visualizer.py"` (path prefix to avoid system-wide matches)
-
-#### i) NotificationPopups — Shared Timer Optimization (NOT committed)
-- Replaced per-notification QML Timer objects (created/destroyed per notification) with a single shared `dismissTimer` (1s interval, checks `notifTimestamps[nid]`)
-- Replaced `timerMap` dict with `notifTimestamps` + `pausedTimestamps` timestamp dicts
-- Reduces QML object churn
-
-#### j) MPRIS Track Card Vertical Centering Fix (`TopNotch.qml`)
-- Restructured MPRIS Track Card from flat `RowLayout` → `ColumnLayout` wrapper containing `RowLayout`
-- Vinyl art wrapped in `Loader { active: root.currentPage === 0 }` (lazy loads only when Media tab is visible)
-- Vinyl gets `scale: 1.0 + (avgAmp * 0.06)` pulse on beat (NumberAnimation 120ms OutQuad)
-- Vinyl `Loader` has `Layout.minimumHeight: 80`
-- Controls Item has `Layout.minimumHeight: 60`
-- Card `implicitHeight` changed from hardcoded 90 → `mprisContent.implicitHeight + 28` (dynamic height)
-- Pulsar visualizer bars use `root.visualizerHeightVal` (configurable) instead of hardcoded 16
+**Phase 5 (dead code + extraction) — `e3fb959`:**
+- Removed: 4 never-started swaync control Processes + `setBrightnessProc` (no UI set path), zero-width badge wrapper, `formatTime()`, `selectedIndex`, `trackLength`, unused setting props (`clock12hVal`, `networkRefreshIntervalVal`, `expandAnimType`, `tabAnimType`).
+- `clock_12h` setting now wired: overrides `clock_format` → `"h:mm A"` / `"HH:mm"`.
+- NEW `components/SparklineCanvas.qml`: CPU/RAM/Net graphs extracted from 3×45-line inline Canvas blocks (hist + currentVal + thresholdColors).
+- Style.qml: removed 6 unused tokens.
+- Deleted orphan scripts: `get_occupied_workspaces.py`, `download_cdn.py`, `download_missing_icons.py`, `replace_icons.py`.
+- `launch_quickshell.sh`: escaped regex dots, kill-wait loop (up to 3s) before relaunch.
+- `validate_codebase.sh`: excludes `scratch_*`/`test_*` from QML lint.
+- README: stale `scripts/core/launch_quickshell.sh` paths fixed.
 
 ---
 
-## 4. Active State & Blockers
+## 3. Active State & Blockers
 
-### Working tree status: DIRTY (9 modified, 1 new)
+### Validation status
+- `~/.config/quickshell/scripts/core/validate_codebase.sh` — **PASSES** (qmllint + py_compile + bash -n).
+- All 5 phases live-relaunched and smoke-tested: IPC toggle/close/OSD OK, zero QSLog errors, poll gating verified via log timeline (refresh on entry, 3s beats while visible, stop on collapse), settings apply success+failure paths, Process restart semantics verified.
 
-```
- M STATE.md
- M cava_config
- M components/NotificationPopups.qml
- M components/TopNotch.qml
- M scripts/core/launch_quickshell.sh
- M scripts/hyprland/apply_all_settings.py
- M scripts/hyprland/set_hypr_option.sh
- M scripts/notch/stream_audio_visualizer.py
-?? scripts/hyprland/persist_hypr_state.py
-```
+### Runtime test checklist (used this session — all passed)
+1. SettingsWindow: apply success AND failure paths render
+2. Apply from Settings → `hypr_state.json` updated + border colors in both hypr files (verified live: gaps_in 2, rounding 5, borders ffd595bd/ff020007)
+3. CustomSwitch: toggle persists across reopen
+4. NotificationHistory: 3+ notifications → Clear All empties model; zero TypeErrors
+5. Power menu keyboard flow: Enter/Escape work; background-click during countdown must NOT power off
+6. WiFi/BT: spinner resets to 0°
+7. OSD via `scripts/core/osd.sh volume up` (no traceback spam)
+8. Expanded height slider at 480 → notch not clipped
+9. MPRIS pause → system audio during dismissal window must NOT re-show visualizer
+10. `set_hypr_option.sh gaps_in 6` → persists only on hyprctl success (uses eval fallback on lua parser)
 
-Latest commit: `0364a6c` — 14 commits ahead of likely origin (never pushed).
+### Blockers
+- **Push blocked**: `git push origin main` fails — no `gh` CLI, no git credential helper, SSH key (`id_ed25519`) not registered with GitHub. 12 commits local. User chose "skip push for now".
+- **Sandbox caveat**: `-n` (no-duplicate) means a sandbox cannot run while the live instance is up; `sandbox.sh` now kills only its own PID (safe), but the live bar must be stopped first.
 
-### What has been validated
-- `~/.config/quickshell/scripts/core/validate_codebase.sh` — **PASSES** (qmllint + py_compile + bash -n)
+### Known issues still open (lower priority — not requested)
+- `get_system_info.py` negative network speeds after counter reset (no clamp)
+- `get_apps.py` user-local/Flatpak apps shadowed by system ones (no dedupe)
+- `manage_wifi.py` SSIDs containing `:` break `-t` parsing; WiFi password visible via `ps` (pass via stdin)
+- `CustomSlider.qml` double-emits `moved` on release
+- SettingsWindow discards unapplied draft on close
+- `notifHistoryModel` unbounded (no cap)
+- M3Icon stale comments (light_mode/wifi_off/bluetooth_disabled now exist) + dead assets (`check.svg`, `delete.svg`, `volume_down.svg`)
+- `get_wallust_colors.sh` sources arbitrary cache file
+- Settings keys `expand_anim_type`/`tab_anim_type`/`network_refresh` round-trip but have no consumer (SettingsWindow shows sliders for network_refresh and a 12h toggle that are effectively inert; `clock_12h` is now wired)
 
-### What has NOT been tested yet
-- ✅ Workspace occupancy reactive binding passes qmllint but **not runtime-tested** (sandbox not launched)
-- ✅ MPRIS Track Card restructuring not runtime-tested
-- ✅ Visualizer frame throttling not runtime-tested
-- ✅ `stream_audio_visualizer.py` simplification not runtime-tested
-- ✅ `apply_all_settings.py` hyprctl keyword changes not runtime-tested
-- ✅ `persist_hypr_state.py` not runtime-tested
-
-### Known pre-existing issues (not introduced by this session)
-- `TopNotch.qml:1802` — anchors on layout-managed item (qmllint warning)
-- Missing M3Icon SVG files: `refresh.svg`, `desktop_windows.svg`, `keyboard.svg`, `notifications_none.svg`
-
-### Potential risk areas
-- **Workspace reactive binding:** Relies on QML engine tracking `Hyprland.workspaces.get(i).toplevels.count` across iterations. If the QML binding engine misses model mutations (binding expression dependencies in dynamic loops), occupied dots may fail to update. Fallback: add a 500ms polling Timer as safety net.
-- **Visualizer frame throttle:** 66ms timer creates a ~1-frame delay. If users notice visualizer sluggishness, reduce interval or remove throttle.
-- **Separate `visualizerBars` vs `visualizerFrame`:** Two arrays holding the same data; potential for drift if timer misbehaves. Consider unifying once throttling is verified.
-- **MPRIS Loader:** `Loader { active: root.currentPage === 0 }` means vinyl appears/disappears immediately (no crossfade). Add opacity transition if jarring.
+### User-specific state
+- `notch_settings.json`: `visualizer_bar_count: 20` (live user value, not the 12 default); `clock_12h: true`, `clock_format: "h:mm A"`.
+- `~/.cache/quickshell/hypr_state.json`: 20 keys, user's original values restored and live-verified.
 
 ---
 
-## 5. Next Steps
+## 4. Next Steps
 
-### Immediate (before deployment)
-1. **Sandbox runtime test:** `QUICKSHELL_SANDBOX=1 quickshell -n -p ~/.config/quickshell/shell.qml`
-   - Verify workspace dots highlight when windows are present
-   - Verify MPRIS Track Card renders with correct vertical centering
-   - Verify visualizer bars update without jank
-2. **Fix any runtime issues** discovered in testing
-3. **Commit all changes** (or commit in logical groups):
-   ```
-   git add -A && git commit -m "Feat: Workspace occupancy reactive binding, MPRIS card vertical centering, visualizer throttling, hyprctl keyword settings"
-   ```
+### Immediate (next session, in order)
+1. **Push to origin** (after auth is set up): `git push origin main` — 12 commits ahead; user must supply GitHub auth (PAT/credential helper/SSH key registration). Commit this STATE.md first.
+2. **Optional cleanups** (from §3 open issues): dead M3Icon assets + stale comments; `get_system_info.py` negative-speed clamp; `manage_wifi.py` `:` SSID parsing + stdin password; SettingsWindow draft persistence; notifModel cap. Wire or remove inert settings (`network_refresh` slider, `expand_anim_type`/`tab_anim_type` keys).
+3. **Feature candidates** (queued but not requested): notification action buttons (`NotificationServer.actions`), urgency-based popup theming, max-popup-count setting, sound/haptic feedback on arrival.
 
-### After testing
-4. **Push to origin:** `git push origin main` (first push of entire project)
-
-### Known work queued (Phase 5 — component extraction)
-- Extract workspace dots → standalone `WorkspaceIndicator.qml`
-- Extract clock display → standalone `ClockDisplay.qml`
-- Extract OSD overlay → standalone `OsdOverlay.qml`
-- Extract media card → standalone `MprisTrackCard.qml`
-- Extract audio visualizer → standalone `VisualizerOverlay.qml`
-- Each extraction should follow existing patterns (`Layout.alignment: Qt.AlignVCenter`, `implicitHeight` from content)
-
-### Potential improvements (not requested)
-- Push notification action buttons (rendering `NotificationServer.actions`)
-- Urgency-based popup theming (color/style per `urgency` level)
-- Configurable max visible popup count (currently 4)
-- Sound/haptic feedback on notification arrival
-
----
-
-## 6. Key Constraints & Patterns
-
-### Hyprland dual-write
-Every setting change MUST write to BOTH persistence files:
-- `~/.config/hypr/quickshell_hypr.lua`
-- `~/.config/hypr/quickshell_hypr.conf`
-Handled by `persist_hypr_state.py`. Never bypass.
-
-### Live settings application
-Use `hyprctl keyword <key> <value>` — never `hyprctl reload` (full reload is disruptive).
-Mapping in `apply_all_settings.py:KEYWORD_MAP` and `set_hypr_option.sh` case statement.
-
-### Child process lifecycle
-Python scripts spawning children MUST use `ctypes` + `PR_SET_PDEATHSIG(SIGTERM)` to avoid orphan processes when QuickShell is killed.
-
-### Validation (run before every commit):
-```bash
-~/.config/quickshell/scripts/core/validate_codebase.sh
-```
-
-### Sandbox testing:
-```bash
-QUICKSHELL_SANDBOX=1 quickshell -n -p ~/.config/quickshell/shell.qml
-```
-
-### Live deployment:
-```bash
-pkill -9 -x quickshell || true
-nohup quickshell -n -p ~/.config/quickshell/shell.qml >/dev/null 2>&1 &
-```
-Or use `scripts/core/launch_quickshell.sh` (also kills cava, stream_audio_visualizer, watch_workspaces, swaync).
-
-### Animation conventions:
-- Notch morphing: `SpringAnimation` (tension/damping)
-- Popup transitions: `NumberAnimation` with bezier curves (`OutQuint`, `OutCubic`, `OutBack`)
-- Never hard-cut state transitions — always animate
-
-### Input passthrough pattern:
-PanelWindow `mask: Region { item: visibleContentItem }` — transparent areas click through to windows behind.
+### Key constraints (from AGENTS.md — unchanged)
+- **Hyprland dual-write**: every setting MUST write to BOTH `~/.config/hypr/quickshell_hypr.lua` AND `~/.config/hypr/quickshell_hypr.conf` (handled by `persist_hypr_state.py`/`apply_all_settings.py`; never bypass)
+- **Live settings**: `hyprctl keyword <key> <value>`, never `hyprctl reload`
+- **Child lifecycle**: Python children MUST use `ctypes` + `PR_SET_PDEATHSIG(SIGTERM)`
+- **Validation before commit**: `~/.config/quickshell/scripts/core/validate_codebase.sh`
+- **Sandbox**: `QUICKSHELL_SANDBOX=1 quickshell -n -p ~/.config/quickshell/shell.qml` (scripts skip Hyprland side-effects)
+- **Live deploy**: `pkill -9 -x quickshell || true; nohup quickshell -n -p ~/.config/quickshell/shell.qml >/dev/null 2>&1 &` or `scripts/core/launch_quickshell.sh`
+- **Animation**: never hard-cut transitions; SpringAnimation for morphing, NumberAnimation bezier for popups
+- **Input passthrough**: PanelWindow `mask: Region { item: notchComp.notchBoxItem }`
