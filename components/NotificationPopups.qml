@@ -2,6 +2,7 @@ import QtQuick
 import QtQuick.Layouts
 import Qt5Compat.GraphicalEffects
 import Quickshell
+import Quickshell.Io
 import Quickshell.Services.Notifications
 import "../theme"
 
@@ -9,7 +10,45 @@ Item {
     id: root
 
     width: 374
-    implicitHeight: popupListView.contentHeight + 72
+    implicitHeight: springHeight + 72
+
+    // --- Spring Settings (live, matching the notch expansion feel) ---
+    property real popupSpringTension: 4.5
+    property real popupSpringDamping: 0.35
+
+    // Animated stack height — the window grows/shrinks with a spring on every add/remove
+    property real springHeight: popupListView.contentHeight
+    Behavior on springHeight {
+        SpringAnimation {
+            spring: root.popupSpringTension
+            damping: root.popupSpringDamping
+            epsilon: 0.25
+        }
+    }
+
+    Process {
+        id: loadPopupSettingsProc
+        command: ["python3", "/home/yogesh/.config/quickshell/scripts/notch/get_notch_settings.py"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    var data = JSON.parse(this.text.trim());
+                    if (data.popup_tension !== undefined) root.popupSpringTension = data.popup_tension;
+                    if (data.popup_damping !== undefined) root.popupSpringDamping = data.popup_damping;
+                } catch (e) {
+                    console.log("Error loading popup settings:", e);
+                }
+            }
+        }
+    }
+
+    function reloadSettings() {
+        if (!loadPopupSettingsProc.running) {
+            loadPopupSettingsProc.running = true;
+        }
+    }
+
+    Component.onCompleted: root.reloadSettings()
 
     // --- Data Layer ---
     ListModel { id: popupModel }
@@ -105,7 +144,7 @@ Item {
         width: parent.width
         height: contentHeight
         interactive: false
-        spacing: -24
+        spacing: -12
         clip: true
         cacheBuffer: 400
 
@@ -131,7 +170,6 @@ Item {
             clip: false
 
             readonly property int notifNid: model.nid
-            readonly property bool isBottom: index === popupModel.count - 1
 
             property bool earShown: false
             property bool removing: false
@@ -148,9 +186,9 @@ Item {
                 PropertyAction { target: delegateRoot; property: "ListView.delayRemove"; value: false }
             }
 
-            // Entrance complete — show ear after popup reaches top
+            // Entrance complete — show bezel ear after popup slides in
             ListView.onAdd: SequentialAnimation {
-                PauseAnimation { duration: 500 }
+                PauseAnimation { duration: 350 }
                 PropertyAction { target: delegateRoot; property: "earShown"; value: true }
             }
 
@@ -221,6 +259,8 @@ Item {
                     anchors.right: parent.right
                     height: notifLayout.implicitHeight + 32
                     color: "#000000"
+                    topLeftRadius: index === 0 ? 0 : Style.radiusMedium
+                    topRightRadius: index === 0 ? 0 : Style.radiusMedium
                     bottomLeftRadius: index === popupModel.count - 1 ? Style.radiusMedium : 0
 
                     ColumnLayout {
@@ -350,23 +390,13 @@ Item {
                     onVisibleChanged: if (visible) requestPaint()
                 }
 
-                // --- BOTTOM RIGHT INVERTED EAR (last item only) ---
-                // Always present in delegate, naturally occluded by overlapping delegate below
+                // --- BOTTOM RIGHT INVERTED EAR (drip connector at seams, flourish on last) ---
+                // Always visible: at seams it bridges into the lower popup's rounded top void,
+                // on the last popup it hangs free as the flourish.
                 Canvas {
                     width: 24; height: 24
                     anchors.top: bgRect.bottom
                     anchors.right: bgRect.right
-                    opacity: delegateRoot.isBottom ? 1 : 0
-                    scale: delegateRoot.isBottom ? 1 : 0
-                    transformOrigin: Item.TopLeft
-
-                    Behavior on opacity {
-                        NumberAnimation { duration: 300; easing.type: Easing.OutCubic }
-                    }
-
-                    Behavior on scale {
-                        NumberAnimation { duration: 400; easing.type: Easing.OutBack }
-                    }
 
                     onPaint: {
                         var ctx = getContext("2d");
@@ -391,7 +421,7 @@ Item {
         id: inputMask
         width: 350
         anchors.right: parent.right
-        height: popupListView.contentHeight
+        height: root.springHeight
         visible: false
     }
 

@@ -122,6 +122,9 @@ PanelWindow {
     property real tabSpringTension: 5.5
     property real tabSpringDamping: 0.22
 
+    property real popupSpringTension: 4.5
+    property real popupSpringDamping: 0.35
+
     Process {
         id: getOptionsProc
         command: ["python3", "/home/yogesh/.config/quickshell/scripts/hyprland/get_hypr_options.py"]
@@ -193,6 +196,8 @@ PanelWindow {
                     if (data.tab_anim_type !== undefined) root.tabAnimType = data.tab_anim_type;
                     if (data.tab_tension !== undefined) root.tabSpringTension = data.tab_tension;
                     if (data.tab_damping !== undefined) root.tabSpringDamping = data.tab_damping;
+                    if (data.popup_tension !== undefined) root.popupSpringTension = data.popup_tension;
+                    if (data.popup_damping !== undefined) root.popupSpringDamping = data.popup_damping;
                     if (data.stats_interval !== undefined) root.sysStatsIntervalVal = data.stats_interval;
                     if (data.network_refresh !== undefined) root.networkRefreshIntervalVal = data.network_refresh;
                     if (data.osd_timeout !== undefined) root.osdTimeoutVal = data.osd_timeout;
@@ -306,6 +311,8 @@ PanelWindow {
                 "expand_damping": root.expandSpringDamping,
                 "tab_tension": root.tabSpringTension,
                 "tab_damping": root.tabSpringDamping,
+                "popup_tension": root.popupSpringTension,
+                "popup_damping": root.popupSpringDamping,
                 "expand_anim_type": root.expandAnimType,
                 "tab_anim_type": root.tabAnimType,
                 "stats_interval": root.sysStatsIntervalVal,
@@ -1328,6 +1335,54 @@ PanelWindow {
                                     CustomSlider {
                                         width: parent.width; from: 0.10; to: 0.80; value: root.tabSpringDamping; stepSize: 0.02
                                         onMoved: function(val) { root.tabSpringDamping = val; root.hasPendingChanges = true; }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // SECTION 6.1: NOTIFICATION POPUP ANIMATION
+                    Column {
+                        width: parent.width; spacing: 8
+                        RowLayout {
+                            width: parent.width; spacing: 6
+                            M3Icon { name: "notifications"; color: Style.accent; size: 16 }
+                            Text { text: "NOTIFICATION POPUP ANIMATION"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeSmall; font.weight: Font.Bold; color: Style.textMuted }
+                        }
+
+                        Rectangle {
+                            width: parent.width; height: secn31Inner.height + 24; radius: Style.radiusMedium; color: Style.cardBg; border.color: Style.cardBorder
+                            Column {
+                                id: secn31Inner
+                                anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top; anchors.margins: 14; spacing: 14
+
+                                Column {
+                                    width: parent.width; spacing: 6
+                                    RowLayout {
+                                        width: parent.width
+                                        Text { text: "Popup Stack Tension"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeNormal; color: Style.textPrimary }
+                                        Item { Layout.fillWidth: true }
+                                        Text { text: root.popupSpringTension.toFixed(1); font.family: Style.fontFamilyMono; font.pixelSize: Style.fontSizeSmall; color: Style.accent; font.weight: Font.Bold }
+                                    }
+                                    CustomSlider {
+                                        width: parent.width; from: 1.0; to: 10.0; value: root.popupSpringTension; stepSize: 0.5
+                                        onMoved: function(val) { root.popupSpringTension = val; root.hasPendingChanges = true; }
+                                    }
+                                }
+
+                                Rectangle { width: parent.width; height: 1; color: "#2A2A2D" }
+
+                                Column {
+                                    width: parent.width; spacing: 6
+                                    RowLayout {
+                                        width: parent.width
+                                        Text { text: "Popup Stack Damping"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeNormal; color: Style.textPrimary }
+                                        Item { Layout.fillWidth: true }
+                                        Text { text: root.popupSpringDamping.toFixed(2); font.family: Style.fontFamilyMono; font.pixelSize: Style.fontSizeSmall; color: Style.accent; font.weight: Font.Bold }
+                                    }
+                                    CustomSlider {
+                                        width: parent.width; from: 0.10; to: 0.80; value: root.popupSpringDamping; stepSize: 0.02
+                                        onMoved: function(val) { root.popupSpringDamping = val; root.hasPendingChanges = true; }
                                     }
                                 }
                             }

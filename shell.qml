@@ -132,6 +132,9 @@ Scope {
     // iOS-Style Hyprland Settings Window
     SettingsWindow {
         id: settingsModal
-        onNotchSettingsChanged: notchComp.refreshNotchSettings()
+        onNotchSettingsChanged: {
+            notchComp.refreshNotchSettings();
+            popupsComp.reloadSettings();
+        }
     }
 }

@@ -19,6 +19,8 @@ DEFAULTS = {
     "tab_anim_type": "spring",
     "tab_tension": 5.5,
     "tab_damping": 0.22,
+    "popup_tension": 4.5,
+    "popup_damping": 0.35,
     "dripping_ears": True,
     "clock_12h": False,
     "wall_duration": 0.5,
