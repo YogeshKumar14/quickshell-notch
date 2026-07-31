@@ -108,7 +108,7 @@ general {{
     gaps_in = {data.get("gaps_in", DEFAULTS["gaps_in"])}
     gaps_out = {data.get("gaps_out", DEFAULTS["gaps_out"])}
     border_size = {data.get("border_size", DEFAULTS["border_size"])}
-    layout = {data.get("layout", "dwindle")}
+    layout = "{data.get("layout", "dwindle")}"
     col.active_border = rgba({data.get("active_border", "0a84ffff")})
     col.inactive_border = rgba({data.get("inactive_border", "585b70ff")})
 }}
