@@ -6,7 +6,7 @@ sleep_timer = 2
 
 [input]
 method = pulse
-source = bluez_output.41_42_FF_86_FD_A2.1.monitor
+source = alsa_output.pci-0000_00_01.1.pro-output-3.monitor
 
 [output]
 method = raw

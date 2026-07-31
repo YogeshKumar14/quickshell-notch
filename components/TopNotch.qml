@@ -414,8 +414,6 @@ Item {
         running: true
         onTriggered: root.refreshOccupied()
     }
-
-    Component.onCompleted: root.refreshOccupied()
     property bool isWorkspaceActive: false
     onIsWorkspaceActiveChanged: { if (isWorkspaceActive) root.isOsdActive = false; }
 
@@ -610,6 +608,7 @@ Item {
     Component.onCompleted: {
         refreshNotchSettings();
         updateClock();
+        root.refreshOccupied();
     }
 
     // Fixed root dimensions (624px width allows 32px padding for inverted ears)
