@@ -26,6 +26,13 @@ Item {
 
     Behavior on opacity { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
 
+    onIsOpenChanged: {
+        if (!root.isOpen) {
+            countdownTimer.stop();
+            root.isConfirming = false;
+        }
+    }
+
     Process {
         id: powerProc
     }
@@ -54,6 +61,7 @@ Item {
     }
 
     function execute() {
+        if (!root.isOpen) return;
         if (root.pendingCmd !== "") {
             powerProc.command = ["bash", "-c", root.pendingCmd];
             powerProc.running = true;

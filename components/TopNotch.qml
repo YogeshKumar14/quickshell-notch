@@ -2485,6 +2485,10 @@ Item {
             }
         }
 
+        function cancelPowerAction() { powerMenuOverlay.cancel(); }
+        function executePendingPower() { powerMenuOverlay.execute(); }
+        function triggerPowerAction(title, cmd) { powerMenuOverlay.trigger(title, cmd); }
+
         // Integrated WiFi Menu View Overlay inside notchBox (Morphed State)
         WifiMenu {
             id: wifiMenuOverlay
