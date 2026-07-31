@@ -22,6 +22,8 @@ ICONS=(
   "search"
   "wallpaper"
   "apps"
+  "mouse"
+  "auto_awesome"
 )
 
 for icon in "${ICONS[@]}"; do

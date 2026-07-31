@@ -362,7 +362,7 @@ PanelWindow {
                                 RowLayout {
                                     anchors.centerIn: parent
                                     spacing: 6
-                                    M3Icon { name: index < 2 ? "desktop_windows" : "settings"; color: root.currentTab === index ? "#000" : Style.textSecondary; size: 16 }
+                                    M3Icon { name: ["desktop_windows", "mouse", "auto_awesome", "settings"][index]; color: root.currentTab === index ? "#000" : Style.textSecondary; size: 16 }
                                     Text { text: modelData; font.family: Style.fontFamily; color: root.currentTab === index ? "#000" : Style.textSecondary; font.pixelSize: 12; font.weight: Font.Bold }
                                 }
 
