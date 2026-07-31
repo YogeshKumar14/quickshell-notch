@@ -9,7 +9,14 @@ Item {
     id: root
 
     width: 374
-    implicitHeight: popupListView.contentHeight + 72
+    implicitHeight: Math.max(popupListView.contentHeight, chaseHeight) + 72
+
+    // Lags contentHeight on shrink so the rising popup stays visible during reflow
+    property real chaseHeight: popupListView.contentHeight
+
+    Behavior on chaseHeight {
+        NumberAnimation { duration: 400; easing.type: Easing.OutQuint }
+    }
 
     // --- Data Layer ---
     ListModel { id: popupModel }
@@ -106,7 +113,6 @@ Item {
         height: contentHeight
         interactive: false
         spacing: -24
-        clip: true
         cacheBuffer: 400
 
         model: popupModel
@@ -320,36 +326,6 @@ Item {
 
                     Behavior on scale {
                         NumberAnimation { duration: 400; easing.type: Easing.OutBack }
-                    }
-
-                    onPaint: {
-                        var ctx = getContext("2d");
-                        var s = 24;
-                        ctx.clearRect(0, 0, s, s);
-                        ctx.fillStyle = "#000000";
-                        ctx.beginPath();
-                        ctx.arc(0, s, s, -Math.PI / 2, 0, false);
-                        ctx.lineTo(s, 0);
-                        ctx.closePath();
-                        ctx.fill();
-                    }
-
-                    Component.onCompleted: requestPaint()
-                    onVisibleChanged: if (visible) requestPaint()
-                }
-
-                // --- BOTTOM LEFT DRIP TAB (seam connector — springs in when the popup below attaches) ---
-                // Protrudes into the transparent left gutter, so flush popups stay gapless
-                Canvas {
-                    width: 24; height: 24
-                    anchors.top: bgRect.bottom
-                    anchors.left: parent.left
-                    visible: index < popupModel.count - 1
-                    scale: index < popupModel.count - 1 ? 1 : 0
-                    transformOrigin: Item.TopRight
-
-                    Behavior on scale {
-                        NumberAnimation { duration: 300; easing.type: Easing.OutBack }
                     }
 
                     onPaint: {
