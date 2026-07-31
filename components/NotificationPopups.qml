@@ -9,17 +9,37 @@ Item {
     id: root
 
     width: 374
-    implicitHeight: Math.max(popupListView.contentHeight, chaseHeight) + 72
+    // Top ear strip (24) + panel + bottom ear strip (24)
+    implicitHeight: 24 + stackExtent + 24
 
-    // Lags contentHeight on shrink so the rising popup stays visible during reflow
-    property real chaseHeight: popupListView.contentHeight
+    // Live extent of the popup stack (max item bottom). Follows the displaced
+    // springs frame-by-frame, so the panel is always flush with the stack —
+    // contentHeight is unreliable during ListView transitions (transitioning
+    // items are excluded from it), so it cannot drive the visible panel.
+    property real stackExtent: 0
 
-    Behavior on chaseHeight {
-        NumberAnimation { duration: 400; easing.type: Easing.OutQuint }
+    function updateStackExtent() {
+        var maxY = 0;
+        var items = popupListView.contentItem.children;
+        for (var i = 0; i < items.length; i++) {
+            var c = items[i];
+            if (c && !c.removing && c.height > 0) {
+                var bottom = c.y + c.height;
+                if (bottom > maxY) maxY = bottom;
+            }
+        }
+        root.stackExtent = maxY;
     }
 
     // --- Data Layer ---
-    ListModel { id: popupModel }
+    ListModel {
+        id: popupModel
+        onCountChanged: {
+            root.updateStackExtent();
+            if (count > 0) earDelayTimer.restart();
+            else root.earShown = false;
+        }
+    }
 
     property var notifObjectMap: ({})
     property var notifTimestamps: ({})
@@ -106,117 +126,115 @@ Item {
         delete root.pausedTimestamps[nid];
     }
 
-    // --- View Layer ---
-    ListView {
-        id: popupListView
-        width: parent.width
-        height: contentHeight
-        interactive: false
-        spacing: -24
-        cacheBuffer: 400
+    // --- Unified Panel ---
+    Rectangle {
+        id: panelRect
+        width: 350
+        y: 24
+        anchors.right: parent.right
+        height: root.stackExtent
+        color: "#000000"
 
-        model: popupModel
-
-        // Entrance: slide in from right while the stack attaches below
-        add: Transition {
-            ParallelAnimation {
-                NumberAnimation { property: "opacity"; from: 0; to: 1; duration: 250; easing.type: Easing.OutCubic }
-                NumberAnimation { property: "x"; from: root.width; to: 0; duration: 400; easing.type: Easing.OutQuint }
-            }
-        }
-
-        // Smooth reflow when items shift (same curve as entrance for one coordinated motion)
-        displaced: Transition {
-            NumberAnimation { property: "y"; duration: 400; easing.type: Easing.OutQuint }
-        }
-
-        delegate: Item {
-            id: delegateRoot
-            width: popupListView.width
-            height: bgRect.height + 24
+        ListView {
+            id: popupListView
+            anchors.fill: parent
+            interactive: false
+            spacing: 0
             clip: false
+            cacheBuffer: 400
 
-            readonly property int notifNid: model.nid
+            model: popupModel
 
-            property bool earShown: false
-            property bool removing: false
-            property real dragStartX: 0
-
-            // Exit animation — delayRemove prevents instant destruction
-            ListView.onRemove: SequentialAnimation {
-                PropertyAction { target: delegateRoot; property: "removing"; value: true }
-                PropertyAction { target: delegateRoot; property: "ListView.delayRemove"; value: true }
+            // Entrance: slide in from right while the panel springs open
+            add: Transition {
                 ParallelAnimation {
-                    NumberAnimation { target: contentItem; property: "opacity"; to: 0; duration: 250; easing.type: Easing.OutCubic }
-                    NumberAnimation { target: contentItem; property: "x"; to: root.width * 1.5; duration: 350; easing.type: Easing.OutCubic }
+                    NumberAnimation { property: "opacity"; from: 0; to: 1; duration: 250; easing.type: Easing.OutCubic }
+                    NumberAnimation { property: "x"; from: root.width; to: 0; duration: 400; easing.type: Easing.OutQuint }
                 }
-                PropertyAction { target: delegateRoot; property: "ListView.delayRemove"; value: false }
             }
 
-            // Entrance complete — show bezel ear after popup slides in
-            ListView.onAdd: SequentialAnimation {
-                PauseAnimation { duration: 400 }
-                PropertyAction { target: delegateRoot; property: "earShown"; value: true }
+            // Reflow: spring in sync with the panel's boxHeight spring
+            // (same distance, same frame, same parameters -> one coordinated motion)
+            displaced: Transition {
+                SpringAnimation { property: "y"; spring: 5.5; damping: 0.22 }
             }
 
-            // --- Draggable Content Wrapper ---
-            Item {
-                id: contentItem
-                width: parent.width
-                height: delegateRoot.height
+            delegate: Item {
+                id: delegateRoot
+                width: popupListView.width
+                height: notifLayout.implicitHeight + 32
                 clip: false
 
-                Behavior on x {
-                    enabled: !dragArea.pressed && !delegateRoot.removing
-                    NumberAnimation { duration: 400; easing.type: Easing.OutQuint }
+                readonly property int notifNid: model.nid
+
+                property bool removing: false
+                property real dragStartX: 0
+
+                onYChanged: root.updateStackExtent()
+                onHeightChanged: root.updateStackExtent()
+                Component.onDestruction: root.updateStackExtent()
+
+                // Exit animation — delayRemove prevents instant destruction
+                ListView.onRemove: SequentialAnimation {
+                    PropertyAction { target: delegateRoot; property: "removing"; value: true }
+                    PropertyAction { target: delegateRoot; property: "ListView.delayRemove"; value: true }
+                    ParallelAnimation {
+                        NumberAnimation { target: contentItem; property: "opacity"; to: 0; duration: 250; easing.type: Easing.OutCubic }
+                        NumberAnimation { target: contentItem; property: "x"; to: root.width * 1.5; duration: 350; easing.type: Easing.OutCubic }
+                    }
+                    PropertyAction { target: delegateRoot; property: "ListView.delayRemove"; value: false }
                 }
 
-                MouseArea {
-                    id: dragArea
-                    width: bgRect.width
-                    height: bgRect.height
-                    anchors.right: parent.right
-                    drag.target: contentItem
-                    drag.axis: Drag.XAxis
-                    drag.minimumX: 0
-                    drag.maximumX: root.width * 1.5
+                // --- Draggable Content Wrapper ---
+                Item {
+                    id: contentItem
+                    width: parent.width
+                    height: delegateRoot.height
+                    clip: false
 
-                    onEntered: root.pauseTimer(delegateRoot.notifNid)
-                    onExited: root.resumeTimer(delegateRoot.notifNid)
-
-                    onPressed: function(mouse) {
-                        delegateRoot.dragStartX = contentItem.x;
+                    Behavior on x {
+                        enabled: !dragArea.pressed && !delegateRoot.removing
+                        NumberAnimation { duration: 400; easing.type: Easing.OutQuint }
                     }
 
-                    onReleased: function(mouse) {
-                        var deltaX = contentItem.x - delegateRoot.dragStartX;
+                    MouseArea {
+                        id: dragArea
+                        width: parent.width
+                        height: parent.height
 
-                        // Tap to dismiss (no significant movement)
-                        if (Math.abs(deltaX) < 10) {
-                            root.removeById(delegateRoot.notifNid);
-                            return;
+                        drag.target: contentItem
+                        drag.axis: Drag.XAxis
+                        drag.minimumX: 0
+                        drag.maximumX: root.width * 1.5
+
+                        onEntered: root.pauseTimer(delegateRoot.notifNid)
+                        onExited: root.resumeTimer(delegateRoot.notifNid)
+
+                        onPressed: function(mouse) {
+                            delegateRoot.dragStartX = contentItem.x;
                         }
 
-                        // Horizontal dismiss threshold
-                        if (deltaX > 80) {
-                            root.removeById(delegateRoot.notifNid);
-                            return;
-                        }
+                        onReleased: function(mouse) {
+                            var deltaX = contentItem.x - delegateRoot.dragStartX;
 
-                        // Snap back
-                        contentItem.x = 0;
+                            // Tap to dismiss (no significant movement)
+                            if (Math.abs(deltaX) < 10) {
+                                root.removeById(delegateRoot.notifNid);
+                                return;
+                            }
+
+                            // Horizontal dismiss threshold
+                            if (deltaX > 80) {
+                                root.removeById(delegateRoot.notifNid);
+                                return;
+                            }
+
+                            // Snap back
+                            contentItem.x = 0;
+                        }
                     }
-                }
 
-                // --- Solid Black Notification Body ---
-                Rectangle {
-                    id: bgRect
-                    width: 350
-                    anchors.right: parent.right
-                    height: notifLayout.implicitHeight + 32
-                    color: "#000000"
-                    bottomLeftRadius: index === popupModel.count - 1 ? Style.radiusMedium : 0
-
+                    // --- Notification Content Row (transparent — panel provides the bg) ---
                     ColumnLayout {
                         id: notifLayout
                         anchors.left: parent.left
@@ -310,71 +328,79 @@ Item {
                         }
                     }
                 }
-
-                // --- TOP LEFT INVERTED EAR (first item only — bridges to notch) ---
-                Canvas {
-                    width: 24; height: 24
-                    x: 0; y: 0
-                    visible: index === 0
-                    opacity: delegateRoot.earShown ? 1 : 0
-                    scale: delegateRoot.earShown ? 1 : 0
-                    transformOrigin: Item.TopRight
-
-                    Behavior on opacity {
-                        NumberAnimation { duration: 300; easing.type: Easing.OutCubic }
-                    }
-
-                    Behavior on scale {
-                        NumberAnimation { duration: 400; easing.type: Easing.OutBack }
-                    }
-
-                    onPaint: {
-                        var ctx = getContext("2d");
-                        var s = 24;
-                        ctx.clearRect(0, 0, s, s);
-                        ctx.fillStyle = "#000000";
-                        ctx.beginPath();
-                        ctx.arc(0, s, s, -Math.PI / 2, 0, false);
-                        ctx.lineTo(s, 0);
-                        ctx.closePath();
-                        ctx.fill();
-                    }
-
-                    Component.onCompleted: requestPaint()
-                    onVisibleChanged: if (visible) requestPaint()
-                }
-
-                // --- BOTTOM RIGHT INVERTED EAR (flourish on the last popup) ---
-                // Always present; when stacked it is fully occluded by the popup below
-                Canvas {
-                    width: 24; height: 24
-                    anchors.top: bgRect.bottom
-                    anchors.right: bgRect.right
-
-                    onPaint: {
-                        var ctx = getContext("2d");
-                        var s = 24;
-                        ctx.clearRect(0, 0, s, s);
-                        ctx.fillStyle = "#000000";
-                        ctx.beginPath();
-                        ctx.arc(0, s, s, -Math.PI / 2, 0, false);
-                        ctx.lineTo(s, 0);
-                        ctx.closePath();
-                        ctx.fill();
-                    }
-
-                    Component.onCompleted: requestPaint()
-                }
             }
         }
     }
 
-    // Hidden mask target for PanelWindow input region (350px bgRect only, no ear gap)
+    // --- TOP LEFT INVERTED EAR (bridges the panel to the notch) ---
+    Canvas {
+        width: 24; height: 24
+        x: 0; y: 0
+        opacity: root.earShown ? 1 : 0
+        scale: root.earShown ? 1 : 0
+        transformOrigin: Item.TopRight
+
+        Behavior on opacity {
+            NumberAnimation { duration: 300; easing.type: Easing.OutCubic }
+        }
+
+        Behavior on scale {
+            NumberAnimation { duration: 400; easing.type: Easing.OutBack }
+        }
+
+        onPaint: {
+            var ctx = getContext("2d");
+            var s = 24;
+            ctx.clearRect(0, 0, s, s);
+            ctx.fillStyle = "#000000";
+            ctx.beginPath();
+            ctx.arc(0, s, s, -Math.PI / 2, 0, false);
+            ctx.lineTo(s, 0);
+            ctx.closePath();
+            ctx.fill();
+        }
+
+        Component.onCompleted: requestPaint()
+        onVisibleChanged: if (visible) requestPaint()
+    }
+
+    // --- BOTTOM RIGHT INVERTED EAR (flourish on the panel's lower corner) ---
+    Canvas {
+        width: 24; height: 24
+        anchors.top: panelRect.bottom
+        anchors.right: panelRect.right
+
+        onPaint: {
+            var ctx = getContext("2d");
+            var s = 24;
+            ctx.clearRect(0, 0, s, s);
+            ctx.fillStyle = "#000000";
+            ctx.beginPath();
+            ctx.arc(0, s, s, -Math.PI / 2, 0, false);
+            ctx.lineTo(s, 0);
+            ctx.closePath();
+            ctx.fill();
+        }
+
+        Component.onCompleted: requestPaint()
+    }
+
+    // Ear entrance delay (matches the first popup's slide-in)
+    property bool earShown: false
+
+    Timer {
+        id: earDelayTimer
+        interval: 400
+        onTriggered: root.earShown = true
+    }
+
+    // Hidden mask target for PanelWindow input region (350px panel only)
     Rectangle {
         id: inputMask
         width: 350
-        anchors.right: parent.right
-        height: popupListView.contentHeight
+        x: root.width - 350
+        y: 24
+        height: root.stackExtent
         visible: false
     }
 

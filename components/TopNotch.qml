@@ -1140,7 +1140,7 @@ Item {
                                 Rectangle {
                                     anchors.centerIn: parent
                                     width: parent.width; height: parent.height; radius: 3
-                                    color: isOccupied ? "#FFFFFF" : "#3A3A3C"
+                                    color: isOccupied ? '#00ffd5' : "#3A3A3C"
 
                                     Behavior on color { ColorAnimation { duration: 150 } }
                                 }
