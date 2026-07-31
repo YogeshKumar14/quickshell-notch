@@ -58,15 +58,20 @@ Item {
         interval: 1000
         running: false
         repeat: false
-        onTriggered: wifiScanner.running = true
+        onTriggered: if (!wifiScanner.running) wifiScanner.running = true
     }
 
+    // Scan once when the menu opens, not in a 5s loop: the slow Realtek
+    // rtw88 chip cannot keep up with overlapping scans (wpa_supplicant
+    // rejects piled-up triggers and the driver/interface can wedge, which
+    // drops the wifi connection). Manual refresh + post-action rescans cover
+    // network changes.
     Timer {
         id: autoScanTimer
-        interval: 5000
+        interval: 1000
         running: root.isOpen
-        repeat: true
-        onTriggered: wifiScanner.running = true
+        repeat: false
+        onTriggered: if (!wifiScanner.running) wifiScanner.running = true
     }
 
     function connect(ssid, password) {
@@ -85,11 +90,13 @@ Item {
     }
 
     function rescan() {
-        wifiScanner.running = false;
+        if (wifiScanner.running) return;
         wifiScanner.running = true;
     }
 
-    Component.onCompleted: wifiScanner.running = true
+    Component.onCompleted: {
+        if (!wifiScanner.running) wifiScanner.running = true;
+    }
 
     ColumnLayout {
         anchors.fill: parent

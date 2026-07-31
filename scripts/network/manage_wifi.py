@@ -6,6 +6,8 @@ import signal
 import ctypes
 
 TIMEOUT = 5
+SCAN_TIMEOUT = 15
+CONNECT_TIMEOUT = 30
 
 def set_pdeathsig():
     try:
@@ -15,27 +17,34 @@ def set_pdeathsig():
         pass
 
 def get_status():
+    # The radio state must NEVER be reported as off because of a slow
+    # scan/list timeout — that would flip the notch's wifi switch off for
+    # real (the user clicks it, turning wifi off). Each sub-query is
+    # isolated so failures only degrade the data they produce.
     try:
         power_out = subprocess.check_output(["nmcli", "radio", "wifi"], stderr=subprocess.DEVNULL, timeout=TIMEOUT).decode().strip()
         is_on = (power_out == "enabled")
-        
-        active_ssid = ""
-        saved_ssids = set()
-        if is_on:
-            try:
-                conn_out = subprocess.check_output(["nmcli", "-t", "-f", "name,type,active", "connection", "show"], stderr=subprocess.DEVNULL, timeout=TIMEOUT).decode()
-                for line in conn_out.splitlines():
-                    parts = line.split(":")
-                    if len(parts) >= 3 and "wireless" in parts[1]:
-                        saved_ssids.add(parts[0])
-                        if parts[2] == "yes":
-                            active_ssid = parts[0]
-            except Exception:
-                pass
-        
-        networks = []
-        if is_on:
-            list_out = subprocess.check_output(["nmcli", "-t", "-f", "ssid,signal,security,active", "dev", "wifi", "list"], stderr=subprocess.DEVNULL, timeout=TIMEOUT).decode()
+    except Exception:
+        return {"power": False, "active": "", "networks": []}
+
+    active_ssid = ""
+    saved_ssids = set()
+    if is_on:
+        try:
+            conn_out = subprocess.check_output(["nmcli", "-t", "-f", "name,type,active", "connection", "show"], stderr=subprocess.DEVNULL, timeout=TIMEOUT).decode()
+            for line in conn_out.splitlines():
+                parts = line.split(":")
+                if len(parts) >= 3 and "wireless" in parts[1]:
+                    saved_ssids.add(parts[0])
+                    if parts[2] == "yes":
+                        active_ssid = parts[0]
+        except Exception:
+            pass
+
+    networks = []
+    if is_on:
+        try:
+            list_out = subprocess.check_output(["nmcli", "-t", "-f", "ssid,signal,security,active", "dev", "wifi", "list"], stderr=subprocess.DEVNULL, timeout=SCAN_TIMEOUT).decode()
             seen_ssids = set()
             for line in list_out.splitlines():
                 parts = line.split(":")
@@ -53,13 +62,10 @@ def get_status():
                         })
             # Sort networks so the active one floats to the top
             networks.sort(key=lambda x: not x["active"])
-            
-        return {"power": is_on, "active": active_ssid, "networks": networks[:12]}
-    except Exception:
-        return {"power": False, "active": "", "networks": []}
+        except Exception:
+            pass
 
-def spawn(args):
-    return subprocess.Popen(args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, preexec_fn=set_pdeathsig)
+    return {"power": is_on, "active": active_ssid, "networks": networks[:12]}
 
 if __name__ == "__main__":
     if len(sys.argv) > 1:
@@ -71,8 +77,8 @@ if __name__ == "__main__":
         elif action == "connect" and len(sys.argv) > 2:
             ssid = sys.argv[2]
             password = sys.argv[3] if len(sys.argv) > 3 else None
+            args = ["nmcli", "dev", "wifi", "connect", ssid]
             if password:
-                spawn(["nmcli", "dev", "wifi", "connect", ssid, "password", password])
-            else:
-                spawn(["nmcli", "dev", "wifi", "connect", ssid])
+                args += ["password", password]
+            subprocess.run(args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=CONNECT_TIMEOUT, preexec_fn=set_pdeathsig)
     print(json.dumps(get_status()))
