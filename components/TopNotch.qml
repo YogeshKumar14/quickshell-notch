@@ -68,9 +68,6 @@ Item {
     property int currentPage: 0
     property int totalPages: 4
 
-    // Keyboard selection index for grid tabs (-1 = no selection)
-    property int selectedIndex: 0
-
     // Toggle a specific tab open/closed via IPC keybind
     function toggleTab(page) {
         if (root.isExpanded && root.currentPage === page) {
@@ -78,7 +75,6 @@ Item {
         } else {
             root.currentPage = page;
             root.isExpanded = true;
-            root.selectedIndex = 0;
             focusTabSearchTimer.restart();
         }
     }
@@ -224,9 +220,6 @@ Item {
     property bool appsTabAlive: false
 
     onCurrentPageChanged: {
-        // Reset keyboard selection
-        selectedIndex = 0;
-
         // Activate the tab we're switching TO
         if (currentPage === 1) {
             wallsTabAlive = true;
@@ -272,9 +265,8 @@ Item {
     property int expandedHeightVal: 420
     property int notchRadiusVal: 16
     property bool drippingEarsVal: true
-    property bool clock12hVal: false
-    property string clockFormatVal: "h:mm A"
     property int clockFontSizeVal: 14
+    property string clockFormatVal: "h:mm A"
     property int batteryWarningThresholdVal: 20
     property int osdTimeoutVal: 2000
     property bool workspaceOverlayVal: true
@@ -523,26 +515,8 @@ Item {
     }
 
     // Inhibited status poll removed: value was never consumed anywhere.
-
-    Process {
-        id: toggleDndProc
-        command: ["swaync-client", "-d"]
-    }
-
-    Process {
-        id: dismissLatestProc
-        command: ["swaync-client", "--close-latest"]
-    }
-
-    Process {
-        id: clearNotifsProc
-        command: ["swaync-client", "-C"]
-    }
-
-    Process {
-        id: openSwayncProc
-        command: ["swaync-client", "-t"]
-    }
+    // DnD/notif control processes removed: no UI triggers them; the subscribe
+    // stream keeps notifCount/dndActive fresh.
 
     // Dynamic Ear Size scaling in sync with spring expansion (12px Compact -> 24px Expanded)
     property real earSize: root.isExpanded ? 24 : 12
@@ -556,12 +530,10 @@ Item {
     }
 
     // Notch Expansion Animation Profile
-    property string expandAnimType: "outback"
     property real expandSpringTension: 4.5
     property real expandSpringDamping: 0.28
 
     // Tab Switch Animation Profile
-    property string tabAnimType: "spring"
     property real tabSpringTension: 5.5
     property real tabSpringDamping: 0.22
 
@@ -577,7 +549,6 @@ Item {
                     if (data.expanded_height !== undefined) root.expandedHeightVal = data.expanded_height;
                     if (data.bottom_radius !== undefined) root.notchRadiusVal = data.bottom_radius;
                     if (data.dripping_ears !== undefined) root.drippingEarsVal = data.dripping_ears;
-                    if (data.clock_12h !== undefined) root.clock12hVal = data.clock_12h;
                     if (data.app_columns !== undefined) root.appColumnsVal = data.app_columns;
                     if (data.workspace_overlay !== undefined) root.workspaceOverlayVal = data.workspace_overlay;
                     if (data.workspace_timeout !== undefined) root.workspaceTimeoutVal = data.workspace_timeout;
@@ -592,16 +563,14 @@ Item {
                     if (data.visualizer_wave_width !== undefined) root.visualizerWaveWidthVal = data.visualizer_wave_width;
                     if (data.visualizer_pulsar_scale !== undefined) root.visualizerPulsarScaleVal = data.visualizer_pulsar_scale;
                     if (data.visualizer_pause_delay !== undefined) root.visualizerPauseDelayVal = data.visualizer_pause_delay;
-                    if (data.expand_anim_type !== undefined) root.expandAnimType = data.expand_anim_type;
                     if (data.expand_tension !== undefined) root.expandSpringTension = data.expand_tension;
                     if (data.expand_damping !== undefined) root.expandSpringDamping = data.expand_damping;
-                    if (data.tab_anim_type !== undefined) root.tabAnimType = data.tab_anim_type;
                     if (data.tab_tension !== undefined) root.tabSpringTension = data.tab_tension;
                     if (data.tab_damping !== undefined) root.tabSpringDamping = data.tab_damping;
                     if (data.stats_interval !== undefined) root.sysStatsIntervalVal = data.stats_interval;
-                    if (data.network_refresh !== undefined) root.networkRefreshIntervalVal = data.network_refresh;
                     if (data.osd_timeout !== undefined) root.osdTimeoutVal = data.osd_timeout;
                     if (data.clock_format !== undefined) root.clockFormatVal = data.clock_format;
+                    if (data.clock_12h !== undefined) root.clockFormatVal = data.clock_12h ? "h:mm A" : "HH:mm";
                     if (data.clock_font_size !== undefined) root.clockFontSizeVal = data.clock_font_size;
                     if (data.battery_warning_threshold !== undefined) root.batteryWarningThresholdVal = data.battery_warning_threshold;
                 } catch (e) {
@@ -733,7 +702,6 @@ Item {
     property string trackArtist: activePlayer && activePlayer.trackArtist ? activePlayer.trackArtist : "Top Notch"
     property bool isPlaying: activePlayer ? (activePlayer.playbackState === MprisPlaybackState.Playing) : false
 
-    property real trackLength: activePlayer && activePlayer.length ? activePlayer.length : 0
     property real trackPosition: activePlayer && activePlayer.position ? activePlayer.position : 0
 
     onActivePlayerChanged: {
@@ -742,14 +710,6 @@ Item {
         } else {
             root.trackPosition = 0;
         }
-    }
-
-    function formatTime(microsecs) {
-        if (isNaN(microsecs) || microsecs <= 0) return "00:00";
-        var totalSecs = Math.floor(microsecs / 1000000);
-        var mins = Math.floor(totalSecs / 60);
-        var secs = totalSecs % 60;
-        return (mins < 10 ? "0" + mins : mins) + ":" + (secs < 10 ? "0" + secs : secs);
     }
 
     Timer {
@@ -768,7 +728,6 @@ Item {
     property int ramUsage: 0
     property int diskUsage: 0
     property int sysStatsIntervalVal: 2000
-    property int networkRefreshIntervalVal: 5000
 
     property var cpuHistory: []
     property var ramHistory: []
@@ -898,11 +857,6 @@ Item {
                 if (!isNaN(val)) root.brightnessLevel = val;
             }
         }
-    }
-
-    Process {
-        id: setBrightnessProc
-        stdout: StdioCollector { onStreamFinished: brightnessProc.running = true }
     }
 
     Process {
@@ -1523,32 +1477,6 @@ Item {
                                             font.weight: Font.Bold
                                             color: root.currentPage === index ? "#000" : Style.textPrimary
                                             Behavior on color { ColorAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
-                                        }
-
-                                        // Smooth Morphing Badge Wrapper
-                                        Item {
-                                            width: 0 // badge removed
-                                            height: 14
-                                            anchors.verticalCenter: parent.verticalCenter
-                                            clip: true
-                                            Behavior on width { NumberAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
-
-                                            Rectangle {
-                                                x: 6 // Visual spacing
-                                                width: 14; height: 14; radius: 7
-                                                color: root.currentPage === index ? "#000" : Style.accent
-                                                Behavior on color { ColorAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
-                                                
-                                                Text {
-                                                    anchors.centerIn: parent
-                                                    text: root.notifCount > 9 ? "9+" : root.notifCount.toString()
-                                                    font.family: Style.fontFamily
-                                                    font.pixelSize: 8
-                                                    font.weight: Font.Bold
-                                                    color: root.currentPage === index ? Style.accent : "#000"
-                                                    Behavior on color { ColorAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
-                                                }
-                                            }
                                         }
                                     }
 
@@ -2189,45 +2117,11 @@ Item {
                                                 Text { text: root.cpuUsage + "%"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeNormal; font.weight: Font.Bold; color: Style.accent }
                                             }
 
-                                            Canvas {
-                                                id: cpuGraph
+                                            SparklineCanvas {
                                                 Layout.fillWidth: true
-                                                implicitHeight: 42
-                                                property var hist: root.cpuHistory
-                                                onHistChanged: requestPaint()
-
-                                                onPaint: {
-                                                    var ctx = getContext("2d");
-                                                    ctx.clearRect(0, 0, width, height);
-                                                    if (!hist || hist.length < 2) return;
-
-                                                    var val = root.cpuUsage;
-                                                    var colorObj = Style.accent;
-                                                    if (val > 80) colorObj = Style.danger;
-                                                    else if (val > 60) colorObj = Style.warning;
-
-                                                    ctx.strokeStyle = colorObj;
-                                                    ctx.lineWidth = 1.3;
-                                                    ctx.beginPath();
-
-                                                    var step = width / (hist.length - 1);
-                                                    for (var i = 0; i < hist.length; i++) {
-                                                        var x = i * step;
-                                                        var y = height - (hist[i] / 100.0 * (height - 4)) - 2;
-                                                        if (i === 0) ctx.moveTo(x, y);
-                                                        else ctx.lineTo(x, y);
-                                                    }
-                                                    ctx.stroke();
-
-                                                    ctx.lineTo(width, height);
-                                                    ctx.lineTo(0, height);
-                                                    ctx.closePath();
-                                                    var grad = ctx.createLinearGradient(0, 0, 0, height);
-                                                    grad.addColorStop(0, Qt.rgba(colorObj.r, colorObj.g, colorObj.b, 0.08));
-                                                    grad.addColorStop(1, Qt.rgba(colorObj.r, colorObj.g, colorObj.b, 0.0));
-                                                    ctx.fillStyle = grad;
-                                                    ctx.fill();
-                                                }
+                                                hist: root.cpuHistory
+                                                currentVal: root.cpuUsage
+                                                thresholdColors: true
                                             }
                                         }
                                     }
@@ -2253,45 +2147,11 @@ Item {
                                                 Text { text: root.ramUsage + "%"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeNormal; font.weight: Font.Bold; color: Style.accent }
                                             }
 
-                                            Canvas {
-                                                id: ramGraph
+                                            SparklineCanvas {
                                                 Layout.fillWidth: true
-                                                implicitHeight: 42
-                                                property var hist: root.ramHistory
-                                                onHistChanged: requestPaint()
-
-                                                onPaint: {
-                                                    var ctx = getContext("2d");
-                                                    ctx.clearRect(0, 0, width, height);
-                                                    if (!hist || hist.length < 2) return;
-
-                                                    var val = root.ramUsage;
-                                                    var colorObj = Style.accent;
-                                                    if (val > 80) colorObj = Style.danger;
-                                                    else if (val > 60) colorObj = Style.warning;
-
-                                                    ctx.strokeStyle = colorObj;
-                                                    ctx.lineWidth = 1.3;
-                                                    ctx.beginPath();
-
-                                                    var step = width / (hist.length - 1);
-                                                    for (var i = 0; i < hist.length; i++) {
-                                                        var x = i * step;
-                                                        var y = height - (hist[i] / 100.0 * (height - 4)) - 2;
-                                                        if (i === 0) ctx.moveTo(x, y);
-                                                        else ctx.lineTo(x, y);
-                                                    }
-                                                    ctx.stroke();
-
-                                                    ctx.lineTo(width, height);
-                                                    ctx.lineTo(0, height);
-                                                    ctx.closePath();
-                                                    var grad = ctx.createLinearGradient(0, 0, 0, height);
-                                                    grad.addColorStop(0, Qt.rgba(colorObj.r, colorObj.g, colorObj.b, 0.08));
-                                                    grad.addColorStop(1, Qt.rgba(colorObj.r, colorObj.g, colorObj.b, 0.0));
-                                                    ctx.fillStyle = grad;
-                                                    ctx.fill();
-                                                }
+                                                hist: root.ramHistory
+                                                currentVal: root.ramUsage
+                                                thresholdColors: true
                                             }
                                         }
                                     }
@@ -2333,41 +2193,9 @@ Item {
                                                 }
                                             }
 
-                                            Canvas {
-                                                id: netGraph
+                                            SparklineCanvas {
                                                 Layout.fillWidth: true
-                                                implicitHeight: 42
-                                                property var hist: root.netHistory
-                                                onHistChanged: requestPaint()
-
-                                                onPaint: {
-                                                    var ctx = getContext("2d");
-                                                    ctx.clearRect(0, 0, width, height);
-                                                    if (!hist || hist.length < 2) return;
-
-                                                    var colorObj = Style.accent;
-                                                    ctx.strokeStyle = colorObj;
-                                                    ctx.lineWidth = 1.3;
-                                                    ctx.beginPath();
-
-                                                    var step = width / (hist.length - 1);
-                                                    for (var i = 0; i < hist.length; i++) {
-                                                        var x = i * step;
-                                                        var y = height - (hist[i] / 100.0 * (height - 4)) - 2;
-                                                        if (i === 0) ctx.moveTo(x, y);
-                                                        else ctx.lineTo(x, y);
-                                                    }
-                                                    ctx.stroke();
-
-                                                    ctx.lineTo(width, height);
-                                                    ctx.lineTo(0, height);
-                                                    ctx.closePath();
-                                                    var grad = ctx.createLinearGradient(0, 0, 0, height);
-                                                    grad.addColorStop(0, Qt.rgba(colorObj.r, colorObj.g, colorObj.b, 0.08));
-                                                    grad.addColorStop(1, Qt.rgba(colorObj.r, colorObj.g, colorObj.b, 0.0));
-                                                    ctx.fillStyle = grad;
-                                                    ctx.fill();
-                                                }
+                                                hist: root.netHistory
                                             }
                                         }
                                     }

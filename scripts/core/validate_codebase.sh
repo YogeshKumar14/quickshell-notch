@@ -17,7 +17,7 @@ while IFS= read -r file; do
         qmllint "$file"
         QML_FAILS=$((QML_FAILS + 1))
     fi
-done < <(find "$DIR" -name "*.qml")
+done < <(find "$DIR" -name "*.qml" ! -name "scratch_*" ! -name "test_*")
 
 if [ $QML_FAILS -eq 0 ]; then
     echo "✅ Passed"

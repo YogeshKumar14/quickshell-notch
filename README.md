@@ -90,13 +90,13 @@ To load Top Notch automatically when Hyprland starts, add the launcher script to
 For **Lua configurations** (`hyprland.lua`):
 ```lua
 hl.on("hyprland.start", function()
-    hl.exec_cmd("$HOME/.config/quickshell/scripts/launch_quickshell.sh")
+    hl.exec_cmd("$HOME/.config/quickshell/scripts/core/launch_quickshell.sh")
 end)
 ```
 
 For **Standard configurations** (`hyprland.conf`):
 ```ini
-exec-once = bash ~/.config/quickshell/scripts/launch_quickshell.sh
+exec-once = bash ~/.config/quickshell/scripts/core/launch_quickshell.sh
 ```
 
 ---
