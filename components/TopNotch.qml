@@ -263,6 +263,18 @@ Item {
     property int autoCloseDelay: 5000
     property int compactWidthVal: 130
     property int expandedHeightVal: 420
+
+    // Per-tab expanded notch height: media (0) and stats (3) grow to fit their
+    // content exactly; walls (1) and apps (2) keep the user-configured height.
+    property int pageChromeHeight: 14 + headerRow.implicitHeight + 10 + tabDots.implicitHeight + 10 + 14
+    property int mediaPageContentHeight: mediaColumn ? mediaColumn.implicitHeight : 0
+    property int statsPageContentHeight: statsColumn ? statsColumn.implicitHeight : 0
+    property int pageNotchHeight: root.currentPage === 0 ? Math.max(root.expandedHeightVal, root.mediaPageContentHeight + root.pageChromeHeight)
+        : (root.currentPage === 3 ? Math.max(root.expandedHeightVal, root.statsPageContentHeight + root.pageChromeHeight)
+        : root.expandedHeightVal)
+    // Window-sized hint: tall enough for the tallest page so spring morphs between
+    // page heights never clip (the window is transparent; the mask passes clicks through).
+    property int maxPageNotchHeight: Math.max(root.expandedHeightVal, root.mediaPageContentHeight + root.pageChromeHeight, root.statsPageContentHeight + root.pageChromeHeight)
     property int notchRadiusVal: 16
     property bool drippingEarsVal: true
     property int clockFontSizeVal: 14
@@ -603,7 +615,7 @@ Item {
     // Fixed root dimensions (624px width allows 32px padding for inverted ears)
     // Height tracks the configurable expanded height so it never clips
     implicitWidth: Style.notchWidthExpanded + 64
-    implicitHeight: Math.max(Style.notchHeightExpanded, root.expandedHeightVal)
+    implicitHeight: Math.max(Style.notchHeightExpanded, root.maxPageNotchHeight)
 
     // Clock string (pure JS — zero process spawns)
     property string timeStr: "00:00"
@@ -971,7 +983,7 @@ Item {
         anchors.horizontalCenter: parent.horizontalCenter
 
         width: root.isOsdActive ? 280 : ((root.isPowerMenuOpen || root.isWifiMenuOpen || root.isBluetoothMenuOpen || root.isNotifMenuOpen) ? 320 : (root.isExpanded ? Style.notchWidthExpanded : (root.isWorkspaceActive ? 240 : (root.showVisualizer ? root.dynamicVisNotchWidth : root.compactWidthVal))))
-        height: root.isOsdActive ? Style.notchHeightCompact : (root.isPowerMenuOpen ? 260 : ((root.isWifiMenuOpen || root.isBluetoothMenuOpen || root.isNotifMenuOpen) ? 320 : (root.isExpanded ? root.expandedHeightVal : Style.notchHeightCompact)))
+        height: root.isOsdActive ? Style.notchHeightCompact : (root.isPowerMenuOpen ? 260 : ((root.isWifiMenuOpen || root.isBluetoothMenuOpen || root.isNotifMenuOpen) ? 320 : (root.isExpanded ? root.pageNotchHeight : Style.notchHeightCompact)))
 
         color: "#000000"
         border.width: 0
@@ -1376,9 +1388,17 @@ Item {
         Item {
             id: expandedContainer
             width: Style.notchWidthExpanded
-            height: root.expandedHeightVal
+            height: root.pageNotchHeight
             anchors.top: parent.top
             anchors.horizontalCenter: parent.horizontalCenter
+
+            Behavior on height {
+                SpringAnimation {
+                    spring: root.expandSpringTension
+                    damping: root.expandSpringDamping
+                    epsilon: 0.25
+                }
+            }
 
             opacity: (root.isExpanded && !root.isPowerMenuOpen && !root.isWifiMenuOpen && !root.isBluetoothMenuOpen && !root.isNotifMenuOpen) ? 1.0 : 0.0
             visible: opacity > 0.01
@@ -1394,6 +1414,7 @@ Item {
 
                 // Expanded Header: Text Tabs ("Media", "Walls", "Apps", "Stats") + Gear Icon + Close
                 RowLayout {
+                    id: headerRow
                     Layout.fillWidth: true
                     spacing: 8
 
@@ -1728,6 +1749,7 @@ Item {
                             ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
 
                             ColumnLayout {
+                                id: mediaColumn
                                 width: pageViewport.width
                                 spacing: 14
 
@@ -2078,6 +2100,7 @@ Item {
                             clip: true
 
                             ColumnLayout {
+                                id: statsColumn
                                 anchors.fill: parent
                                 spacing: 12
 
@@ -2273,6 +2296,7 @@ Item {
 
                 // iOS-STYLE SLIDING PILL TAB INDICATOR
                 Item {
+                    id: tabDots
                     Layout.alignment: Qt.AlignHCenter
                     implicitWidth: 104
                     implicitHeight: 14
