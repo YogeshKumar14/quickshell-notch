@@ -77,20 +77,15 @@ Item {
         dismissAndCleanup(nid);
     }
 
-    function removeAtIndex(idx) {
-        if (idx >= 0 && idx < popupModel.count) {
-            var nid = popupModel.get(idx).nid;
-            popupModel.remove(idx, 1);
-            dismissAndCleanup(nid);
-        }
-    }
-
     function dismissAndCleanup(nid) {
         var omap = root.notifObjectMap;
-        if (omap[nid]) {
-            omap[nid].dismiss();
+        if (omap[nid] !== undefined) {
+            try {
+                omap[nid].dismiss();
+            } catch (e) {
+                // Handle already closed server-side; nothing to dismiss.
+            }
             delete omap[nid];
-            root.notifObjectMap = omap;
         }
         delete root.notifTimestamps[nid];
         delete root.pausedTimestamps[nid];
@@ -204,13 +199,13 @@ Item {
 
                         // Tap to dismiss (no significant movement)
                         if (Math.abs(deltaX) < 10) {
-                            root.removeAtIndex(index);
+                            root.removeById(delegateRoot.notifNid);
                             return;
                         }
 
                         // Horizontal dismiss threshold
                         if (deltaX > 80) {
-                            root.removeAtIndex(index);
+                            root.removeById(delegateRoot.notifNid);
                             return;
                         }
 

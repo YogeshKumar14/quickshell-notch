@@ -107,6 +107,10 @@ Item {
     onIsExpandedChanged: {
         if (isExpanded) {
             root.isOsdActive = false;
+            root.refreshOccupied();
+            workspacePollTimer.running = true;
+            root.refreshDeviceLevels();
+            devicePollTimer.running = true;
             if (currentPage === 1 || currentPage === 2) {
                 focusTabSearchTimer.restart();
             }
@@ -121,6 +125,8 @@ Item {
             root.isBluetoothMenuOpen = false;
             root.isPowerMenuOpen = false;
             root.isWifiPasswordPromptOpen = false;
+            workspacePollTimer.running = root.isWorkspaceActive;
+            devicePollTimer.running = root.isOsdActive;
         }
     }
 
@@ -365,7 +371,7 @@ Item {
     Process {
         id: visualizerStreamProc
         command: ["python3", "/home/yogesh/.config/quickshell/scripts/notch/stream_audio_visualizer.py"]
-        running: true
+        running: root.visualizerEnabledVal
         stdout: SplitParser {
             onRead: function(data) {
                 try {
@@ -395,6 +401,15 @@ Item {
         }
     }
 
+    // Restart the visualizer stream when the bar count changes so the new
+    // count takes effect live (config is regenerated on every cava spawn).
+    Timer {
+        id: visualizerRestartTimer
+        interval: 10
+        repeat: false
+        onTriggered: visualizerStreamProc.running = true
+    }
+
     // Workspace native QML state (occupiedWorkspaces is a reactive binding — no manual refresh needed)
     property int activeWorkspace: 1
     property var occupiedWorkspaces: [1]
@@ -410,14 +425,25 @@ Item {
         root.occupiedWorkspaces = list;
     }
 
+    // Poll occupancy only while the workspace overlay or the expanded notch
+    // is visible; refresh once on entry so data is never stale.
     Timer {
+        id: workspacePollTimer
         interval: 500
         repeat: true
-        running: true
+        running: false
         onTriggered: root.refreshOccupied()
     }
     property bool isWorkspaceActive: false
-    onIsWorkspaceActiveChanged: { if (isWorkspaceActive) root.isOsdActive = false; }
+    onIsWorkspaceActiveChanged: {
+        if (root.isWorkspaceActive) {
+            root.isOsdActive = false;
+            root.refreshOccupied();
+            workspacePollTimer.running = true;
+        } else if (!root.isExpanded) {
+            workspacePollTimer.running = false;
+        }
+    }
 
     // Reactive workspace overlay via focused workspace changes
     Connections {
@@ -474,7 +500,6 @@ Item {
     // SwayNC Notifications Properties
     property int notifCount: 0
     property bool dndActive: false
-    property bool isInhibited: false
 
     // Event-driven SwayNC subscription (replaces 3 polling processes)
     Process {
@@ -497,24 +522,7 @@ Item {
         }
     }
 
-    // Inhibited status poll (not available via subscribe, low-frequency 10s poll)
-    Process {
-        id: swayncInhibitedProc
-        command: ["swaync-client", "-I"]
-        running: true
-        stdout: StdioCollector {
-            onStreamFinished: {
-                root.isInhibited = this.text.trim().toLowerCase() === "true";
-            }
-        }
-    }
-
-    Timer {
-        interval: 10000
-        running: true
-        repeat: true
-        onTriggered: swayncInhibitedProc.running = true
-    }
+    // Inhibited status poll removed: value was never consumed anywhere.
 
     Process {
         id: toggleDndProc
@@ -611,6 +619,16 @@ Item {
         refreshNotchSettings();
         updateClock();
         root.refreshOccupied();
+        root.refreshDeviceLevels();
+    }
+
+    // Restart the visualizer stream when the bar count changes so the new
+    // count takes effect live.
+    onVisualizerBarCountValChanged: {
+        if (root.visualizerEnabledVal) {
+            visualizerStreamProc.running = false;
+            visualizerRestartTimer.restart();
+        }
     }
 
     // Fixed root dimensions (624px width allows 32px padding for inverted ears)
@@ -842,7 +860,6 @@ Item {
     Process {
         id: volProc
         command: ["bash", "-c", "wpctl get-volume @DEFAULT_AUDIO_SINK@ | awk '{print int($2 * 100)}'"]
-        running: true
         stdout: StdioCollector {
             onStreamFinished: {
                 var val = parseInt(this.text.trim());
@@ -853,12 +870,12 @@ Item {
 
     Process {
         id: setVolProc
+        stdout: StdioCollector { onStreamFinished: volProc.running = true }
     }
 
     Process {
         id: micProc
         command: ["bash", "-c", "wpctl get-volume @DEFAULT_AUDIO_SOURCE@ | awk '{print int($2 * 100)}'"]
-        running: true
         stdout: StdioCollector {
             onStreamFinished: {
                 var val = parseInt(this.text.trim());
@@ -875,7 +892,6 @@ Item {
     Process {
         id: brightnessProc
         command: ["bash", "-c", "brightnessctl -m | awk -F, '{print int($4)}'"]
-        running: true
         stdout: StdioCollector {
             onStreamFinished: {
                 var val = parseInt(this.text.trim());
@@ -892,7 +908,6 @@ Item {
     Process {
         id: batteryProc
         command: ["bash", "-c", "echo $(cat /sys/class/power_supply/BAT0/capacity); cat /sys/class/power_supply/BAT0/status"]
-        running: true
         stdout: StdioCollector {
             onStreamFinished: {
                 var lines = this.text.trim().split("\n");
@@ -905,16 +920,29 @@ Item {
         }
     }
 
-    // Low-frequency poll to track external changes (hardware keys, battery drain)
+    // Poll device levels only while the notch is expanded or an OSD is up;
+    // refresh once on entry and re-poll after every set operation.
     Timer {
+        id: devicePollTimer
         interval: 3000
-        running: true
         repeat: true
-        onTriggered: {
-            volProc.running = true;
-            micProc.running = true;
-            brightnessProc.running = true;
-            batteryProc.running = true;
+        running: false
+        onTriggered: root.refreshDeviceLevels()
+    }
+
+    function refreshDeviceLevels() {
+        volProc.running = true;
+        micProc.running = true;
+        brightnessProc.running = true;
+        batteryProc.running = true;
+    }
+
+    onIsOsdActiveChanged: {
+        if (root.isOsdActive) {
+            root.refreshDeviceLevels();
+            devicePollTimer.running = true;
+        } else if (!root.isExpanded) {
+            devicePollTimer.running = false;
         }
     }
 
