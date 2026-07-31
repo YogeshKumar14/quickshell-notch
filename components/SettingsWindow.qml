@@ -347,32 +347,104 @@ PanelWindow {
                     color: "#1C1C1E"
                     border.color: "#2C2C2E"
 
+                    // Sliding Hover Pill (master handle — springs to the hovered tab)
+                    Rectangle {
+                        id: settingsHoverPill
+                        height: 28
+                        radius: 14
+                        color: Style.cardBgHover
+                        z: 0
+                        anchors.top: parent.top
+                        anchors.topMargin: 3
+
+                        property var hoveredItem: settingsSegRow.hoveredIndex >= 0 ? settingsSegRepeater.itemAt(settingsSegRow.hoveredIndex) : null
+                        x: hoveredItem ? hoveredItem.x + 3 : settingsSlidingPill.x
+                        width: hoveredItem ? hoveredItem.width : settingsSlidingPill.width
+                        opacity: settingsSegRow.hoveredIndex >= 0 && settingsSegRow.hoveredIndex !== root.currentTab ? 1 : 0
+
+                        Behavior on x { enabled: settingsHoverPill.width > 0; SpringAnimation { spring: root.tabSpringTension; damping: root.tabSpringDamping } }
+                        Behavior on width { enabled: settingsHoverPill.width > 0; SpringAnimation { spring: root.tabSpringTension; damping: root.tabSpringDamping } }
+                        Behavior on opacity { NumberAnimation { duration: root.buttonSpeedVal } }
+                    }
+
+                    // Sliding Highlight Pill (master highlight handle — springs to the active tab)
+                    Rectangle {
+                        id: settingsSlidingPill
+                        height: 28
+                        radius: 14
+                        color: Style.accent
+                        z: 0
+                        anchors.top: parent.top
+                        anchors.topMargin: 3
+
+                        property var currentItem: (settingsSegRepeater.count > 0) ? settingsSegRepeater.itemAt(root.currentTab) : null
+                        x: currentItem ? currentItem.x + 3 : 0
+                        width: currentItem ? currentItem.width : 0
+
+                        Behavior on x { enabled: settingsSlidingPill.width > 0; SpringAnimation { spring: root.tabSpringTension; damping: root.tabSpringDamping } }
+                        Behavior on width { enabled: settingsSlidingPill.width > 0; SpringAnimation { spring: root.tabSpringTension; damping: root.tabSpringDamping } }
+                    }
+
                     RowLayout {
+                        id: settingsSegRow
                         anchors.fill: parent
                         anchors.margins: 3
                         spacing: 0
+                        z: 1 // Keep tabs above the sliding pills
+
+                        property int hoveredIndex: {
+                            for (var i = 0; i < settingsSegRepeater.count; i++) {
+                                var item = settingsSegRepeater.itemAt(i);
+                                if (item && item.isHovered) return i;
+                            }
+                            return -1;
+                        }
 
                         Repeater {
+                            id: settingsSegRepeater
                             model: ["General", "Input", "Looks", "System"]
                             delegate: Rectangle {
+                                property bool isHovered: tabMouse.containsMouse
                                 Layout.fillWidth: true
                                 Layout.fillHeight: true
                                 radius: 14
-                                color: root.currentTab === index ? Style.accent : "transparent"
-
-                                Behavior on color { ColorAnimation { duration: 150 } }
+                                color: "transparent"
 
                                 RowLayout {
                                     anchors.centerIn: parent
                                     spacing: 6
-                                    M3Icon { name: ["desktop_windows", "mouse", "auto_awesome", "settings"][index]; color: root.currentTab === index ? "#000" : Style.textSecondary; size: 16 }
-                                    Text { text: modelData; font.family: Style.fontFamily; color: root.currentTab === index ? "#000" : Style.textSecondary; font.pixelSize: 12; font.weight: Font.Bold }
+                                    M3Icon {
+                                        name: ["desktop_windows", "mouse", "auto_awesome", "settings"][index]
+                                        color: root.currentTab === index ? "#000" : Style.textSecondary
+                                        size: 16
+                                        Behavior on color { ColorAnimation { duration: 150 } }
+                                    }
+                                    Text {
+                                        text: modelData
+                                        font.family: Style.fontFamily
+                                        color: root.currentTab === index ? "#000" : Style.textSecondary
+                                        font.pixelSize: 12
+                                        font.weight: Font.Bold
+                                        Behavior on color { ColorAnimation { duration: 150 } }
+                                    }
                                 }
 
                                 MouseArea {
+                                    id: tabMouse
                                     anchors.fill: parent
+                                    hoverEnabled: true
                                     cursorShape: Qt.PointingHandCursor
                                     onClicked: root.currentTab = index
+                                }
+
+                                // Dynamic M3 Divider
+                                Rectangle {
+                                    anchors.right: parent.right
+                                    anchors.verticalCenter: parent.verticalCenter
+                                    width: 1
+                                    height: 16
+                                    color: Style.cardBorder
+                                    visible: index < 3 && root.currentTab !== index && root.currentTab !== index + 1
                                 }
                             }
                         }
