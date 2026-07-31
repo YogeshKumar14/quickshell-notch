@@ -1271,6 +1271,38 @@ PanelWindow {
                                         onMoved: function(val) { root.expandSpringDamping = val; root.hasPendingChanges = true; }
                                     }
                                 }
+
+                                Rectangle { width: parent.width; height: 1; color: "#2A2A2D" }
+
+                                Column {
+                                    width: parent.width; spacing: 6
+                                    RowLayout {
+                                        width: parent.width
+                                        Text { text: "Tab Slide Tension"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeNormal; color: Style.textPrimary }
+                                        Item { Layout.fillWidth: true }
+                                        Text { text: root.tabSpringTension.toFixed(1); font.family: Style.fontFamilyMono; font.pixelSize: Style.fontSizeSmall; color: Style.accent; font.weight: Font.Bold }
+                                    }
+                                    CustomSlider {
+                                        width: parent.width; from: 1.0; to: 10.0; value: root.tabSpringTension; stepSize: 0.5
+                                        onMoved: function(val) { root.tabSpringTension = val; root.hasPendingChanges = true; }
+                                    }
+                                }
+
+                                Rectangle { width: parent.width; height: 1; color: "#2A2A2D" }
+
+                                Column {
+                                    width: parent.width; spacing: 6
+                                    RowLayout {
+                                        width: parent.width
+                                        Text { text: "Tab Slide Damping"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeNormal; color: Style.textPrimary }
+                                        Item { Layout.fillWidth: true }
+                                        Text { text: root.tabSpringDamping.toFixed(2); font.family: Style.fontFamilyMono; font.pixelSize: Style.fontSizeSmall; color: Style.accent; font.weight: Font.Bold }
+                                    }
+                                    CustomSlider {
+                                        width: parent.width; from: 0.10; to: 0.80; value: root.tabSpringDamping; stepSize: 0.02
+                                        onMoved: function(val) { root.tabSpringDamping = val; root.hasPendingChanges = true; }
+                                    }
+                                }
                             }
                         }
                     }
