@@ -1608,36 +1608,6 @@ Item {
                         }
                     }
 
-                    // Power Button with Micro-Animations
-                    Rectangle {
-                        width: 28; height: 28; radius: 14
-                        color: root.isPowerMenuOpen ? Style.danger : (powerM.containsMouse ? Style.cardBgHover : Style.cardBg)
-                        border.color: Style.cardBorder
-
-                        scale: (root.buttonAnimsVal && powerM.pressed) ? 0.95 : ((root.buttonAnimsVal && powerM.containsMouse) ? 1.08 : 1.0)
-                        Behavior on scale { enabled: root.buttonAnimsVal; NumberAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
-                        Behavior on color { ColorAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
-
-                        M3Icon {
-                            anchors.centerIn: parent
-                            name: "󰐥"
-                            size: 16
-                            color: root.isPowerMenuOpen ? "#FFF" : (powerM.containsMouse ? Style.danger : Style.textSecondary)
-                        }
-
-                        MouseArea {
-                            id: powerM
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: {
-                                root.isPowerMenuOpen = !root.isPowerMenuOpen;
-                                root.isPowerConfirming = false;
-                                root.powerSelectedIndex = 0;
-                            }
-                        }
-                    }
-
                     // Notification Bell Icon button with Micro-Animations
                     Rectangle {
                         width: 28; height: 28; radius: 14
@@ -1685,6 +1655,36 @@ Item {
                                 root.isWifiMenuOpen = false;
                                 root.isBluetoothMenuOpen = false;
                                 root.isPowerMenuOpen = false;
+                            }
+                        }
+                    }
+
+                    // Power Button with Micro-Animations
+                    Rectangle {
+                        width: 28; height: 28; radius: 14
+                        color: root.isPowerMenuOpen ? Style.danger : (powerM.containsMouse ? Style.cardBgHover : Style.cardBg)
+                        border.color: Style.cardBorder
+
+                        scale: (root.buttonAnimsVal && powerM.pressed) ? 0.95 : ((root.buttonAnimsVal && powerM.containsMouse) ? 1.08 : 1.0)
+                        Behavior on scale { enabled: root.buttonAnimsVal; NumberAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
+                        Behavior on color { ColorAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
+
+                        M3Icon {
+                            anchors.centerIn: parent
+                            name: "󰐥"
+                            size: 16
+                            color: root.isPowerMenuOpen ? "#FFF" : (powerM.containsMouse ? Style.danger : Style.textSecondary)
+                        }
+
+                        MouseArea {
+                            id: powerM
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                root.isPowerMenuOpen = !root.isPowerMenuOpen;
+                                root.isPowerConfirming = false;
+                                root.powerSelectedIndex = 0;
                             }
                         }
                     }
