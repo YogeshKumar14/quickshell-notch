@@ -1,8 +1,12 @@
 #!/usr/bin/env python3
 import os
+import sys
 import json
 import hashlib
 from concurrent.futures import ThreadPoolExecutor
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "core"))
+from atomic_write import atomic_write
 
 THUMB_DIR = os.path.expanduser("~/.cache/quickshell/thumbs")
 THUMB_SIZE = (160, 110)
@@ -14,11 +18,17 @@ def ensure_thumb(full_path):
     thumb_name = f"{path_hash}.jpg"
     thumb_path = os.path.join(THUMB_DIR, thumb_name)
 
-    # Skip if thumb exists and is newer than original
+    # Skip if thumb exists and is newer than original (and is not corrupt)
     if os.path.isfile(thumb_path):
         try:
             if os.path.getmtime(thumb_path) >= os.path.getmtime(full_path):
-                return thumb_path
+                try:
+                    from PIL import Image
+                    with Image.open(thumb_path) as existing:
+                        existing.verify()
+                    return thumb_path
+                except Exception:
+                    pass
         except OSError:
             pass
 
@@ -35,9 +45,15 @@ def ensure_thumb(full_path):
                 img = bg
             elif img.mode != "RGB":
                 img = img.convert("RGB")
-            img.save(thumb_path, "JPEG", quality=70, optimize=True)
+            tmp_path = thumb_path + ".tmp"
+            img.save(tmp_path, "JPEG", quality=70, optimize=True)
+        os.replace(tmp_path, thumb_path)
         return thumb_path
     except Exception:
+        try:
+            os.unlink(tmp_path)
+        except OSError:
+            pass
         return full_path
 
 def process_wallpaper(item):
@@ -78,8 +94,8 @@ def scan():
                 name = os.path.splitext(entry)[0].replace("-", " ").replace("_", " ").title()
                 items_to_process.append((name, entry, full_path, folder_name))
 
-    # Process thumbnails in parallel across CPU cores
-    with ThreadPoolExecutor(max_workers=16) as executor:
+    # Process thumbnails in parallel (4 workers bounds memory on large sets)
+    with ThreadPoolExecutor(max_workers=4) as executor:
         wallpapers = list(executor.map(process_wallpaper, items_to_process))
 
     # Sort alphabetically by name

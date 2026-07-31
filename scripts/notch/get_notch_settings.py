@@ -1,6 +1,11 @@
 #!/usr/bin/env python3
 import os
+import sys
 import json
+import time
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "core"))
+from atomic_write import atomic_write
 
 CONFIG_DIR = os.path.expanduser("~/.config/quickshell")
 CONFIG_FILE = os.path.join(CONFIG_DIR, "notch_settings.json")
@@ -43,22 +48,42 @@ DEFAULTS = {
     "battery_warning_threshold": 20
 }
 
+def coerce_value(key, val):
+    default = DEFAULTS.get(key)
+    if isinstance(default, bool):
+        return str(val).lower() == "true"
+    if isinstance(default, int):
+        return int(float(val))
+    if isinstance(default, float):
+        return float(val)
+    return val
+
 def main():
+    data = dict(DEFAULTS)
     if os.path.isfile(CONFIG_FILE):
         try:
             with open(CONFIG_FILE, "r", encoding="utf-8") as fp:
-                data = json.load(fp)
+                loaded = json.load(fp)
+            if isinstance(loaded, dict):
+                data.update(loaded)
                 for k, v in DEFAULTS.items():
                     if k not in data:
                         data[k] = v
                 print(json.dumps(data))
+                if data != loaded:
+                    os.makedirs(CONFIG_DIR, exist_ok=True)
+                    atomic_write(CONFIG_FILE, json.dumps(data, indent=2))
                 return
-        except Exception:
-            pass
-    
+        except Exception as e:
+            backup = CONFIG_FILE + ".corrupt." + time.strftime("%Y%m%d%H%M%S")
+            try:
+                os.rename(CONFIG_FILE, backup)
+                print(f"WARNING: unreadable settings file backed up to {backup}", file=sys.stderr)
+            except Exception:
+                print(f"WARNING: unreadable settings file could not be backed up: {e}", file=sys.stderr)
+
     os.makedirs(CONFIG_DIR, exist_ok=True)
-    with open(CONFIG_FILE, "w", encoding="utf-8") as fp:
-        json.dump(DEFAULTS, fp)
+    atomic_write(CONFIG_FILE, json.dumps(DEFAULTS, indent=2))
     print(json.dumps(DEFAULTS))
 
 if __name__ == "__main__":

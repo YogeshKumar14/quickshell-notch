@@ -3,34 +3,44 @@ if [ "$QUICKSHELL_SANDBOX" = "1" ]; then
     echo "sandbox_skipped"
     exit 0
 fi
+
 KEY="$1"
 VAL="$2"
+if [ -z "$KEY" ]; then
+    echo "Usage: set_notch_option.sh KEY VAL" >&2
+    exit 1
+fi
 
 CONFIG_FILE="$HOME/.config/quickshell/notch_settings.json"
 mkdir -p "$HOME/.config/quickshell"
 
-python3 -c "
-import os, json
-file_path = os.path.expanduser('$CONFIG_FILE')
-data = {}
+QUICK_OPT_KEY="$KEY" QUICK_OPT_VAL="$VAL" QUICK_OPT_FILE="$CONFIG_FILE" \
+PYTHONPATH="$HOME/.config/quickshell/scripts/notch:$HOME/.config/quickshell/scripts/core" \
+python3 - <<'PY'
+import os, sys, json, time
+
+from get_notch_settings import DEFAULTS, coerce_value
+from atomic_write import atomic_write
+
+file_path = os.environ["QUICK_OPT_FILE"]
+key = os.environ["QUICK_OPT_KEY"]
+val = os.environ["QUICK_OPT_VAL"]
+
+data = dict(DEFAULTS)
 if os.path.isfile(file_path):
     try:
-        with open(file_path, 'r') as fp:
-            data = json.load(fp)
-    except Exception: pass
+        with open(file_path, "r", encoding="utf-8") as fp:
+            loaded = json.load(fp)
+        if isinstance(loaded, dict):
+            data.update(loaded)
+    except Exception as e:
+        backup = file_path + ".corrupt." + time.strftime("%Y%m%d%H%M%S")
+        try:
+            os.rename(file_path, backup)
+            print(f"WARNING: unreadable settings file backed up to {backup}", file=sys.stderr)
+        except Exception:
+            print(f"WARNING: unreadable settings file could not be backed up: {e}", file=sys.stderr)
 
-key = '$KEY'
-val = '$VAL'
-
-if key in ['auto_close', 'compact_width', 'expanded_height', 'bottom_radius', 'app_columns', 'workspace_timeout', 'button_speed', 'visualizer_height', 'visualizer_timeout', 'network_refresh']:
-    data[key] = int(val)
-elif key in ['expand_tension', 'expand_damping', 'tab_tension', 'tab_damping', 'wall_duration']:
-    data[key] = float(val)
-elif key in ['dripping_ears', 'clock_12h', 'bar_shadow', 'workspace_overlay', 'button_anims', 'visualizer_enabled']:
-    data[key] = val.lower() == 'true'
-else:
-    data[key] = val
-
-with open(file_path, 'w') as fp:
-    json.dump(data, fp)
-"
+data[key] = coerce_value(key, val)
+atomic_write(file_path, json.dumps(data, indent=2))
+PY

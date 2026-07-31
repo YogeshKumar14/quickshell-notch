@@ -1,7 +1,11 @@
 #!/usr/bin/env python3
 import os
+import sys
 import json
 import configparser
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "core"))
+from atomic_write import atomic_write
 
 CACHE_DIR = os.path.expanduser("~/.cache/quickshell")
 CACHE_FILE = os.path.join(CACHE_DIR, "apps.json")
@@ -15,14 +19,25 @@ def scan_apps():
         os.path.expanduser("~/.local/share/flatpak/exports/share/applications")
     ]
 
-    # Fast cache validation: if cache is newer than all desktop dirs, return cache immediately
+    # Fast cache validation: cache is fresh only if newer than every .desktop file
+    # (dir mtimes miss in-place edits of existing files)
     if os.path.isfile(CACHE_FILE):
         try:
             cache_mtime = os.path.getmtime(CACHE_FILE)
             needs_rebuild = False
             for d in desktop_dirs:
-                if os.path.isdir(d) and os.path.getmtime(d) > cache_mtime:
+                if not os.path.isdir(d):
+                    continue
+                if os.path.getmtime(d) > cache_mtime:
                     needs_rebuild = True
+                    break
+                for entry in os.listdir(d):
+                    if entry.endswith(".desktop"):
+                        fpath = os.path.join(d, entry)
+                        if os.path.getmtime(fpath) > cache_mtime:
+                            needs_rebuild = True
+                            break
+                if needs_rebuild:
                     break
             if not needs_rebuild:
                 with open(CACHE_FILE, "r", encoding="utf-8") as fp:
@@ -160,8 +175,7 @@ def scan_apps():
     
     # Save cache file
     os.makedirs(CACHE_DIR, exist_ok=True)
-    with open(CACHE_FILE, "w", encoding="utf-8") as fp:
-        json.dump(apps, fp)
+    atomic_write(CACHE_FILE, json.dumps(apps))
 
     return apps
 
