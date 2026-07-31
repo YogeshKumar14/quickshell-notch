@@ -39,6 +39,7 @@ PanelWindow {
 
     // Apply Button Feedback state
     property bool isAppliedSuccess: false
+    property bool isApplyFailed: false
     property bool hasPendingChanges: false
 
     Timer {
@@ -46,6 +47,13 @@ PanelWindow {
         interval: 2000
         repeat: false
         onTriggered: root.isAppliedSuccess = false
+    }
+
+    Timer {
+        id: applyFailedTimer
+        interval: 4000
+        repeat: false
+        onTriggered: root.isApplyFailed = false
     }
 
     // --- HYPRLAND DRAFT & APPLIED OPTIONS ---
@@ -199,13 +207,24 @@ PanelWindow {
     // Atomic Single Process Batch Executor
     Process {
         id: applyAllProc
-        stdout: StdioCollector {
-            onStreamFinished: {
-                root.hasPendingChanges = false;
-                root.isAppliedSuccess = true;
-                appliedSuccessTimer.restart();
-                root.notchSettingsChanged();
+        stdout: StdioCollector { }
+        onExited: function(exitCode, exitStatus) {
+            if (exitCode !== 0) {
+                root.isApplyFailed = true;
+                applyFailedTimer.restart();
+                return;
             }
+            var statusText = "";
+            try { statusText = applyAllProc.stdout.text; } catch (e) {}
+            if (statusText.indexOf("\"status\": \"partial\"") >= 0 || statusText.indexOf("\"status\": \"error\"") >= 0) {
+                root.isApplyFailed = true;
+                applyFailedTimer.restart();
+                return;
+            }
+            root.hasPendingChanges = false;
+            root.isAppliedSuccess = true;
+            appliedSuccessTimer.restart();
+            root.notchSettingsChanged();
         }
     }
 
@@ -284,6 +303,8 @@ PanelWindow {
                 "expand_damping": root.expandSpringDamping,
                 "tab_tension": root.tabSpringTension,
                 "tab_damping": root.tabSpringDamping,
+                "expand_anim_type": root.expandAnimType,
+                "tab_anim_type": root.tabAnimType,
                 "stats_interval": root.sysStatsIntervalVal,
                 "network_refresh": root.networkRefreshIntervalVal,
                 "osd_timeout": root.osdTimeoutVal,
@@ -1401,7 +1422,7 @@ PanelWindow {
                     implicitWidth: applyRow.implicitWidth + 20
                     implicitHeight: 34
                     radius: 17
-                    color: root.isAppliedSuccess ? Style.success : (root.hasPendingChanges ? Style.accent : (applyM.containsMouse ? Style.cardBgHover : Style.cardBg))
+                    color: root.isApplyFailed ? Style.danger : (root.isAppliedSuccess ? Style.success : (root.hasPendingChanges ? Style.accent : (applyM.containsMouse ? Style.cardBgHover : Style.cardBg)))
                     border.color: root.hasPendingChanges ? Style.accent : Style.cardBorder
 
                     scale: (root.buttonAnimsVal && applyM.pressed) ? 0.95 : ((root.buttonAnimsVal && applyM.containsMouse) ? 1.05 : 1.0)
@@ -1414,17 +1435,17 @@ PanelWindow {
                         spacing: 6
 
                         Text {
-                            text: root.isAppliedSuccess ? "󰄬" : (root.hasPendingChanges ? "󰄲" : "󰄬")
+                            text: root.isApplyFailed ? "󰅙" : (root.isAppliedSuccess ? "󰄬" : (root.hasPendingChanges ? "󰄲" : "󰄬"))
                             font.family: Style.fontFamilyMono
-                            color: root.isAppliedSuccess ? "#FFFFFF" : (root.hasPendingChanges ? "#000000" : Style.textSecondary)
+                            color: root.isApplyFailed ? "#FFFFFF" : (root.isAppliedSuccess ? "#FFFFFF" : (root.hasPendingChanges ? "#000000" : Style.textSecondary))
                             font.pixelSize: 13
                         }
 
                         Text {
-                            text: root.isAppliedSuccess ? "Applied ✓" : (root.hasPendingChanges ? "Apply Changes *" : "Apply Changes")
+                            text: root.isApplyFailed ? "Apply Failed" : (root.isAppliedSuccess ? "Applied ✓" : (root.hasPendingChanges ? "Apply Changes *" : "Apply Changes"))
                             font.family: Style.fontFamily
                             font.pixelSize: Style.fontSizeSmall
-                            color: root.isAppliedSuccess ? "#FFFFFF" : (root.hasPendingChanges ? "#000000" : Style.textPrimary)
+                            color: root.isApplyFailed ? "#FFFFFF" : (root.isAppliedSuccess ? "#FFFFFF" : (root.hasPendingChanges ? "#000000" : Style.textPrimary))
                             font.weight: Font.Bold
                         }
                     }

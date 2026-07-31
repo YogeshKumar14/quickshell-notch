@@ -7,6 +7,7 @@ SOCK_PATH = "/tmp/quickshell-notch.sock"
 def send_command(cmd):
     try:
         with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as s:
+            s.settimeout(1.0)
             s.connect(SOCK_PATH)
             s.sendall(f"{cmd}\n".encode('utf-8'))
     except Exception as e:

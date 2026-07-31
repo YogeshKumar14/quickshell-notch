@@ -28,21 +28,29 @@ def main():
 
     res = {}
     
+    results = {}
     try:
         batch_cmd = ";".join(f"getoption {opt}" for opt in options)
-        out = subprocess.check_output(["hyprctl", "-j", "--batch", batch_cmd], stderr=subprocess.DEVNULL).decode()
+        out = subprocess.check_output(["hyprctl", "-j", "--batch", batch_cmd], stderr=subprocess.DEVNULL, timeout=5).decode()
         
-        # Parse the batch output: each option result is separated by newlines
+        # Parse the batch output tolerantly: blank-line separated blocks, with
+        # line-by-line fallback so format changes degrade gracefully
         parts = [p.strip() for p in out.split("\n\n") if p.strip()]
-        results = {}
         for p in parts:
             try:
                 data = json.loads(p)
-                opt_name = data.get("option")
-                if opt_name:
-                    results[opt_name] = data
+                if data.get("option"):
+                    results[data["option"]] = data
+                    continue
             except Exception:
                 pass
+            for line in p.splitlines():
+                try:
+                    data = json.loads(line)
+                    if data.get("option"):
+                        results[data["option"]] = data
+                except Exception:
+                    pass
     except Exception:
         results = {}
 

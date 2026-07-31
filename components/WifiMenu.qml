@@ -126,6 +126,9 @@ Item {
                     RotationAnimation on rotation {
                         running: wifiScanner.running || wifiToggler.running
                         from: 0; to: 360; loops: Animation.Infinite; duration: 1000
+                        onRunningChanged: {
+                            if (!running) wifiRefText.rotation = 0;
+                        }
                     }
                 }
                 MouseArea {

@@ -6,6 +6,9 @@ import sys
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "core"))
 from atomic_write import atomic_write
 
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from apply_hypr_option import normalize_color, swap_color
+
 CACHE_FILE = os.path.expanduser("~/.cache/quickshell/hypr_state.json")
 LUA_PATH = os.path.expanduser("~/.config/hypr/quickshell_hypr.lua")
 CONF_PATH = os.path.expanduser("~/.config/hypr/quickshell_hypr.conf")
@@ -44,6 +47,8 @@ def convert_type(t, v):
             return float(v)
         elif t in ["blur", "animations", "shadow", "dim_inactive", "input_tap_to_click", "input_natural_scroll"]:
             return str(v).lower() == "true"
+        elif t in ["active_border", "inactive_border"]:
+            return normalize_color(v)
         return v
     except ValueError as e:
         print(f"Invalid value for {t}: {v} ({e})", file=sys.stderr)
@@ -65,8 +70,8 @@ hl.config({{
         border_size = {data.get("border_size", DEFAULTS["border_size"])},
         layout = "{data.get("layout", "dwindle")}",
         col = {{
-            active_border = "{data.get("active_border", "rgba(0a84ffff)")}",
-            inactive_border = "{data.get("inactive_border", "rgba(585b70ff)")}"
+            active_border = "rgba({swap_color(data.get("active_border", "0a84ffff"))})",
+            inactive_border = "rgba({swap_color(data.get("inactive_border", "585b70ff"))})"
         }}
     }},
     decoration = {{
@@ -104,8 +109,8 @@ general {{
     gaps_out = {data.get("gaps_out", DEFAULTS["gaps_out"])}
     border_size = {data.get("border_size", DEFAULTS["border_size"])}
     layout = {data.get("layout", "dwindle")}
-    col.active_border = {data.get("active_border", "rgba(0a84ffff)")}
-    col.inactive_border = {data.get("inactive_border", "rgba(585b70ff)")}
+    col.active_border = rgba({data.get("active_border", "0a84ffff")})
+    col.inactive_border = rgba({data.get("inactive_border", "585b70ff")})
 }}
 
 decoration {{

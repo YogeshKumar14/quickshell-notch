@@ -2,17 +2,28 @@
 import subprocess
 import json
 import sys
+import signal
+import ctypes
+
+TIMEOUT = 5
+
+def set_pdeathsig():
+    try:
+        libc = ctypes.CDLL("libc.so.6")
+        libc.prctl(1, signal.SIGTERM)
+    except Exception:
+        pass
 
 def get_status():
     try:
-        show_out = subprocess.check_output(["bluetoothctl", "show"], stderr=subprocess.DEVNULL).decode()
+        show_out = subprocess.check_output(["bluetoothctl", "show"], stderr=subprocess.DEVNULL, timeout=TIMEOUT).decode()
         is_on = "Powered: yes" in show_out
         
         devices = []
         if is_on:
             connected_macs = set()
             try:
-                conn_out = subprocess.check_output(["bluetoothctl", "devices", "Connected"], stderr=subprocess.DEVNULL).decode()
+                conn_out = subprocess.check_output(["bluetoothctl", "devices", "Connected"], stderr=subprocess.DEVNULL, timeout=TIMEOUT).decode()
                 for line in conn_out.splitlines():
                     parts = line.split(" ")
                     if len(parts) >= 3:
@@ -20,7 +31,7 @@ def get_status():
             except Exception:
                 pass
 
-            devices_out = subprocess.check_output(["bluetoothctl", "devices"], stderr=subprocess.DEVNULL).decode()
+            devices_out = subprocess.check_output(["bluetoothctl", "devices"], stderr=subprocess.DEVNULL, timeout=TIMEOUT).decode()
             for line in devices_out.splitlines():
                 parts = line.split(" ", 2)
                 if len(parts) >= 3:
@@ -35,21 +46,24 @@ def get_status():
     except Exception:
         return {"power": False, "devices": []}
 
+def spawn(args):
+    return subprocess.Popen(args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, preexec_fn=set_pdeathsig)
+
 if __name__ == "__main__":
     if len(sys.argv) > 1:
         action = sys.argv[1]
         if action == "on":
-            subprocess.run(["bluetoothctl", "power", "on"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            subprocess.run(["bluetoothctl", "power", "on"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=TIMEOUT)
         elif action == "off":
-            subprocess.run(["bluetoothctl", "power", "off"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            subprocess.run(["bluetoothctl", "power", "off"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=TIMEOUT)
         elif action == "toggle_conn" and len(sys.argv) > 2:
             mac = sys.argv[2]
             try:
-                info = subprocess.check_output(["bluetoothctl", "info", mac], stderr=subprocess.DEVNULL).decode()
+                info = subprocess.check_output(["bluetoothctl", "info", mac], stderr=subprocess.DEVNULL, timeout=TIMEOUT).decode()
                 if "Connected: yes" in info:
-                    subprocess.Popen(["bluetoothctl", "disconnect", mac], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                    spawn(["bluetoothctl", "disconnect", mac])
                 else:
-                    subprocess.Popen(["bluetoothctl", "connect", mac], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+                    spawn(["bluetoothctl", "connect", mac])
             except Exception:
                 pass
     print(json.dumps(get_status()))

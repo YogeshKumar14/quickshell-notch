@@ -40,6 +40,30 @@ def cleanup():
     except OSError:
         pass
 
+def sweep_stale_configs():
+    try:
+        now = time.time()
+        for name in os.listdir(CONFIG_DIR):
+            if not name.startswith("cava_config."):
+                continue
+            path = os.path.join(CONFIG_DIR, name)
+            try:
+                pid = int(name.rsplit(".", 1)[1])
+            except ValueError:
+                continue
+            try:
+                if os.path.isdir(f"/proc/{pid}"):
+                    continue
+            except OSError:
+                pass
+            if now - os.path.getmtime(path) > 60:
+                try:
+                    os.unlink(path)
+                except OSError:
+                    pass
+    except OSError:
+        pass
+
 atexit.register(cleanup)
 
 def sig_handler(signum, frame):
@@ -99,6 +123,7 @@ bar_delimiter = 59
 
 def main():
     global proc
+    sweep_stale_configs()
     cava_bin = shutil.which("cava")
     if not cava_bin:
         print(json.dumps({"bars": [0] * DEFAULT_BAR_COUNT, "active": False}), flush=True)

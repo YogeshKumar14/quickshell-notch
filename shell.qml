@@ -76,7 +76,7 @@ Scope {
         }
 
         implicitWidth: Style.notchWidthExpanded + 64
-        implicitHeight: Style.notchHeightExpanded
+        implicitHeight: Math.max(Style.notchHeightExpanded, notchComp.expandedHeightVal)
         color: "transparent"
 
         // Input passthrough: only the visible notchBox receives input, transparent area clicks through

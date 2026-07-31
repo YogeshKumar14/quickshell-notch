@@ -119,6 +119,9 @@ Item {
                     RotationAnimation on rotation {
                         running: btScanner.running || btToggler.running
                         from: 0; to: 360; loops: Animation.Infinite; duration: 1000
+                        onRunningChanged: {
+                            if (!running) btRefText.rotation = 0;
+                        }
                     }
                 }
                 MouseArea {
@@ -156,6 +159,9 @@ Item {
                     RotationAnimation on rotation {
                         running: btToggler.running
                         from: 0; to: 360; loops: Animation.Infinite; duration: 1000
+                        onRunningChanged: {
+                            if (!running) btActiveIcon.rotation = 0;
+                        }
                     }
                 }
                 Text {

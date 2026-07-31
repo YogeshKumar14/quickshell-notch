@@ -17,7 +17,7 @@ Item {
     property int osdValue: 50
     property real animatedOsdValue: root.osdValue
     property color osdColor: Style.accent
-    property var notifModel: null
+    property ListModel notifModel: null
 
     Behavior on osdColor {
         ColorAnimation { duration: 250; easing.type: Easing.OutCubic }
@@ -377,9 +377,11 @@ Item {
                         var wasActive = root.isAudioActive;
                         root.isAudioActive = parsed.active;
 
-                        // Non-MPRIS system audio stream trigger logic (doesn't interfere with MPRIS playback timers!)
+                        // Non-MPRIS system audio stream trigger logic.
+                        // Guard: while the MPRIS pause-dismissal timer is pending,
+                        // system audio must not resurrect the visualizer.
                         if (!root.isPlaying) {
-                            if (parsed.active && !wasActive) {
+                            if (parsed.active && !wasActive && !visualizerPauseTimer.running) {
                                 triggerVisualizerPopup();
                             } else if (!parsed.active) {
                                 triggerVisualizerDismissal();
@@ -612,8 +614,9 @@ Item {
     }
 
     // Fixed root dimensions (624px width allows 32px padding for inverted ears)
+    // Height tracks the configurable expanded height so it never clips
     implicitWidth: Style.notchWidthExpanded + 64
-    implicitHeight: Style.notchHeightExpanded
+    implicitHeight: Math.max(Style.notchHeightExpanded, root.expandedHeightVal)
 
     // Clock string (pure JS — zero process spawns)
     property string timeStr: "00:00"

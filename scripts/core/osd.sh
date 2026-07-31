@@ -1,6 +1,23 @@
 #!/usr/bin/env bash
 # ~/.config/quickshell/scripts/core/osd.sh
 
+send_osd() {
+    KIND="$1"
+    VALUE="$2"
+    [ -z "$VALUE" ] && return 0
+    KIND="$KIND" VALUE="$VALUE" python3 - <<'PY'
+import os, socket
+try:
+    s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+    s.settimeout(1.0)
+    s.connect('/tmp/quickshell-notch.sock')
+    s.sendall(f"osd:{os.environ['KIND']}:{os.environ['VALUE']}\n".encode())
+    s.close()
+except Exception:
+    pass
+PY
+}
+
 if [ "$1" == "volume" ]; then
     if [ "$2" == "up" ]; then
         wpctl set-volume -l 1.0 @DEFAULT_AUDIO_SINK@ 5%+
@@ -9,9 +26,9 @@ if [ "$1" == "volume" ]; then
     fi
     # Wait 50ms for Pipewire to propagate the audio event
     sleep 0.05
-    # Get current volume
-    VOL=$(wpctl get-volume @DEFAULT_AUDIO_SINK@ | awk '{print $2 * 100}')
-    python3 -c "import socket; s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM); s.connect('/tmp/quickshell-notch.sock'); s.sendall(b'osd:vol:${VOL%.*}\n'); s.close()"
+    # Get current volume (rounded to nearest percent)
+    VOL=$(wpctl get-volume @DEFAULT_AUDIO_SINK@ | awk '{printf "%.0f", $2 * 100}')
+    send_osd vol "$VOL"
 elif [ "$1" == "brightness" ]; then
     if [ "$2" == "up" ]; then
         brightnessctl s +5%
@@ -22,5 +39,5 @@ elif [ "$1" == "brightness" ]; then
     sleep 0.05
     # Get current brightness percentage
     BRI=$(brightnessctl i | grep -oP '\(\K[0-9]+(?=%\))')
-    python3 -c "import socket; s = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM); s.connect('/tmp/quickshell-notch.sock'); s.sendall(b'osd:bri:${BRI}\n'); s.close()"
+    send_osd bri "$BRI"
 fi

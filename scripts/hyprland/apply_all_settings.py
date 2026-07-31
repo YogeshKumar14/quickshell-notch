@@ -7,40 +7,42 @@ import subprocess
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "core"))
 from atomic_write import atomic_write
 
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__))))
+from persist_hypr_state import generate_lua, generate_conf, load_state, save_state, ensure_includes
+from apply_hypr_option import apply as apply_hyprctl_keyword, normalize_color
+
 CONFIG_DIR = os.path.expanduser("~/.config/quickshell")
 NOTCH_CONFIG_FILE = os.path.join(CONFIG_DIR, "notch_settings.json")
 HYPR_CONFIG_FILE = os.path.expanduser("~/.config/hypr/quickshell_hypr.lua")
+CONF_PATH = os.path.expanduser("~/.config/hypr/quickshell_hypr.conf")
+
+def to_bool(v):
+    if isinstance(v, str):
+        return v.strip().lower() == "true"
+    return bool(v)
 
 KEYWORD_MAP = {
     "gaps_in": ("general:gaps_in", int),
     "gaps_out": ("general:gaps_out", int),
     "rounding": ("decoration:rounding", int),
     "border_size": ("general:border_size", int),
-    "blur": ("decoration:blur:enabled", lambda v: "true" if v else "false"),
+    "blur": ("decoration:blur:enabled", to_bool),
     "layout": ("general:layout", str),
-    "animations": ("animations:enabled", lambda v: "true" if v else "false"),
+    "animations": ("animations:enabled", to_bool),
     "active_opacity": ("decoration:active_opacity", float),
     "inactive_opacity": ("decoration:inactive_opacity", float),
-    "shadow": ("decoration:shadow:enabled", lambda v: "true" if v else "false"),
+    "shadow": ("decoration:shadow:enabled", to_bool),
     "shadow_range": ("decoration:shadow:range", int),
-    "dim_inactive": ("decoration:dim_inactive", lambda v: "true" if v else "false"),
+    "dim_inactive": ("decoration:dim_inactive", to_bool),
     "master_ratio": ("master:mfact", float),
     "blur_passes": ("decoration:blur:passes", int),
     "blur_size": ("decoration:blur:size", int),
     "input_sensitivity": ("input:sensitivity", float),
-    "input_tap_to_click": ("input:touchpad:tap_to_click", lambda v: "true" if v else "false"),
-    "input_natural_scroll": ("input:touchpad:natural_scroll", lambda v: "true" if v else "false"),
+    "input_tap_to_click": ("input:touchpad:tap_to_click", to_bool),
+    "input_natural_scroll": ("input:touchpad:natural_scroll", to_bool),
+    "active_border": ("general:col.active_border", normalize_color),
+    "inactive_border": ("general:col.inactive_border", normalize_color),
 }
-
-def apply_hyprctl_keyword(key, val):
-    try:
-        subprocess.run(
-            ["hyprctl", "keyword", key, str(val)],
-            stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL,
-            timeout=2
-        )
-    except Exception:
-        pass
 
 def main():
     if os.environ.get("QUICKSHELL_SANDBOX") == "1":
@@ -60,6 +62,25 @@ def main():
     notch_data = payload.get("notch", {})
     hypr_data = payload.get("hypr", {})
 
+    # 0. Validate and convert ALL hypr values BEFORE writing anything,
+    #    so a bad value can never corrupt the persisted configs.
+    #    Accept both nested {"hypr": {...}} and flat payloads.
+    if not hypr_data:
+        hypr_data = {k: payload[k] for k in KEYWORD_MAP if k in payload}
+
+    converted = {}
+    errors = []
+    for key, (hyprctl_key, converter) in KEYWORD_MAP.items():
+        if key in hypr_data:
+            try:
+                converted[key] = converter(hypr_data[key])
+            except Exception as e:
+                errors.append(f"{key}: {e}")
+
+    if errors:
+        print(json.dumps({"status": "error", "errors": errors}))
+        sys.exit(1)
+
     # 1. ATOMIC WRITE FOR NOTCH SETTINGS
     os.makedirs(CONFIG_DIR, exist_ok=True)
     existing_notch = {}
@@ -73,118 +94,36 @@ def main():
     existing_notch.update(notch_data)
     atomic_write(NOTCH_CONFIG_FILE, json.dumps(existing_notch, indent=2))
 
-    # 2. WRITE HYPRLAND LUA CONFIG & CONF (persistence)
-    gaps_in = hypr_data.get("gaps_in", 5)
-    gaps_out = hypr_data.get("gaps_out", 10)
-    rounding = hypr_data.get("rounding", 10)
-    border_size = hypr_data.get("border_size", 2)
-    blur_enabled = hypr_data.get("blur", True)
-    layout = hypr_data.get("layout", "dwindle")
-    animations = hypr_data.get("animations", True)
-    active_op = hypr_data.get("active_opacity", 1.0)
-    inactive_op = hypr_data.get("inactive_opacity", 1.0)
-    shadow = hypr_data.get("shadow", True)
-    shadow_range = hypr_data.get("shadow_range", 4)
-    dim_inactive = hypr_data.get("dim_inactive", False)
-    master_ratio = hypr_data.get("master_ratio", 0.55)
-    blur_passes = hypr_data.get("blur_passes", 3)
-    blur_size = hypr_data.get("blur_size", 8)
-    input_sensitivity = hypr_data.get("input_sensitivity", 0.0)
-    input_tap_to_click = hypr_data.get("input_tap_to_click", False)
-    input_natural_scroll = hypr_data.get("input_natural_scroll", False)
+    # 2. WRITE HYPRLAND LUA CONFIG & CONF (persistence) + sync state cache.
+    #    Merge into existing state: a partial payload must never reset the
+    #    settings it does not mention back to defaults.
+    if converted:
+        merged = load_state()
+        merged.update(converted)
+        os.makedirs(os.path.dirname(HYPR_CONFIG_FILE), exist_ok=True)
+        atomic_write(HYPR_CONFIG_FILE, generate_lua(merged))
+        atomic_write(CONF_PATH, generate_conf(merged))
+        save_state(merged)
+        ensure_includes(
+            merged,
+            'pcall(dofile, os.getenv("HOME") .. "/.config/hypr/quickshell_hypr.lua")',
+            'source = $HOME/.config/hypr/quickshell_hypr.conf'
+        )
 
-    os.makedirs(os.path.dirname(HYPR_CONFIG_FILE), exist_ok=True)
-    lua_content = f"""-- Generated by Quickshell Settings
-hl.config({{
-    input = {{
-        sensitivity = {input_sensitivity},
-        touchpad = {{
-            tap_to_click = {str(input_tap_to_click).lower()},
-            natural_scroll = {str(input_natural_scroll).lower()}
-        }}
-    }},
-    general = {{
-        gaps_in = {gaps_in},
-        gaps_out = {gaps_out},
-        border_size = {border_size},
-        layout = "{layout}"
-    }},
-    decoration = {{
-        rounding = {rounding},
-        active_opacity = {active_op},
-        inactive_opacity = {inactive_op},
-        dim_inactive = {str(dim_inactive).lower()},
-        blur = {{
-            enabled = {str(blur_enabled).lower()},
-            size = {blur_size},
-            passes = {blur_passes}
-        }},
-        shadow = {{
-            enabled = {str(shadow).lower()},
-            range = {shadow_range}
-        }}
-    }},
-    animations = {{
-        enabled = {str(animations).lower()}
-    }},
-    master = {{
-        mfact = {master_ratio}
-    }}
-}})
-"""
-    atomic_write(HYPR_CONFIG_FILE, lua_content)
+        # 3. APPLY LIVE VIA TARGETED hyprctl keyword (no full reload)
+        failures = []
+        for key, value in converted.items():
+            hyprctl_key = KEYWORD_MAP[key][0]
+            if not apply_hyprctl_keyword(hyprctl_key, value):
+                failures.append(key)
 
-    conf_content = f"""# Generated by Quickshell Settings
-input {{
-    sensitivity = {input_sensitivity}
-    touchpad {{
-        tap-to-click = {str(input_tap_to_click).lower()}
-        natural_scroll = {str(input_natural_scroll).lower()}
-    }}
-}}
+        if failures:
+            print(json.dumps({"status": "partial", "errors": [f"hyprctl failed: {k}" for k in failures]}))
+            return
+        print(json.dumps({"status": "ok"}))
+        return
 
-general {{
-    gaps_in = {gaps_in}
-    gaps_out = {gaps_out}
-    border_size = {border_size}
-    layout = {layout}
-}}
-
-decoration {{
-    rounding = {rounding}
-    active_opacity = {active_op}
-    inactive_opacity = {inactive_op}
-    dim_inactive = {str(dim_inactive).lower()}
-
-    blur {{
-        enabled = {str(blur_enabled).lower()}
-        size = {blur_size}
-        passes = {blur_passes}
-    }}
-
-    shadow {{
-        enabled = {str(shadow).lower()}
-        range = {shadow_range}
-    }}
-}}
-
-animations {{
-    enabled = {str(animations).lower()}
-}}
-
-master {{
-    mfact = {master_ratio}
-}}
-"""
-    conf_path = os.path.join(os.path.dirname(HYPR_CONFIG_FILE), "quickshell_hypr.conf")
-    atomic_write(conf_path, conf_content)
-
-    # 3. APPLY LIVE VIA TARGETED hyprctl keyword (no full reload)
-    for key, (hyprctl_key, converter) in KEYWORD_MAP.items():
-        if key in hypr_data:
-            apply_hyprctl_keyword(hyprctl_key, converter(hypr_data[key]))
-
-    print(json.dumps({"status": "ok"}))
+    print(json.dumps({"status": "ok", "note": "no hypr settings in payload"}))
 
 if __name__ == "__main__":
     main()

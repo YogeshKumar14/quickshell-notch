@@ -6,11 +6,10 @@ Item {
     id: root
 
     required property bool isOpen
-    required property var notifModel
+    required property ListModel notifModel
 
     property int notifCount: notifModel ? notifModel.count : 0
     property bool isClearing: false
-    property int clearIdx: 0
 
     anchors.fill: parent
     z: 99
@@ -25,12 +24,10 @@ Item {
         interval: 180
         repeat: true
         onTriggered: {
-            if (root.clearIdx < root.notifModel.count) {
-                root.notifModel.remove(root.clearIdx);
-                root.notifCount = root.notifModel.count;
+            if (root.notifModel.count > 0) {
+                root.notifModel.remove(0);
             } else {
                 root.isClearing = false;
-                root.notifCount = 0;
                 stop();
             }
         }
@@ -39,14 +36,12 @@ Item {
     function dismissNotification(index) {
         if (notifModel) {
             notifModel.remove(index);
-            root.notifCount = notifModel.count;
         }
     }
 
     function clearAll() {
         if (notifModel && notifModel.count > 0 && !isClearing) {
             isClearing = true;
-            clearIdx = 0;
             clearTimer.start();
         }
     }

@@ -8,29 +8,30 @@ TYPE="$1"
 VAL="$2"
 
 PERSIST_SCRIPT="$HOME/.config/quickshell/scripts/hyprland/persist_hypr_state.py"
+APPLY_SCRIPT="$HOME/.config/quickshell/scripts/hyprland/apply_hypr_option.py"
 
-# Apply live keyword to memory instantly
+# Map setting name to the hyprctl key (dotted path).
 case "$TYPE" in
-    gaps_in)          hyprctl keyword general:gaps_in "$VAL" ;;
-    gaps_out)         hyprctl keyword general:gaps_out "$VAL" ;;
-    rounding)         hyprctl keyword decoration:rounding "$VAL" ;;
-    border_size)      hyprctl keyword general:border_size "$VAL" ;;
-    blur)             hyprctl keyword decoration:blur:enabled "$VAL" ;;
-    active_border)    hyprctl keyword general:col.active_border "$VAL" ;;
-    inactive_border)  hyprctl keyword general:col.inactive_border "$VAL" ;;
-    layout)           hyprctl keyword general:layout "$VAL" ;;
-    animations)       hyprctl keyword animations:enabled "$VAL" ;;
-    active_opacity)   hyprctl keyword decoration:active_opacity "$VAL" ;;
-    inactive_opacity) hyprctl keyword decoration:inactive_opacity "$VAL" ;;
-    shadow)           hyprctl keyword decoration:shadow:enabled "$VAL" ;;
-    dim_inactive)     hyprctl keyword decoration:dim_inactive "$VAL" ;;
-    master_ratio)     hyprctl keyword master:mfact "$VAL" ;;
-    input_sensitivity) hyprctl keyword input:sensitivity "$VAL" ;;
-    input_tap_to_click) hyprctl keyword input:touchpad:tap_to_click "$VAL" ;;
-    input_natural_scroll) hyprctl keyword input:touchpad:natural_scroll "$VAL" ;;
-    shadow_range)     hyprctl keyword decoration:shadow:range "$VAL" ;;
-    blur_passes)      hyprctl keyword decoration:blur:passes "$VAL" ;;
-    blur_size)        hyprctl keyword decoration:blur:size "$VAL" ;;
+    gaps_in)            KEY="general:gaps_in" ;;
+    gaps_out)           KEY="general:gaps_out" ;;
+    rounding)           KEY="decoration:rounding" ;;
+    border_size)        KEY="general:border_size" ;;
+    blur)               KEY="decoration:blur:enabled" ;;
+    active_border)      KEY="general:col.active_border" ;;
+    inactive_border)    KEY="general:col.inactive_border" ;;
+    layout)             KEY="general:layout" ;;
+    animations)         KEY="animations:enabled" ;;
+    active_opacity)     KEY="decoration:active_opacity" ;;
+    inactive_opacity)   KEY="decoration:inactive_opacity" ;;
+    shadow)             KEY="decoration:shadow:enabled" ;;
+    dim_inactive)       KEY="decoration:dim_inactive" ;;
+    master_ratio)       KEY="master:mfact" ;;
+    input_sensitivity)  KEY="input:sensitivity" ;;
+    input_tap_to_click) KEY="input:touchpad:tap_to_click" ;;
+    input_natural_scroll) KEY="input:touchpad:natural_scroll" ;;
+    shadow_range)       KEY="decoration:shadow:range" ;;
+    blur_passes)        KEY="decoration:blur:passes" ;;
+    blur_size)          KEY="decoration:blur:size" ;;
     reset_defaults)
         rm -f "$HOME/.config/hypr/quickshell_hypr.lua"
         rm -f "$HOME/.config/hypr/quickshell_hypr.conf"
@@ -54,5 +55,12 @@ PY
         ;;
 esac
 
-# Persist to lua + conf files for reboot durability
-python3 "$PERSIST_SCRIPT" "$TYPE" "$VAL"
+# Apply live (keyword with eval fallback for non-legacy parsers).
+if ! python3 "$APPLY_SCRIPT" "$KEY" "$VAL"; then
+    echo "live apply failed for $TYPE; not persisting" >&2
+    exit 1
+fi
+
+# Persist to lua + conf files for reboot durability only if the live apply succeeded
+python3 "$PERSIST_SCRIPT" "$TYPE" "$VAL" || exit 1
+echo "ok"
