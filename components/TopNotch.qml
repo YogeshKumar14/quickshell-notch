@@ -1758,14 +1758,6 @@ Item {
                                 width: pageViewport.width
                                 spacing: 14
 
-                                Text {
-                                    text: "Media & Audio Controls"
-                                    font.family: Style.fontFamily
-                                    font.pixelSize: Style.fontSizeLarge
-                                    font.weight: Font.Bold
-                                    color: Style.accent
-                                }
-
                                 // MPRIS Track Card (Dynamic Island Card Style)
                                 Rectangle {
                                     id: mprisCard
@@ -2108,17 +2100,6 @@ Item {
                                 id: statsColumn
                                 anchors.fill: parent
                                 spacing: 12
-
-                                Text {
-                                    text: "System Hardware Monitor"
-                                    font.family: Style.fontFamily
-                                    font.pixelSize: Style.fontSizeLarge
-                                    font.weight: Font.Bold
-                                    font.letterSpacing: 1.2
-                                    style: Text.Raised
-                                    styleColor: "#000000"
-                                    color: Style.accent
-                                }
 
                                 RowLayout {
                                     Layout.fillWidth: true
