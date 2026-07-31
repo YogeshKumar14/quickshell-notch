@@ -14,15 +14,27 @@ FocusScope {
     // Keyboard selection index (from parent TopNotch)
     property int selectedIndex: 0
 
+    // Wallpaper source folder; empty = default folders (Pictures/Wallpapers, WallpaperMinimal)
+    property string wallpaperDir: ""
+
     signal wallpaperSelected(string path)
 
     property var allWallpapers: []
 
+    property bool pendingRescan: false
+
     Process {
         id: scannerProc
-        command: ["python3", "/home/yogesh/.config/quickshell/scripts/desktop/scan_wallpapers.py"]
+        command: root.wallpaperDir !== ""
+            ? ["python3", "/home/yogesh/.config/quickshell/scripts/desktop/scan_wallpapers.py", root.wallpaperDir]
+            : ["python3", "/home/yogesh/.config/quickshell/scripts/desktop/scan_wallpapers.py"]
         stdout: StdioCollector {
             onStreamFinished: {
+                if (root.pendingRescan) {
+                    root.pendingRescan = false;
+                    root.rescanNow();
+                    return;
+                }
                 try {
                     var items = JSON.parse(this.text);
                     root.allWallpapers = [{
@@ -42,14 +54,24 @@ FocusScope {
         }
     }
 
-    Component.onCompleted: {
-        scannerProc.running = true;
+    function rescanNow() {
+        if (!scannerProc.running) {
+            scannerProc.running = true;
+        } else {
+            root.pendingRescan = true;
+        }
     }
 
-    function refresh() {
+    onWallpaperDirChanged: root.rescanNow()
+
+    Component.onCompleted: {
         if (!scannerProc.running) {
             scannerProc.running = true;
         }
+    }
+
+    function refresh() {
+        root.rescanNow();
     }
 
     function focusSearch() {

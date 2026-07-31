@@ -45,7 +45,8 @@ DEFAULTS = {
     "osd_timeout": 2000,
     "clock_format": "h:mm A",
     "clock_font_size": 14,
-    "battery_warning_threshold": 20
+    "battery_warning_threshold": 20,
+    "wallpaper_dir": ""
 }
 
 def coerce_value(key, val):

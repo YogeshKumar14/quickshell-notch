@@ -282,6 +282,7 @@ Item {
     property int batteryWarningThresholdVal: 20
     property int osdTimeoutVal: 2000
     property bool workspaceOverlayVal: true
+    property string wallpaperDirVal: ""
     property int workspaceTimeoutVal: 2500
     property string wsAnimType: "stretch"
     property bool buttonAnimsVal: true
@@ -590,6 +591,7 @@ Item {
                     if (data.clock_12h !== undefined) root.clockFormatVal = data.clock_12h ? "h:mm A" : "HH:mm";
                     if (data.clock_font_size !== undefined) root.clockFontSizeVal = data.clock_font_size;
                     if (data.battery_warning_threshold !== undefined) root.batteryWarningThresholdVal = data.battery_warning_threshold;
+                    if (data.wallpaper_dir !== undefined) root.wallpaperDirVal = data.wallpaper_dir;
                 } catch (e) {
                     console.log("Error loading notch settings:", e);
                 }
@@ -2063,6 +2065,7 @@ Item {
                                 focus: true
                                 sourceComponent: WallpaperSelector {
                                     isOpen: true
+                                    wallpaperDir: root.wallpaperDirVal
                                     onWallpaperSelected: function(path) {
                                         root.handleWallpaperSelected(path);
                                     }

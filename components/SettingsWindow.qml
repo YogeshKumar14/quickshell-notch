@@ -88,6 +88,7 @@ PanelWindow {
     property bool clock12hVal: false
     property real wallDurationVal: 0.5
     property string wallTypeVal: "outer"
+    property string wallpaperDirVal: ""
     property int appColumnsVal: 4
     property bool barShadowVal: true
     property bool workspaceOverlayVal: true
@@ -170,6 +171,7 @@ PanelWindow {
                     if (data.clock_12h !== undefined) root.clock12hVal = data.clock_12h;
                     if (data.wall_duration !== undefined) root.wallDurationVal = data.wall_duration;
                     if (data.wall_type !== undefined) root.wallTypeVal = data.wall_type;
+                    if (data.wallpaper_dir !== undefined) root.wallpaperDirVal = data.wallpaper_dir;
                     if (data.app_columns !== undefined) root.appColumnsVal = data.app_columns;
                     if (data.bar_shadow !== undefined) root.barShadowVal = data.bar_shadow;
                     if (data.workspace_overlay !== undefined) root.workspaceOverlayVal = data.workspace_overlay;
@@ -284,6 +286,7 @@ PanelWindow {
                 "clock_12h": root.clock12hVal,
                 "wall_duration": root.wallDurationVal,
                 "wall_type": root.wallTypeVal,
+                "wallpaper_dir": root.wallpaperDirVal,
                 "app_columns": root.appColumnsVal,
                 "bar_shadow": root.barShadowVal,
                 "workspace_overlay": root.workspaceOverlayVal,
@@ -1222,6 +1225,30 @@ PanelWindow {
                                         width: parent.width; from: 0.2; to: 2.0; value: root.wallDurationVal; stepSize: 0.1
                                         onMoved: function(val) { root.wallDurationVal = val; root.hasPendingChanges = true; }
                                     }
+                                }
+
+                                Rectangle { width: parent.width; height: 1; color: "#2A2A2D" }
+
+                                Column {
+                                    width: parent.width; spacing: 6
+                                    RowLayout {
+                                        width: parent.width
+                                        Text { text: "Wallpaper Folder"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeNormal; color: Style.textPrimary; Layout.alignment: Qt.AlignVCenter }
+                                        Item { Layout.fillWidth: true }
+                                        Rectangle {
+                                            width: 240; height: 28; radius: 6; color: Style.cardBgHover; border.color: "#3C3C3E"
+                                            TextInput {
+                                                anchors.fill: parent; anchors.margins: 6
+                                                verticalAlignment: TextInput.AlignVCenter
+                                                font.family: Style.fontFamilyMono
+                                                font.pixelSize: Style.fontSizeSmall
+                                                color: Style.accent
+                                                text: root.wallpaperDirVal
+                                                onEditingFinished: { root.wallpaperDirVal = text.trim(); root.hasPendingChanges = true; }
+                                            }
+                                        }
+                                    }
+                                    Text { text: "Leave empty to scan the default folders (~/Pictures/Wallpapers, WallpaperMinimal)"; font.family: Style.fontFamily; font.pixelSize: 10; color: Style.textMuted; wrapMode: Text.Wrap }
                                 }
                             }
                         }

@@ -67,14 +67,17 @@ def process_wallpaper(item):
         "folder": folder_name
     }
 
-def scan():
+def scan(target_dir=""):
     os.makedirs(THUMB_DIR, exist_ok=True)
     home = os.path.expanduser("~")
-    dirs = [
-        os.path.join(home, "Pictures", "Wallpapers"),
-        os.path.join(home, "Pictures", "WallpaperMinimal"),
-        os.path.join(home, "Pictures")
-    ]
+    if target_dir:
+        dirs = [os.path.expanduser(target_dir)]
+    else:
+        dirs = [
+            os.path.join(home, "Pictures", "Wallpapers"),
+            os.path.join(home, "Pictures", "WallpaperMinimal"),
+            os.path.join(home, "Pictures")
+        ]
 
     valid_exts = {".png", ".jpg", ".jpeg", ".webp", ".gif"}
     items_to_process = []
@@ -103,4 +106,4 @@ def scan():
     print(json.dumps(wallpapers))
 
 if __name__ == "__main__":
-    scan()
+    scan(sys.argv[1] if len(sys.argv) > 1 else "")
