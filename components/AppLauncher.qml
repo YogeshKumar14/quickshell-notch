@@ -180,8 +180,8 @@ FocusScope {
                     x: appGrid.currentItem ? appGrid.currentItem.x : 0
                     y: appGrid.currentItem ? appGrid.currentItem.y : 0
                     
-                    Behavior on x { SpringAnimation { spring: 4.0; damping: 0.7; mass: 1.0 } }
-                    Behavior on y { SpringAnimation { spring: 4.0; damping: 0.7; mass: 1.0 } }
+                    Behavior on x { NumberAnimation { duration: 250; easing.type: Easing.OutCubic } }
+                    Behavior on y { NumberAnimation { duration: 250; easing.type: Easing.OutCubic } }
 
                     Rectangle {
                         anchors.fill: parent
@@ -212,7 +212,7 @@ FocusScope {
                         border.width: 1
                         scale: isSelected ? 1.03 : 1.0
 
-                        Behavior on scale { SpringAnimation { spring: 4.0; damping: 0.6; mass: 1.0 } }
+                        Behavior on scale { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
 
                         ColumnLayout {
                             anchors.centerIn: parent
