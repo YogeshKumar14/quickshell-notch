@@ -2,7 +2,6 @@ import QtQuick
 import QtQuick.Layouts
 import Qt5Compat.GraphicalEffects
 import Quickshell
-import Quickshell.Io
 import Quickshell.Services.Notifications
 import "../theme"
 
@@ -10,45 +9,7 @@ Item {
     id: root
 
     width: 374
-    implicitHeight: springHeight + 72
-
-    // --- Spring Settings (live, matching the notch expansion feel) ---
-    property real popupSpringTension: 4.5
-    property real popupSpringDamping: 0.35
-
-    // Animated stack height — the window grows/shrinks with a spring on every add/remove
-    property real springHeight: popupListView.contentHeight
-    Behavior on springHeight {
-        SpringAnimation {
-            spring: root.popupSpringTension
-            damping: root.popupSpringDamping
-            epsilon: 0.25
-        }
-    }
-
-    Process {
-        id: loadPopupSettingsProc
-        command: ["python3", "/home/yogesh/.config/quickshell/scripts/notch/get_notch_settings.py"]
-        stdout: StdioCollector {
-            onStreamFinished: {
-                try {
-                    var data = JSON.parse(this.text.trim());
-                    if (data.popup_tension !== undefined) root.popupSpringTension = data.popup_tension;
-                    if (data.popup_damping !== undefined) root.popupSpringDamping = data.popup_damping;
-                } catch (e) {
-                    console.log("Error loading popup settings:", e);
-                }
-            }
-        }
-    }
-
-    function reloadSettings() {
-        if (!loadPopupSettingsProc.running) {
-            loadPopupSettingsProc.running = true;
-        }
-    }
-
-    Component.onCompleted: root.reloadSettings()
+    implicitHeight: popupListView.contentHeight + 72
 
     // --- Data Layer ---
     ListModel { id: popupModel }
@@ -144,23 +105,23 @@ Item {
         width: parent.width
         height: contentHeight
         interactive: false
-        spacing: -12
+        spacing: -24
         clip: true
         cacheBuffer: 400
 
         model: popupModel
 
-        // Entrance: slide in from right with expressive decel
+        // Entrance: slide in from right while the stack attaches below
         add: Transition {
             ParallelAnimation {
-                NumberAnimation { property: "opacity"; from: 0; to: 1; duration: 300; easing.type: Easing.OutCubic }
-                NumberAnimation { property: "x"; from: root.width; to: 0; duration: 500; easing.type: Easing.OutQuint }
+                NumberAnimation { property: "opacity"; from: 0; to: 1; duration: 250; easing.type: Easing.OutCubic }
+                NumberAnimation { property: "x"; from: root.width; to: 0; duration: 400; easing.type: Easing.OutQuint }
             }
         }
 
-        // Smooth reflow when items shift
+        // Smooth reflow when items shift (same curve as entrance for one coordinated motion)
         displaced: Transition {
-            NumberAnimation { property: "y"; duration: 500; easing.type: Easing.OutQuint }
+            NumberAnimation { property: "y"; duration: 400; easing.type: Easing.OutQuint }
         }
 
         delegate: Item {
@@ -181,26 +142,15 @@ Item {
                 PropertyAction { target: delegateRoot; property: "ListView.delayRemove"; value: true }
                 ParallelAnimation {
                     NumberAnimation { target: contentItem; property: "opacity"; to: 0; duration: 250; easing.type: Easing.OutCubic }
-                    NumberAnimation { target: contentItem; property: "x"; to: root.width * 1.5; duration: 400; easing.type: Easing.OutCubic }
+                    NumberAnimation { target: contentItem; property: "x"; to: root.width * 1.5; duration: 350; easing.type: Easing.OutCubic }
                 }
                 PropertyAction { target: delegateRoot; property: "ListView.delayRemove"; value: false }
             }
 
             // Entrance complete — show bezel ear after popup slides in
             ListView.onAdd: SequentialAnimation {
-                PauseAnimation { duration: 350 }
+                PauseAnimation { duration: 400 }
                 PropertyAction { target: delegateRoot; property: "earShown"; value: true }
-            }
-
-            // Re-animate ear when becoming top item after dismissal
-            Connections {
-                target: popupListView
-                function onCountChanged() {
-                    if (index === 0 && delegateRoot.earShown) {
-                        delegateRoot.earShown = false
-                        Qt.callLater(function() { delegateRoot.earShown = true })
-                    }
-                }
             }
 
             // --- Draggable Content Wrapper ---
@@ -259,8 +209,6 @@ Item {
                     anchors.right: parent.right
                     height: notifLayout.implicitHeight + 32
                     color: "#000000"
-                    topLeftRadius: index === 0 ? 0 : Style.radiusMedium
-                    topRightRadius: index === 0 ? 0 : Style.radiusMedium
                     bottomLeftRadius: index === popupModel.count - 1 ? Style.radiusMedium : 0
 
                     ColumnLayout {
@@ -390,9 +338,38 @@ Item {
                     onVisibleChanged: if (visible) requestPaint()
                 }
 
-                // --- BOTTOM RIGHT INVERTED EAR (drip connector at seams, flourish on last) ---
-                // Always visible: at seams it bridges into the lower popup's rounded top void,
-                // on the last popup it hangs free as the flourish.
+                // --- BOTTOM LEFT DRIP TAB (seam connector — springs in when the popup below attaches) ---
+                // Protrudes into the transparent left gutter, so flush popups stay gapless
+                Canvas {
+                    width: 24; height: 24
+                    anchors.top: bgRect.bottom
+                    anchors.left: parent.left
+                    visible: index < popupModel.count - 1
+                    scale: index < popupModel.count - 1 ? 1 : 0
+                    transformOrigin: Item.TopRight
+
+                    Behavior on scale {
+                        NumberAnimation { duration: 300; easing.type: Easing.OutBack }
+                    }
+
+                    onPaint: {
+                        var ctx = getContext("2d");
+                        var s = 24;
+                        ctx.clearRect(0, 0, s, s);
+                        ctx.fillStyle = "#000000";
+                        ctx.beginPath();
+                        ctx.arc(0, s, s, -Math.PI / 2, 0, false);
+                        ctx.lineTo(s, 0);
+                        ctx.closePath();
+                        ctx.fill();
+                    }
+
+                    Component.onCompleted: requestPaint()
+                    onVisibleChanged: if (visible) requestPaint()
+                }
+
+                // --- BOTTOM RIGHT INVERTED EAR (flourish on the last popup) ---
+                // Always present; when stacked it is fully occluded by the popup below
                 Canvas {
                     width: 24; height: 24
                     anchors.top: bgRect.bottom
@@ -421,7 +398,7 @@ Item {
         id: inputMask
         width: 350
         anchors.right: parent.right
-        height: root.springHeight
+        height: popupListView.contentHeight
         visible: false
     }
 
