@@ -7,6 +7,7 @@ nohup.out
 
 # Ignore local developer files and guidelines
 AGENTS.md
+STATE.md
 quickshell_notch_tutorial.md
 .gemini_rules.md
 
