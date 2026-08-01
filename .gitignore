@@ -24,4 +24,5 @@ __pycache__/
 
 # npm
 package-lock.json
+cava_config
 cava_config.*

@@ -13,20 +13,16 @@ CONFIG_FILE = os.path.join(CONFIG_DIR, "notch_settings.json")
 DEFAULTS = {
     "auto_close": 5000,
     "compact_width": 130,
-    "expand_anim_type": "outback",
     "expand_tension": 4.5,
     "expand_damping": 0.28,
-    "tab_anim_type": "spring",
     "tab_tension": 5.5,
     "tab_damping": 0.22,
     "dripping_ears": True,
-    "clock_12h": False,
     "wall_duration": 0.5,
     "wall_type": "outer",
     "expanded_height": 420,
     "bottom_radius": 16,
     "app_columns": 4,
-    "bar_shadow": True,
     "workspace_overlay": True,
     "workspace_timeout": 2500,
     "ws_anim_type": "stretch",
@@ -41,7 +37,6 @@ DEFAULTS = {
     "visualizer_pulsar_scale": 1.2,
     "visualizer_pause_delay": 1000,
     "stats_interval": 2000,
-    "network_refresh": 5000,
     "osd_timeout": 2000,
     "clock_format": "h:mm A",
     "clock_font_size": 14,
@@ -66,10 +61,14 @@ def main():
             with open(CONFIG_FILE, "r", encoding="utf-8") as fp:
                 loaded = json.load(fp)
             if isinstance(loaded, dict):
+                # One-time migration: clock_12h folded into clock_format so the
+                # custom format field is the single source of truth.
+                if "clock_12h" in loaded:
+                    loaded["clock_format"] = "h:mm A" if loaded["clock_12h"] else "HH:mm"
                 data.update(loaded)
-                for k, v in DEFAULTS.items():
-                    if k not in data:
-                        data[k] = v
+                # Drop keys no longer known (dead settings round-tripped before)
+                for k in [k for k in data if k not in DEFAULTS]:
+                    del data[k]
                 print(json.dumps(data))
                 if data != loaded:
                     os.makedirs(CONFIG_DIR, exist_ok=True)

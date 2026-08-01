@@ -2,6 +2,17 @@
 import subprocess
 import json
 
+
+def extract_color(grad, default):
+    """Tolerant gradient parser: accepts a string ("aarrggbb deg") or a list
+    of color strings (multi-color gradients) and returns the first color."""
+    if isinstance(grad, list):
+        grad = " ".join(str(c) for c in grad)
+    if not isinstance(grad, str):
+        return default
+    parts = grad.split()
+    return parts[0] if parts else default
+
 def main():
     options = [
         "general:gaps_in",
@@ -85,15 +96,11 @@ def main():
 
     # active_border
     ab = results.get("general:col.active_border", {})
-    grad = ab.get("gradient", "ff89b4fa")
-    color_part = grad.split()[0] if grad else "ff89b4fa"
-    res["active_border"] = color_part
+    res["active_border"] = extract_color(ab.get("gradient"), "ff89b4fa")
 
     # inactive_border
     ib = results.get("general:col.inactive_border", {})
-    igrad = ib.get("gradient", "ff585b70")
-    icolor_part = igrad.split()[0] if igrad else "ff585b70"
-    res["inactive_border"] = icolor_part
+    res["inactive_border"] = extract_color(ib.get("gradient"), "ff585b70")
 
     # layout
     res["layout"] = results.get("general:layout", {}).get("str", "dwindle")

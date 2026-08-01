@@ -138,6 +138,7 @@ def main():
         bar_count = get_bar_count()
         monitor = get_monitor()
         write_cava_config(bar_count, monitor)
+        produced_output = False
 
         try:
             proc = subprocess.Popen(
@@ -173,6 +174,8 @@ def main():
                                 print(json.dumps({"bars": [0] * bar_count, "active": False}), flush=True)
                                 last_was_active = False
 
+                        produced_output = True
+
                         if consecutive_failures > 0:
                             consecutive_failures = 0
                             backoff = 1.0
@@ -193,10 +196,18 @@ def main():
                 except Exception:
                     pass
 
-        consecutive_failures += 1
-        delay = min(backoff, MAX_BACKOFF)
-        backoff = min(backoff * 2, MAX_BACKOFF)
-        time.sleep(delay)
+        # A clean exit — we streamed frames, or cava terminated on its own with
+        # code 0 (e.g. monitor source vanished) — is not a failure. Only real
+        # spawn failures or crashes should grow the backoff.
+        if produced_output or (proc is not None and proc.returncode == 0):
+            consecutive_failures = 0
+            backoff = 1.0
+            time.sleep(0.5)
+        else:
+            consecutive_failures += 1
+            delay = min(backoff, MAX_BACKOFF)
+            backoff = min(backoff * 2, MAX_BACKOFF)
+            time.sleep(delay)
 
 if __name__ == "__main__":
     main()

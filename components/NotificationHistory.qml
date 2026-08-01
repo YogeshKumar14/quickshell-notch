@@ -8,6 +8,8 @@ Item {
     required property bool isOpen
     required property ListModel notifModel
 
+    signal closeRequested()
+
     property int notifCount: notifModel ? notifModel.count : 0
     property bool isClearing: false
 
@@ -21,6 +23,7 @@ Item {
         z: -1
         acceptedButtons: Qt.AllButtons
         cursorShape: Qt.ArrowCursor
+        onClicked: root.closeRequested()
     }
 
     opacity: isOpen ? 1.0 : 0.0

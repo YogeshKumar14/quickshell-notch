@@ -33,10 +33,8 @@ Scope {
                 timestamp: new Date().toLocaleTimeString()
             });
             
-            // Push to transient Notch Stack (opens the notch unless DND)
-            if (!notchComp.dndActive) {
-                notchComp.handleNewNotification();
-            }
+            // Push to transient Notch Stack (opens the notch)
+            notchComp.handleNewNotification();
         }
     }
     
@@ -46,7 +44,7 @@ Scope {
 
         WlrLayershell.layer: WlrLayer.Overlay
         WlrLayershell.exclusiveZone: 0
-        WlrLayershell.keyboardFocus: (notchComp.isExpanded || notchComp.isPowerMenuOpen || notchComp.isWifiMenuOpen || notchComp.isBluetoothMenuOpen || notchComp.isNotifMenuOpen) ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
+        WlrLayershell.keyboardFocus: notchComp.grabsFocus ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
         anchors {
             top: true
         }
@@ -68,7 +66,7 @@ Scope {
 
     HyprlandFocusGrab {
         id: focusGrab
-        active: notchComp.isExpanded || notchComp.isPowerMenuOpen || notchComp.isWifiMenuOpen || notchComp.isBluetoothMenuOpen || notchComp.isNotifMenuOpen
+        active: notchComp.grabsFocus
         windows: [notchWindow]
     }
 
@@ -90,9 +88,15 @@ Scope {
                         } else if (cmd === "toggle") {
                             notchComp.isExpanded = !notchComp.isExpanded;
                             notchComp.isNotifMenuOpen = false;
+                            notchComp.isPowerMenuOpen = false;
+                            notchComp.isWifiMenuOpen = false;
+                            notchComp.isBluetoothMenuOpen = false;
                         } else if (cmd === "close") {
                             notchComp.isExpanded = false;
                             notchComp.isNotifMenuOpen = false;
+                            notchComp.isPowerMenuOpen = false;
+                            notchComp.isWifiMenuOpen = false;
+                            notchComp.isBluetoothMenuOpen = false;
                         } else if (cmd.startsWith("osd:vol:")) {
                             var v = parseInt(cmd.split(":")[2]);
                             if (!isNaN(v)) notchComp.showOsd("volume", v);

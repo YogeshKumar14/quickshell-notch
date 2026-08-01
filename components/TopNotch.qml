@@ -48,6 +48,7 @@ Item {
         root.isPowerMenuOpen = false;
         root.isWifiMenuOpen = false;
         root.isBluetoothMenuOpen = false;
+        root.isNotifMenuOpen = false;
         root.isWorkspaceActive = false;
         
         root.isOsdActive = true;
@@ -75,6 +76,11 @@ Item {
         } else {
             root.currentPage = page;
             root.isExpanded = true;
+            root.selectedIndex = 0;
+            root.isNotifMenuOpen = false;
+            root.isPowerMenuOpen = false;
+            root.isWifiMenuOpen = false;
+            root.isBluetoothMenuOpen = false;
             focusTabSearchTimer.restart();
         }
     }
@@ -85,6 +91,7 @@ Item {
         if (root.isExpanded || root.isPowerMenuOpen || root.isWifiMenuOpen || root.isBluetoothMenuOpen) {
             return;
         }
+        root.notifMenuAutoOpened = true;
         root.isNotifMenuOpen = true;
         if (root.autoCloseDelay > 0 && !notchHover.hovered) {
             autoCloseTimer.restart();
@@ -519,9 +526,8 @@ Item {
         }
     }
 
-    // SwayNC Notifications Properties
+    // Notifications Properties
     property int notifCount: 0
-    property bool dndActive: false
 
     // Notification stack geometry: grows with notification count, capped so the
     // tallest stack matches the 320px menu height (list scrolls beyond the cap)
@@ -533,27 +539,6 @@ Item {
         if (!root.notifModel || root.notifModel.count === 0) return root.notifStackEmptyHeight;
         return root.notifStackChrome + Math.min(root.notifModel.count, root.notifStackMaxRows) * root.notifStackRowHeight;
     }
-
-    // Event-driven SwayNC subscription (replaces 3 polling processes)
-    Process {
-        id: swayncSubscribeProc
-        command: ["swaync-client", "--subscribe-waybar"]
-        running: true
-        stdout: SplitParser {
-            onRead: function(data) {
-                try {
-                    var parsed = JSON.parse(data.trim());
-                    if (parsed.class !== undefined) {
-                        root.dndActive = parsed.class.indexOf("dnd") !== -1;
-                    }
-                } catch (e) {}
-            }
-        }
-    }
-
-    // Inhibited status poll removed: value was never consumed anywhere.
-    // DnD/notif control processes removed: no UI triggers them; the subscribe
-    // stream keeps notifCount/dndActive fresh.
 
     // Dynamic Ear Size scaling in sync with spring expansion (12px Compact -> 24px Expanded)
     property real earSize: root.isExpanded ? 24 : 12
@@ -607,7 +592,6 @@ Item {
                     if (data.stats_interval !== undefined) root.sysStatsIntervalVal = data.stats_interval;
                     if (data.osd_timeout !== undefined) root.osdTimeoutVal = data.osd_timeout;
                     if (data.clock_format !== undefined) root.clockFormatVal = data.clock_format;
-                    if (data.clock_12h !== undefined) root.clockFormatVal = data.clock_12h ? "h:mm A" : "HH:mm";
                     if (data.clock_font_size !== undefined) root.clockFontSizeVal = data.clock_font_size;
                     if (data.battery_warning_threshold !== undefined) root.batteryWarningThresholdVal = data.battery_warning_threshold;
                     if (data.wallpaper_dir !== undefined) root.wallpaperDirVal = data.wallpaper_dir;
@@ -834,6 +818,8 @@ Item {
     property bool isWifiMenuOpen: false
     property bool isBluetoothMenuOpen: false
     property bool isNotifMenuOpen: false
+    property bool notifMenuAutoOpened: false
+    property bool grabsFocus: root.isExpanded || root.isPowerMenuOpen || root.isWifiMenuOpen || root.isBluetoothMenuOpen || (root.isNotifMenuOpen && !root.notifMenuAutoOpened)
 
     property bool wifiPower: false
     property string wifiActiveSsid: ""
@@ -855,62 +841,33 @@ Item {
     property int batteryLevel: 100
     property string batteryStatus: "Unknown"
 
+    // Single-process device poll: volume, mic, brightness and battery levels
+    // in one spawn (replaces 4 per-poll processes)
     Process {
-        id: volProc
-        command: ["bash", "-c", "wpctl get-volume @DEFAULT_AUDIO_SINK@ | awk '{print int($2 * 100)}'"]
+        id: deviceLevelsProc
+        command: ["python3", "/home/yogesh/.config/quickshell/scripts/desktop/get_device_levels.py"]
         stdout: StdioCollector {
             onStreamFinished: {
-                var val = parseInt(this.text.trim());
-                if (!isNaN(val)) root.volumeLevel = val;
+                try {
+                    var data = JSON.parse(this.text.trim());
+                    if (data.volume !== null && data.volume !== undefined) root.volumeLevel = data.volume;
+                    if (data.mic !== null && data.mic !== undefined) root.micLevel = data.mic;
+                    if (data.brightness !== null && data.brightness !== undefined) root.brightnessLevel = data.brightness;
+                    if (data.battery !== null && data.battery !== undefined) root.batteryLevel = data.battery;
+                    if (data.battery_status !== undefined) root.batteryStatus = data.battery_status;
+                } catch (e) {}
             }
         }
     }
 
     Process {
         id: setVolProc
-        stdout: StdioCollector { onStreamFinished: volProc.running = true }
-    }
-
-    Process {
-        id: micProc
-        command: ["bash", "-c", "wpctl get-volume @DEFAULT_AUDIO_SOURCE@ | awk '{print int($2 * 100)}'"]
-        stdout: StdioCollector {
-            onStreamFinished: {
-                var val = parseInt(this.text.trim());
-                if (!isNaN(val)) root.micLevel = val;
-            }
-        }
+        stdout: StdioCollector { onStreamFinished: deviceLevelsProc.running = true }
     }
 
     Process {
         id: setMicProc
-        stdout: StdioCollector { onStreamFinished: micProc.running = true }
-    }
-
-    Process {
-        id: brightnessProc
-        command: ["bash", "-c", "brightnessctl -m | awk -F, '{print int($4)}'"]
-        stdout: StdioCollector {
-            onStreamFinished: {
-                var val = parseInt(this.text.trim());
-                if (!isNaN(val)) root.brightnessLevel = val;
-            }
-        }
-    }
-
-    Process {
-        id: batteryProc
-        command: ["bash", "-c", "echo $(cat /sys/class/power_supply/BAT0/capacity); cat /sys/class/power_supply/BAT0/status"]
-        stdout: StdioCollector {
-            onStreamFinished: {
-                var lines = this.text.trim().split("\n");
-                if (lines.length >= 2) {
-                    var val = parseInt(lines[0]);
-                    if (!isNaN(val)) root.batteryLevel = val;
-                    root.batteryStatus = lines[1].trim();
-                }
-            }
-        }
+        stdout: StdioCollector { onStreamFinished: deviceLevelsProc.running = true }
     }
 
     // Poll device levels only while the notch is expanded or an OSD is up;
@@ -924,10 +881,7 @@ Item {
     }
 
     function refreshDeviceLevels() {
-        volProc.running = true;
-        micProc.running = true;
-        brightnessProc.running = true;
-        batteryProc.running = true;
+        deviceLevelsProc.running = true;
     }
 
     onIsOsdActiveChanged: {
@@ -1597,6 +1551,7 @@ Item {
                                 root.isWifiMenuOpen = !root.isWifiMenuOpen;
                                 root.isBluetoothMenuOpen = false;
                                 root.isPowerMenuOpen = false;
+                                root.isNotifMenuOpen = false;
                             }
                         }
                     }
@@ -1627,6 +1582,7 @@ Item {
                                 root.isBluetoothMenuOpen = !root.isBluetoothMenuOpen;
                                 root.isWifiMenuOpen = false;
                                 root.isPowerMenuOpen = false;
+                                root.isNotifMenuOpen = false;
                             }
                         }
                     }
@@ -1674,6 +1630,7 @@ Item {
                             hoverEnabled: true
                             cursorShape: Qt.PointingHandCursor
                             onClicked: {
+                                root.notifMenuAutoOpened = false;
                                 root.isNotifMenuOpen = !root.isNotifMenuOpen;
                                 root.isWifiMenuOpen = false;
                                 root.isBluetoothMenuOpen = false;
@@ -1708,6 +1665,9 @@ Item {
                                 root.isPowerMenuOpen = !root.isPowerMenuOpen;
                                 root.isPowerConfirming = false;
                                 root.powerSelectedIndex = 0;
+                                root.isWifiMenuOpen = false;
+                                root.isBluetoothMenuOpen = false;
+                                root.isNotifMenuOpen = false;
                             }
                         }
                     }
@@ -2417,6 +2377,7 @@ Item {
             id: notifHistoryOverlay
             isOpen: root.isNotifMenuOpen
             notifModel: root.notifModel
+            onCloseRequested: root.isNotifMenuOpen = false
             onNotifCountChanged: {
                 root.notifCount = notifHistoryOverlay.notifCount;
                 // Stack springs back to compact once it empties out

@@ -85,12 +85,10 @@ PanelWindow {
     property int notchExpandedHeight: 420
     property int notchBottomRadius: 16
     property bool drippingEarsVal: true
-    property bool clock12hVal: false
     property real wallDurationVal: 0.5
     property string wallTypeVal: "outer"
     property string wallpaperDirVal: ""
     property int appColumnsVal: 4
-    property bool barShadowVal: true
     property bool workspaceOverlayVal: true
     property int workspaceTimeoutVal: 2500
     property string wsAnimTypeVal: "stretch"
@@ -107,18 +105,15 @@ PanelWindow {
     property int visualizerPauseDelayVal: 1000
 
     property int sysStatsIntervalVal: 2000
-    property int networkRefreshIntervalVal: 5000
 
     property int osdTimeoutVal: 2000
     property string clockFormatVal: "h:mm A"
     property int clockFontSizeVal: 14
     property int batteryWarningThresholdVal: 20
 
-    property string expandAnimType: "outback"
     property real expandSpringTension: 4.5
     property real expandSpringDamping: 0.28
 
-    property string tabAnimType: "spring"
     property real tabSpringTension: 5.5
     property real tabSpringDamping: 0.22
 
@@ -168,12 +163,10 @@ PanelWindow {
                     if (data.expanded_height !== undefined) root.notchExpandedHeight = data.expanded_height;
                     if (data.bottom_radius !== undefined) root.notchBottomRadius = data.bottom_radius;
                     if (data.dripping_ears !== undefined) root.drippingEarsVal = data.dripping_ears;
-                    if (data.clock_12h !== undefined) root.clock12hVal = data.clock_12h;
                     if (data.wall_duration !== undefined) root.wallDurationVal = data.wall_duration;
                     if (data.wall_type !== undefined) root.wallTypeVal = data.wall_type;
                     if (data.wallpaper_dir !== undefined) root.wallpaperDirVal = data.wallpaper_dir;
                     if (data.app_columns !== undefined) root.appColumnsVal = data.app_columns;
-                    if (data.bar_shadow !== undefined) root.barShadowVal = data.bar_shadow;
                     if (data.workspace_overlay !== undefined) root.workspaceOverlayVal = data.workspace_overlay;
                     if (data.workspace_timeout !== undefined) root.workspaceTimeoutVal = data.workspace_timeout;
                     if (data.ws_anim_type !== undefined) root.wsAnimTypeVal = data.ws_anim_type;
@@ -187,14 +180,11 @@ PanelWindow {
                     if (data.visualizer_wave_width !== undefined) root.visualizerWaveWidthVal = data.visualizer_wave_width;
                     if (data.visualizer_pulsar_scale !== undefined) root.visualizerPulsarScaleVal = data.visualizer_pulsar_scale;
                     if (data.visualizer_pause_delay !== undefined) root.visualizerPauseDelayVal = data.visualizer_pause_delay;
-                    if (data.expand_anim_type !== undefined) root.expandAnimType = data.expand_anim_type;
                     if (data.expand_tension !== undefined) root.expandSpringTension = data.expand_tension;
                     if (data.expand_damping !== undefined) root.expandSpringDamping = data.expand_damping;
-                    if (data.tab_anim_type !== undefined) root.tabAnimType = data.tab_anim_type;
                     if (data.tab_tension !== undefined) root.tabSpringTension = data.tab_tension;
                     if (data.tab_damping !== undefined) root.tabSpringDamping = data.tab_damping;
                     if (data.stats_interval !== undefined) root.sysStatsIntervalVal = data.stats_interval;
-                    if (data.network_refresh !== undefined) root.networkRefreshIntervalVal = data.network_refresh;
                     if (data.osd_timeout !== undefined) root.osdTimeoutVal = data.osd_timeout;
                     if (data.clock_format !== undefined) root.clockFormatVal = data.clock_format;
                     if (data.clock_font_size !== undefined) root.clockFontSizeVal = data.clock_font_size;
@@ -283,12 +273,10 @@ PanelWindow {
                 "expanded_height": root.notchExpandedHeight,
                 "bottom_radius": root.notchBottomRadius,
                 "dripping_ears": root.drippingEarsVal,
-                "clock_12h": root.clock12hVal,
                 "wall_duration": root.wallDurationVal,
                 "wall_type": root.wallTypeVal,
                 "wallpaper_dir": root.wallpaperDirVal,
                 "app_columns": root.appColumnsVal,
-                "bar_shadow": root.barShadowVal,
                 "workspace_overlay": root.workspaceOverlayVal,
                 "workspace_timeout": root.workspaceTimeoutVal,
                 "ws_anim_type": root.wsAnimTypeVal,
@@ -306,10 +294,7 @@ PanelWindow {
                 "expand_damping": root.expandSpringDamping,
                 "tab_tension": root.tabSpringTension,
                 "tab_damping": root.tabSpringDamping,
-                "expand_anim_type": root.expandAnimType,
-                "tab_anim_type": root.tabAnimType,
                 "stats_interval": root.sysStatsIntervalVal,
-                "network_refresh": root.networkRefreshIntervalVal,
                 "osd_timeout": root.osdTimeoutVal,
                 "clock_format": root.clockFormatVal,
                 "clock_font_size": root.clockFontSizeVal,
@@ -1154,7 +1139,11 @@ PanelWindow {
                                     width: parent.width; height: 32
                                     Text { text: "12-Hour AM/PM Clock Format"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeNormal; color: Style.textPrimary; Layout.alignment: Qt.AlignVCenter }
                                     Item { Layout.fillWidth: true }
-                                    CustomSwitch { Layout.alignment: Qt.AlignVCenter; checked: root.clock12hVal; onToggled: function(val) { root.clock12hVal = val; root.hasPendingChanges = true; } }
+                                    CustomSwitch {
+                                        Layout.alignment: Qt.AlignVCenter
+                                        checked: root.clockFormatVal === "h:mm A"
+                                        onToggled: function(val) { root.clockFormatVal = val ? "h:mm A" : "HH:mm"; root.hasPendingChanges = true; }
+                                    }
                                 }
 
                                 Rectangle { width: parent.width; height: 1; color: "#2A2A2D" }
@@ -1489,20 +1478,6 @@ PanelWindow {
                                     CustomSlider {
                                         width: parent.width; from: 500; to: 5000; value: root.sysStatsIntervalVal; stepSize: 250
                                         onMoved: function(val) { root.sysStatsIntervalVal = Math.round(val); root.hasPendingChanges = true; }
-                                    }
-                                }
-
-                                Column {
-                                    width: parent.width; spacing: 6
-                                    RowLayout {
-                                        width: parent.width
-                                        Text { text: "Network Scan Refresh Interval"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeNormal; color: Style.textPrimary }
-                                        Item { Layout.fillWidth: true }
-                                        Text { text: (root.networkRefreshIntervalVal / 1000.0).toFixed(1) + " s"; font.family: Style.fontFamilyMono; font.pixelSize: Style.fontSizeSmall; color: Style.accent; font.weight: Font.Bold }
-                                    }
-                                    CustomSlider {
-                                        width: parent.width; from: 2000; to: 15000; value: root.networkRefreshIntervalVal; stepSize: 500
-                                        onMoved: function(val) { root.networkRefreshIntervalVal = Math.round(val); root.hasPendingChanges = true; }
                                     }
                                 }
                             }
