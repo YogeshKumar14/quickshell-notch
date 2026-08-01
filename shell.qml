@@ -33,50 +33,26 @@ Scope {
                 timestamp: new Date().toLocaleTimeString()
             });
             
-            // Push to transient Pop-ups
+            // Push to transient Notch Stack (opens the notch unless DND)
             if (!notchComp.dndActive) {
-                popupsComp.addNotification(notif);
+                notchComp.handleNewNotification();
             }
         }
     }
     
-    // Dripping Notification Pop-ups
-    PanelWindow {
-        id: notifPopupsWindow
-        WlrLayershell.layer: WlrLayer.Overlay
-        WlrLayershell.exclusiveZone: 0
-        
-        anchors {
-            top: true
-            right: true
-        }
-        
-        implicitWidth: 374
-        implicitHeight: popupsComp.implicitHeight
-        color: "transparent"
-
-        // Input passthrough: only the visible notification cards receive input
-        mask: Region { item: popupsComp.popupArea }
-        
-        NotificationPopups {
-            id: popupsComp
-        }
-    }
-
-    // Top Notch PanelWindow: 624x420 transparent window (allows 32px padding for inverted ears)
+    // Top Notch PanelWindow: 688x420 transparent window (allows 32px padding for inverted ears)
     PanelWindow {
         id: notchWindow
 
         WlrLayershell.layer: WlrLayer.Overlay
         WlrLayershell.exclusiveZone: 0
-        WlrLayershell.keyboardFocus: (notchComp.isExpanded || notchComp.isPowerMenuOpen || notchComp.isWifiMenuOpen || notchComp.isBluetoothMenuOpen) ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
-
+        WlrLayershell.keyboardFocus: (notchComp.isExpanded || notchComp.isPowerMenuOpen || notchComp.isWifiMenuOpen || notchComp.isBluetoothMenuOpen || notchComp.isNotifMenuOpen) ? WlrKeyboardFocus.OnDemand : WlrKeyboardFocus.None
         anchors {
             top: true
         }
 
         implicitWidth: Style.notchWidthExpanded + 64
-        implicitHeight: Math.max(Style.notchHeightExpanded, notchComp.maxPageNotchHeight)
+        implicitHeight: Math.max(Style.notchHeightExpanded, notchComp.maxPageNotchHeight, notchComp.notifStackHeight)
         color: "transparent"
 
         // Input passthrough: only the visible notchBox receives input, transparent area clicks through
@@ -113,8 +89,10 @@ Scope {
                             notchComp.toggleTab(2);
                         } else if (cmd === "toggle") {
                             notchComp.isExpanded = !notchComp.isExpanded;
+                            notchComp.isNotifMenuOpen = false;
                         } else if (cmd === "close") {
                             notchComp.isExpanded = false;
+                            notchComp.isNotifMenuOpen = false;
                         } else if (cmd.startsWith("osd:vol:")) {
                             var v = parseInt(cmd.split(":")[2]);
                             if (!isNaN(v)) notchComp.showOsd("volume", v);

@@ -79,6 +79,18 @@ Item {
         }
     }
 
+    // Auto-open the notification stack for a fresh notification (only when the
+    // notch is compact; busy states only bump the badge)
+    function handleNewNotification() {
+        if (root.isExpanded || root.isPowerMenuOpen || root.isWifiMenuOpen || root.isBluetoothMenuOpen) {
+            return;
+        }
+        root.isNotifMenuOpen = true;
+        if (root.autoCloseDelay > 0 && !notchHover.hovered) {
+            autoCloseTimer.restart();
+        }
+    }
+
     function focusActiveTabSearch() {
         if (root.currentPage === 1 && wallsLoader.item) {
             wallsLoader.forceActiveFocus();
@@ -511,6 +523,17 @@ Item {
     property int notifCount: 0
     property bool dndActive: false
 
+    // Notification stack geometry: grows with notification count, capped so the
+    // tallest stack matches the 320px menu height (list scrolls beyond the cap)
+    property int notifStackChrome: 60
+    property int notifStackRowHeight: 52
+    property int notifStackMaxRows: 5
+    property int notifStackEmptyHeight: 120
+    property int notifStackHeight: {
+        if (!root.notifModel || root.notifModel.count === 0) return root.notifStackEmptyHeight;
+        return root.notifStackChrome + Math.min(root.notifModel.count, root.notifStackMaxRows) * root.notifStackRowHeight;
+    }
+
     // Event-driven SwayNC subscription (replaces 3 polling processes)
     Process {
         id: swayncSubscribeProc
@@ -520,10 +543,6 @@ Item {
             onRead: function(data) {
                 try {
                     var parsed = JSON.parse(data.trim());
-                    if (parsed.text !== undefined) {
-                        var c = parseInt(parsed.text);
-                        if (!isNaN(c)) root.notifCount = c;
-                    }
                     if (parsed.class !== undefined) {
                         root.dndActive = parsed.class.indexOf("dnd") !== -1;
                     }
@@ -646,8 +665,9 @@ Item {
         interval: root.autoCloseDelay
         repeat: false
         onTriggered: {
-            if (root.autoCloseDelay > 0 && root.isExpanded && !notchHover.hovered) {
+            if (root.autoCloseDelay > 0 && !notchHover.hovered) {
                 root.isExpanded = false;
+                root.isNotifMenuOpen = false;
             }
         }
     }
@@ -990,7 +1010,7 @@ Item {
         anchors.horizontalCenter: parent.horizontalCenter
 
         width: root.isOsdActive ? 280 : ((root.isPowerMenuOpen || root.isWifiMenuOpen || root.isBluetoothMenuOpen || root.isNotifMenuOpen) ? 320 : (root.isExpanded ? Style.notchWidthExpanded : (root.isWorkspaceActive ? 240 : (root.showVisualizer ? root.dynamicVisNotchWidth : root.compactWidthVal))))
-        height: root.isOsdActive ? Style.notchHeightCompact : (root.isPowerMenuOpen ? 260 : ((root.isWifiMenuOpen || root.isBluetoothMenuOpen || root.isNotifMenuOpen) ? 320 : (root.isExpanded ? root.pageNotchHeight : Style.notchHeightCompact)))
+        height: root.isOsdActive ? Style.notchHeightCompact : (root.isPowerMenuOpen ? 260 : ((root.isWifiMenuOpen || root.isBluetoothMenuOpen) ? 320 : (root.isNotifMenuOpen ? root.notifStackHeight : (root.isExpanded ? root.pageNotchHeight : Style.notchHeightCompact))))
 
         color: "#000000"
         border.width: 0
@@ -1025,7 +1045,7 @@ Item {
             onHoveredChanged: {
                 if (hovered) {
                     autoCloseTimer.stop();
-                } else if (root.isExpanded && root.autoCloseDelay > 0) {
+                } else if ((root.isExpanded || root.isNotifMenuOpen) && root.autoCloseDelay > 0) {
                     autoCloseTimer.restart();
                 }
             }
@@ -1041,6 +1061,7 @@ Item {
                     root.currentPage = 0; // Directly open Media Tab
                 }
                 root.isExpanded = true;
+                root.isNotifMenuOpen = false;
                 root.isWorkspaceActive = false;
                 autoCloseTimer.stop();
             }
@@ -1049,7 +1070,7 @@ Item {
         // --- COMPACT CONTENT VIEWPORT (Clock vs Workspaces Overlay vs Music Visualizer) ---
         Item {
             anchors.fill: parent
-            opacity: !root.isExpanded ? 1.0 : 0.0
+            opacity: (root.isExpanded || root.isNotifMenuOpen) ? 0.0 : 1.0
             visible: opacity > 0.01
 
             Behavior on opacity {
@@ -1140,7 +1161,7 @@ Item {
                                 Rectangle {
                                     anchors.centerIn: parent
                                     width: parent.width; height: parent.height; radius: 3
-                                    color: isOccupied ? '#00ffd5' : "#3A3A3C"
+                                    color: isOccupied ? '#ffffff' : "#3A3A3C"
 
                                     Behavior on color { ColorAnimation { duration: 150 } }
                                 }
@@ -2396,7 +2417,13 @@ Item {
             id: notifHistoryOverlay
             isOpen: root.isNotifMenuOpen
             notifModel: root.notifModel
-            onNotifCountChanged: root.notifCount = notifHistoryOverlay.notifCount
+            onNotifCountChanged: {
+                root.notifCount = notifHistoryOverlay.notifCount;
+                // Stack springs back to compact once it empties out
+                if (root.isNotifMenuOpen && notifHistoryOverlay.notifCount === 0) {
+                    root.isNotifMenuOpen = false;
+                }
+            }
         }
     }
 }

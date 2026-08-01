@@ -14,6 +14,15 @@ Item {
     anchors.fill: parent
     z: 99
 
+    // Swallow clicks outside interactive children so they don't fall through
+    // to the compact notch click area while the stack is open
+    MouseArea {
+        anchors.fill: parent
+        z: -1
+        acceptedButtons: Qt.AllButtons
+        cursorShape: Qt.ArrowCursor
+    }
+
     opacity: isOpen ? 1.0 : 0.0
     visible: opacity > 0.01
 
@@ -151,6 +160,7 @@ Item {
                 border.width: 1
 
                 property real dragOffset: 0
+                x: dragOffset
 
                 Behavior on dragOffset { NumberAnimation { duration: 150; easing.type: Easing.OutCubic } }
 
