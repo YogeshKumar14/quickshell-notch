@@ -76,7 +76,6 @@ Item {
         } else {
             root.currentPage = page;
             root.isExpanded = true;
-            root.selectedIndex = 0;
             root.isNotifMenuOpen = false;
             root.isPowerMenuOpen = false;
             root.isWifiMenuOpen = false;
@@ -140,6 +139,9 @@ Item {
             root.isBluetoothMenuOpen = false;
             root.isPowerMenuOpen = false;
             root.isWifiPasswordPromptOpen = false;
+            root.isNotifMenuOpen = false;
+            root.notifMenuAutoOpened = false;
+            root.isPowerConfirming = false;
             workspacePollTimer.running = root.isWorkspaceActive;
             devicePollTimer.running = root.isOsdActive;
         }
@@ -151,8 +153,11 @@ Item {
         if (isPowerMenuOpen) {
             root.isOsdActive = false;
             root.forceActiveFocus();
-        } else if (isExpanded) {
-            focusTabSearchTimer.restart();
+        } else {
+            root.isPowerConfirming = false;
+            if (isExpanded) {
+                focusTabSearchTimer.restart();
+            }
         }
     }
 
@@ -160,6 +165,8 @@ Item {
         if (isWifiMenuOpen) {
             root.isOsdActive = false;
             root.forceActiveFocus();
+        } else {
+            root.isWifiPasswordPromptOpen = false;
         }
     }
 
@@ -837,6 +844,8 @@ Item {
 
     property int volumeLevel: 50
     property int micLevel: 50
+    property bool volumeMuted: false
+    property bool micMuted: false
     property int brightnessLevel: 50
     property int batteryLevel: 100
     property string batteryStatus: "Unknown"
@@ -851,7 +860,9 @@ Item {
                 try {
                     var data = JSON.parse(this.text.trim());
                     if (data.volume !== null && data.volume !== undefined) root.volumeLevel = data.volume;
+                    if (data.volume_muted !== undefined) root.volumeMuted = data.volume_muted;
                     if (data.mic !== null && data.mic !== undefined) root.micLevel = data.mic;
+                    if (data.mic_muted !== undefined) root.micMuted = data.mic_muted;
                     if (data.brightness !== null && data.brightness !== undefined) root.brightnessLevel = data.brightness;
                     if (data.battery !== null && data.battery !== undefined) root.batteryLevel = data.battery;
                     if (data.battery_status !== undefined) root.batteryStatus = data.battery_status;
@@ -1488,7 +1499,15 @@ Item {
                                         anchors.fill: parent
                                         hoverEnabled: true
                                         cursorShape: Qt.PointingHandCursor
-                                        onClicked: root.currentPage = index
+                                        onClicked: {
+                                            root.currentPage = index;
+                                            root.isNotifMenuOpen = false;
+                                            root.isPowerMenuOpen = false;
+                                            root.isWifiMenuOpen = false;
+                                            root.isBluetoothMenuOpen = false;
+                                            root.isWifiPasswordPromptOpen = false;
+                                            root.isPowerConfirming = false;
+                                        }
                                     }
 
                                     // Dynamic M3 Divider

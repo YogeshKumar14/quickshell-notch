@@ -12,12 +12,13 @@ def get_volume():
             ["wpctl", "get-volume", "@DEFAULT_AUDIO_SINK@"],
             text=True, stderr=subprocess.DEVNULL, timeout=5
         )
+        muted = "[MUTED]" in out
         m = re.search(r"(\d+(?:\.\d+)?)", out)
         if m:
-            return int(round(float(m.group(1)) * 100))
+            return int(round(float(m.group(1)) * 100)), muted
     except Exception:
         pass
-    return None
+    return None, False
 
 
 def get_mic():
@@ -26,12 +27,13 @@ def get_mic():
             ["wpctl", "get-volume", "@DEFAULT_AUDIO_SOURCE@"],
             text=True, stderr=subprocess.DEVNULL, timeout=5
         )
+        muted = "[MUTED]" in out
         m = re.search(r"(\d+(?:\.\d+)?)", out)
         if m:
-            return int(round(float(m.group(1)) * 100))
+            return int(round(float(m.group(1)) * 100)), muted
     except Exception:
         pass
-    return None
+    return None, False
 
 
 def get_brightness():
@@ -60,9 +62,13 @@ def get_battery():
 
 def main():
     capacity, status = get_battery()
+    vol_level, vol_muted = get_volume()
+    mic_level, mic_muted = get_mic()
     print(json.dumps({
-        "volume": get_volume(),
-        "mic": get_mic(),
+        "volume": vol_level,
+        "volume_muted": vol_muted,
+        "mic": mic_level,
+        "mic_muted": mic_muted,
         "brightness": get_brightness(),
         "battery": capacity,
         "battery_status": status

@@ -26,3 +26,4 @@ __pycache__/
 package-lock.json
 cava_config
 cava_config.*
+AI_Continuation_Document-*.md
