@@ -405,6 +405,7 @@ Item {
                                     root.isPasswordPromptOpen = true;
                                     wifiPasswordInput.forceActiveFocus();
                                 } else {
+                                    root.promptSsid = modelData.ssid;
                                     root.connect(modelData.ssid, "");
                                 }
                             }

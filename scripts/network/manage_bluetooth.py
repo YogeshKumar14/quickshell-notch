@@ -61,9 +61,9 @@ if __name__ == "__main__":
             try:
                 info = subprocess.check_output(["bluetoothctl", "info", mac], stderr=subprocess.DEVNULL, timeout=TIMEOUT).decode()
                 if "Connected: yes" in info:
-                    spawn(["bluetoothctl", "disconnect", mac])
+                    subprocess.run(["bluetoothctl", "disconnect", mac], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=TIMEOUT, preexec_fn=set_pdeathsig)
                 else:
-                    spawn(["bluetoothctl", "connect", mac])
+                    subprocess.run(["bluetoothctl", "connect", mac], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=TIMEOUT, preexec_fn=set_pdeathsig)
             except Exception:
                 pass
     print(json.dumps(get_status()))

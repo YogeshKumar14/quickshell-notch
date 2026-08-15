@@ -4,6 +4,7 @@ import json
 import sys
 import signal
 import ctypes
+import re
 
 TIMEOUT = 5
 SCAN_TIMEOUT = 15
@@ -33,7 +34,7 @@ def get_status():
         try:
             conn_out = subprocess.check_output(["nmcli", "-t", "-f", "name,type,active", "connection", "show"], stderr=subprocess.DEVNULL, timeout=TIMEOUT).decode()
             for line in conn_out.splitlines():
-                parts = line.split(":")
+                parts = [p.replace(r'\:', ':') for p in re.split(r'(?<!\\):', line)]
                 if len(parts) >= 3 and "wireless" in parts[1]:
                     saved_ssids.add(parts[0])
                     if parts[2] == "yes":
@@ -47,7 +48,7 @@ def get_status():
             list_out = subprocess.check_output(["nmcli", "-t", "-f", "ssid,signal,security,active", "dev", "wifi", "list"], stderr=subprocess.DEVNULL, timeout=SCAN_TIMEOUT).decode()
             seen_ssids = set()
             for line in list_out.splitlines():
-                parts = line.split(":")
+                parts = [p.replace(r'\:', ':') for p in re.split(r'(?<!\\):', line)]
                 if len(parts) >= 4:
                     ssid, signal_strength, security, active = parts[0], parts[1], parts[2], parts[3]
                     if ssid and ssid not in seen_ssids:
