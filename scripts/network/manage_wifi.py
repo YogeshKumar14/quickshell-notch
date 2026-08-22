@@ -45,7 +45,7 @@ def get_status():
     networks = []
     if is_on:
         try:
-            list_out = subprocess.check_output(["nmcli", "-t", "-f", "ssid,signal,security,active", "dev", "wifi", "list"], stderr=subprocess.DEVNULL, timeout=SCAN_TIMEOUT).decode()
+            list_out = subprocess.check_output(["nmcli", "-t", "-f", "ssid,signal,security,active", "dev", "wifi", "list", "--rescan", "yes"], stderr=subprocess.DEVNULL, timeout=SCAN_TIMEOUT).decode()
             seen_ssids = set()
             for line in list_out.splitlines():
                 parts = [p.replace(r'\:', ':') for p in re.split(r'(?<!\\):', line)]
