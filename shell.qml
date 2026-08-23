@@ -63,7 +63,10 @@ Scope {
             id: notchComp
             anchors.fill: parent
             notifModel: notifHistoryModel
-            onOpenFullSettings: settingsModal.toggle()
+            onOpenFullSettings: {
+                if (!settingsLoader.active) settingsLoader.active = true;
+                if (settingsLoader.item) settingsLoader.item.toggle();
+            }
         }
     }
 
@@ -114,9 +117,11 @@ Scope {
         }
     }
 
-    // iOS-Style Hyprland Settings Window
-    SettingsWindow {
-        id: settingsModal
-        onNotchSettingsChanged: notchComp.refreshNotchSettings()
+    // iOS-Style Hyprland Settings Window (Lazy-loaded on first open)
+    LazyLoader {
+        id: settingsLoader
+        SettingsWindow {
+            onNotchSettingsChanged: notchComp.refreshNotchSettings()
+        }
     }
 }

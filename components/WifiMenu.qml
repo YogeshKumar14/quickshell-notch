@@ -30,6 +30,8 @@ Item {
             passwordText = "";
             promptSsid = "";
             showPassword = false;
+        } else {
+            if (!wifiScanner.running) wifiScanner.running = true;
         }
     }
 
@@ -100,10 +102,6 @@ Item {
     function rescan() {
         if (wifiScanner.running) return;
         wifiScanner.running = true;
-    }
-
-    Component.onCompleted: {
-        if (!wifiScanner.running) wifiScanner.running = true;
     }
 
     ColumnLayout {

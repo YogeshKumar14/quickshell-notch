@@ -265,10 +265,6 @@ FocusScope {
                         border.width: 1
                         scale: isSelected ? 1.04 : 1.0
 
-                        // Accent glow on selected item
-                        layer.enabled: isSelected
-                        layer.effect: null
-
                         Behavior on scale { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
 
                         ClippingRectangle {

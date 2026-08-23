@@ -273,14 +273,14 @@ Item {
 
     Timer {
         id: wallsUnloadTimer
-        interval: 30000
+        interval: 5000
         repeat: false
         onTriggered: root.wallsTabAlive = false
     }
 
     Timer {
         id: appsUnloadTimer
-        interval: 30000
+        interval: 5000
         repeat: false
         onTriggered: root.appsTabAlive = false
     }
@@ -340,7 +340,7 @@ Item {
         id: visFrameTimer
         interval: 66
         repeat: true
-        running: root.isVisualizerActive || (root.isExpanded && root.currentPage === 0)
+        running: (root.isVisualizerActive || (root.isExpanded && root.currentPage === 0)) && visualizerStreamProc.running
         onTriggered: root.visualizerFrame = root.visualizerBars
     }
 
@@ -402,7 +402,7 @@ Item {
     Process {
         id: visualizerStreamProc
         command: ["python3", "/home/yogesh/.config/quickshell/scripts/notch/stream_audio_visualizer.py"]
-        running: root.visualizerEnabledVal
+        running: root.visualizerEnabledVal && (root.isPlaying || (root.isExpanded && root.currentPage === 0))
         stdout: SplitParser {
             onRead: function(data) {
                 try {
@@ -438,7 +438,12 @@ Item {
         id: visualizerRestartTimer
         interval: 10
         repeat: false
-        onTriggered: visualizerStreamProc.running = true
+        onTriggered: {
+            if (visualizerStreamProc.running) {
+                visualizerStreamProc.running = false;
+                visualizerStreamProc.running = true;
+            }
+        }
     }
 
     // Workspace native QML state (occupiedWorkspaces refreshed on overlay entry + polled)
@@ -465,7 +470,7 @@ Item {
     // is visible; refresh once on entry so data is never stale.
     Timer {
         id: workspacePollTimer
-        interval: 500
+        interval: 1000
         repeat: true
         running: false
         onTriggered: root.refreshOccupied()
@@ -901,7 +906,7 @@ Item {
     // refresh once on entry and re-poll after every set operation.
     Timer {
         id: devicePollTimer
-        interval: 3000
+        interval: 5000
         repeat: true
         running: false
         onTriggered: root.refreshDeviceLevels()
@@ -1868,6 +1873,9 @@ Item {
                                                             source: (root.activePlayer && root.activePlayer.trackArtUrl) ? root.activePlayer.trackArtUrl : ""
                                                             fillMode: Image.PreserveAspectCrop
                                                             visible: false
+                                                            asynchronous: true
+                                                            sourceSize.width: 128
+                                                            sourceSize.height: 128
                                                         }
 
                                                         OpacityMask {

@@ -19,6 +19,12 @@ Item {
 
     Behavior on opacity { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
 
+    onIsOpenChanged: {
+        if (isOpen && !btScanner.running) {
+            btScanner.running = true;
+        }
+    }
+
     Process {
         id: btScanner
         command: ["python3", "/home/yogesh/.config/quickshell/scripts/network/manage_bluetooth.py"]
@@ -80,8 +86,6 @@ Item {
         btScanner.running = false;
         btScanner.running = true;
     }
-
-    Component.onCompleted: btScanner.running = true
 
     ColumnLayout {
         anchors.fill: parent
