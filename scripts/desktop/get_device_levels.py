@@ -39,9 +39,10 @@ def get_mic():
 def get_brightness():
     try:
         out = subprocess.check_output(["brightnessctl", "-m"], text=True, stderr=subprocess.DEVNULL, timeout=5)
-        parts = out.split(",")
-        if len(parts) >= 4:
-            return int(parts[3].rstrip("%"))
+        for line in out.splitlines():
+            parts = line.split(",")
+            if len(parts) >= 4:
+                return int(parts[3].rstrip("%"))
     except Exception:
         pass
     return None

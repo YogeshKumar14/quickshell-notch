@@ -6,7 +6,6 @@ import hashlib
 from concurrent.futures import ThreadPoolExecutor
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "core"))
-from atomic_write import atomic_write
 
 THUMB_DIR = os.path.expanduser("~/.cache/quickshell/thumbs")
 THUMB_SIZE = (160, 110)
@@ -33,6 +32,7 @@ def ensure_thumb(full_path):
             pass
 
     # Generate thumbnail
+    tmp_path = thumb_path + ".tmp"
     try:
         from PIL import Image
         with Image.open(full_path) as img:
@@ -45,7 +45,6 @@ def ensure_thumb(full_path):
                 img = bg
             elif img.mode != "RGB":
                 img = img.convert("RGB")
-            tmp_path = thumb_path + ".tmp"
             img.save(tmp_path, "JPEG", quality=70, optimize=True)
         os.replace(tmp_path, thumb_path)
         return thumb_path

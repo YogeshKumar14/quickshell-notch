@@ -42,6 +42,7 @@ Item {
                     root.btPower = data.power;
                     root.btDevices = data.devices;
                 } catch(e) {}
+                scanTimer.restart();
             }
         }
     }
@@ -66,7 +67,6 @@ Item {
         btToggler.running = false;
         btToggler.command = ["python3", "/home/yogesh/.config/quickshell/scripts/network/manage_bluetooth.py", "toggle_conn", mac];
         btToggler.running = true;
-        scanTimer.restart();
     }
 
     function togglePower(val) {
@@ -74,7 +74,6 @@ Item {
         btToggler.running = false;
         btToggler.command = ["python3", "/home/yogesh/.config/quickshell/scripts/network/manage_bluetooth.py", val ? "on" : "off"];
         btToggler.running = true;
-        scanTimer.restart();
     }
 
     function rescan() {

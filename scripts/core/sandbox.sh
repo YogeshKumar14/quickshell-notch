@@ -18,6 +18,7 @@ fi
 
 # Launch the shell
 quickshell -n -p "$HOME/.config/quickshell/shell.qml" &
-echo $! > "$SANDBOX_PIDFILE"
-wait
-rm -f "$SANDBOX_PIDFILE"
+PID=$!
+echo "$PID" > "$SANDBOX_PIDFILE"
+trap 'kill "$PID" 2>/dev/null; rm -f "$SANDBOX_PIDFILE"' EXIT INT TERM
+wait "$PID"

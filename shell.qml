@@ -32,6 +32,9 @@ Scope {
                 urgency: notif.urgency,
                 timestamp: new Date().toLocaleTimeString()
             });
+            while (notifHistoryModel.count > 100) {
+                notifHistoryModel.remove(notifHistoryModel.count - 1);
+            }
             
             // Push to transient Notch Stack (opens the notch)
             notchComp.handleNewNotification();
@@ -73,7 +76,7 @@ Scope {
     // IPC Socket Server: keybinds send commands here to open specific tabs
     SocketServer {
         id: ipcServer
-        active: true
+        active: Quickshell.env("QUICKSHELL_SANDBOX") !== "1"
         path: "/tmp/quickshell-notch.sock"
         handler: Component {
             Socket {

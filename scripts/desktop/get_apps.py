@@ -124,7 +124,7 @@ def scan_apps():
                 continue
             filepath = os.path.join(d, f)
             try:
-                parser = configparser.ConfigParser(interpolation=None)
+                parser = configparser.ConfigParser(strict=False, interpolation=None)
                 parser.read(filepath, encoding="utf-8")
                 if "Desktop Entry" in parser:
                     entry = parser["Desktop Entry"]

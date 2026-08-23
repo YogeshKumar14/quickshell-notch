@@ -24,6 +24,15 @@ Item {
 
     Behavior on opacity { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
 
+    onIsOpenChanged: {
+        if (!isOpen) {
+            isPasswordPromptOpen = false;
+            passwordText = "";
+            promptSsid = "";
+            showPassword = false;
+        }
+    }
+
     Process {
         id: wifiScanner
         command: ["python3", "/home/yogesh/.config/quickshell/scripts/network/manage_wifi.py"]
@@ -49,6 +58,7 @@ Item {
                     root.wifiActiveSsid = data.active;
                     root.wifiNetworks = data.networks;
                 } catch(e) {}
+                scanTimer.restart();
             }
         }
     }
@@ -78,7 +88,6 @@ Item {
         wifiToggler.running = false;
         wifiToggler.command = ["python3", "/home/yogesh/.config/quickshell/scripts/network/manage_wifi.py", "connect", ssid, password || ""];
         wifiToggler.running = true;
-        scanTimer.restart();
     }
 
     function togglePower(val) {
@@ -86,7 +95,6 @@ Item {
         wifiToggler.running = false;
         wifiToggler.command = ["python3", "/home/yogesh/.config/quickshell/scripts/network/manage_wifi.py", val ? "on" : "off"];
         wifiToggler.running = true;
-        scanTimer.restart();
     }
 
     function rescan() {

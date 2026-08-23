@@ -26,28 +26,28 @@ def get_status():
                 conn_out = subprocess.check_output(["bluetoothctl", "devices", "Connected"], stderr=subprocess.DEVNULL, timeout=TIMEOUT).decode()
                 for line in conn_out.splitlines():
                     parts = line.split(" ")
-                    if len(parts) >= 3:
+                    if len(parts) >= 3 and parts[0] == "Device":
                         connected_macs.add(parts[1])
             except Exception:
                 pass
 
-            devices_out = subprocess.check_output(["bluetoothctl", "devices"], stderr=subprocess.DEVNULL, timeout=TIMEOUT).decode()
-            for line in devices_out.splitlines():
-                parts = line.split(" ", 2)
-                if len(parts) >= 3:
-                    mac, name = parts[1], parts[2]
-                    is_connected = mac in connected_macs
-                    devices.append({
-                        "mac": mac,
-                        "name": name,
-                        "connected": is_connected
-                    })
+            try:
+                devices_out = subprocess.check_output(["bluetoothctl", "devices"], stderr=subprocess.DEVNULL, timeout=TIMEOUT).decode()
+                for line in devices_out.splitlines():
+                    parts = line.split(" ", 2)
+                    if len(parts) >= 3 and parts[0] == "Device":
+                        mac, name = parts[1], parts[2]
+                        is_connected = mac in connected_macs
+                        devices.append({
+                            "mac": mac,
+                            "name": name,
+                            "connected": is_connected
+                        })
+            except Exception:
+                pass
         return {"power": is_on, "devices": devices[:10]}
     except Exception:
         return {"power": False, "devices": []}
-
-def spawn(args):
-    return subprocess.Popen(args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, preexec_fn=set_pdeathsig)
 
 if __name__ == "__main__":
     if len(sys.argv) > 1:

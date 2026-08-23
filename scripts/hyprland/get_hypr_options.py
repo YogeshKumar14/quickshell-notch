@@ -50,7 +50,12 @@ def main():
         for p in parts:
             try:
                 data = json.loads(p)
-                if data.get("option"):
+                if isinstance(data, list):
+                    for item in data:
+                        if isinstance(item, dict) and item.get("option"):
+                            results[item["option"]] = item
+                    continue
+                elif isinstance(data, dict) and data.get("option"):
                     results[data["option"]] = data
                     continue
             except Exception:
@@ -58,7 +63,7 @@ def main():
             for line in p.splitlines():
                 try:
                     data = json.loads(line)
-                    if data.get("option"):
+                    if isinstance(data, dict) and data.get("option"):
                         results[data["option"]] = data
                 except Exception:
                     pass

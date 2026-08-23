@@ -38,6 +38,6 @@ elif [ "$1" == "brightness" ]; then
     # Wait 50ms for sysfs to propagate the backlight event
     sleep 0.05
     # Get current brightness percentage
-    BRI=$(brightnessctl i | grep -oP '\(\K[0-9]+(?=%\))')
+    BRI=$(brightnessctl -m | head -n1 | awk -F',' '{print $4}' | tr -d '%')
     send_osd bri "$BRI"
 fi

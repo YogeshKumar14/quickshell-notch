@@ -761,7 +761,7 @@ Item {
     Timer {
         id: posTimer
         interval: 500
-        running: root.isPlaying && root.activePlayer !== null
+        running: root.isPlaying && root.activePlayer !== null && root.isExpanded
         repeat: true
         onTriggered: {
             if (root.activePlayer) {
@@ -2005,9 +2005,7 @@ Item {
                                             value: root.volumeLevel
                                             onMoved: function(val) {
                                                 root.volumeLevel = Math.round(val);
-                                                if (!volumeThrottleTimer.running) {
-                                                    volumeThrottleTimer.start();
-                                                }
+                                                volumeThrottleTimer.restart();
                                             }
                                             Timer {
                                                 id: volumeThrottleTimer
@@ -2050,9 +2048,7 @@ Item {
                                             value: root.micLevel
                                             onMoved: function(val) {
                                                 root.micLevel = Math.round(val);
-                                                if (!micThrottleTimer.running) {
-                                                    micThrottleTimer.start();
-                                                }
+                                                micThrottleTimer.restart();
                                             }
                                             Timer {
                                                 id: micThrottleTimer

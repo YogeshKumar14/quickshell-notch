@@ -18,12 +18,17 @@ DURATION=0.5
 TYPE="outer"
 
 if [ -f "$SETTINGS_FILE" ]; then
-    read -r DURATION TYPE <<< "$(python3 -c "
+    PARSED=$(python3 -c "
 import json, sys
 d = json.load(open(sys.argv[1]))
 print(f\"{d.get('wall_duration', 0.5)} {d.get('wall_type', 'outer') or 'outer'}\")
-" "$SETTINGS_FILE" 2>/dev/null)"
+" "$SETTINGS_FILE" 2>/dev/null)
+    if [ -n "$PARSED" ]; then
+        read -r DURATION TYPE <<< "$PARSED"
+    fi
 fi
+DURATION="${DURATION:-0.5}"
+TYPE="${TYPE:-outer}"
 
 # 1. Ensure awww-daemon is running (wait for it to be ready)
 if ! awww query >/dev/null 2>&1; then

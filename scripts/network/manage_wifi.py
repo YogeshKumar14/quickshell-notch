@@ -71,15 +71,18 @@ def get_status():
 if __name__ == "__main__":
     if len(sys.argv) > 1:
         action = sys.argv[1]
-        if action == "on":
-            subprocess.run(["nmcli", "radio", "wifi", "on"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=TIMEOUT)
-        elif action == "off":
-            subprocess.run(["nmcli", "radio", "wifi", "off"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=TIMEOUT)
-        elif action == "connect" and len(sys.argv) > 2:
-            ssid = sys.argv[2]
-            password = sys.argv[3] if len(sys.argv) > 3 else None
-            args = ["nmcli", "dev", "wifi", "connect", ssid]
-            if password:
-                args += ["password", password]
-            subprocess.run(args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=CONNECT_TIMEOUT, preexec_fn=set_pdeathsig)
+        try:
+            if action == "on":
+                subprocess.run(["nmcli", "radio", "wifi", "on"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=TIMEOUT)
+            elif action == "off":
+                subprocess.run(["nmcli", "radio", "wifi", "off"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=TIMEOUT)
+            elif action == "connect" and len(sys.argv) > 2:
+                ssid = sys.argv[2]
+                password = sys.argv[3] if len(sys.argv) > 3 else None
+                args = ["nmcli", "dev", "wifi", "connect", ssid]
+                if password:
+                    args += ["password", password]
+                subprocess.run(args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=CONNECT_TIMEOUT, preexec_fn=set_pdeathsig)
+        except (subprocess.TimeoutExpired, FileNotFoundError, OSError):
+            pass
     print(json.dumps(get_status()))
