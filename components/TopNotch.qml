@@ -717,9 +717,25 @@ Item {
                 var c = this.text.trim();
                 if (c && c.startsWith("#")) {
                     Style.accent = c;
+                    // Sync Hyprland window border to the new accent
+                    var aarrggbb = "ff" + c.substring(1).toLowerCase();
+                    borderColorSyncProc.running = false;
+                    borderColorSyncProc.command = [
+                        "bash",
+                        "/home/yogesh/.config/quickshell/scripts/hyprland/set_hypr_option.sh",
+                        "active_border",
+                        aarrggbb
+                    ];
+                    borderColorSyncProc.running = true;
                 }
             }
         }
+    }
+
+    // Sync Hyprland window border to wallust accent
+    Process {
+        id: borderColorSyncProc
+        stdout: StdioCollector {}
     }
 
     function refreshAccent() {
