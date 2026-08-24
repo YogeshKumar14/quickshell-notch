@@ -541,15 +541,15 @@ Item {
     // Notifications Properties
     property int notifCount: 0
 
-    // Notification stack geometry: grows with notification count, capped so the
-    // tallest stack matches the 320px menu height (list scrolls beyond the cap)
+    // Notification stack geometry: grows dynamically with content (including
+    // expanded notifications), capped so it doesn't exceed the expanded notch height.
     property int notifStackChrome: 60
-    property int notifStackRowHeight: 64
-    property int notifStackMaxRows: 5
+    property int notifStackMaxHeight: 420
     property int notifStackEmptyHeight: 120
     property int notifStackHeight: {
         if (!root.notifModel || root.notifModel.count === 0) return root.notifStackEmptyHeight;
-        return root.notifStackChrome + Math.min(root.notifModel.count, root.notifStackMaxRows) * root.notifStackRowHeight;
+        var contentH = notifHistoryOverlay.listContentHeight;
+        return Math.min(root.notifStackChrome + contentH, root.notifStackMaxHeight);
     }
 
     // Dynamic Ear Size scaling in sync with spring expansion (12px Compact -> 24px Expanded)

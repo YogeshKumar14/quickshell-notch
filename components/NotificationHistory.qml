@@ -12,6 +12,7 @@ Item {
 
     property int notifCount: notifModel ? notifModel.count : 0
     property bool isClearing: false
+    property real listContentHeight: notifList.contentHeight
 
     anchors.fill: parent
     z: 99
@@ -55,6 +56,20 @@ Item {
         if (notifModel && notifModel.count > 0 && !isClearing) {
             isClearing = true;
             clearTimer.start();
+        }
+    }
+
+    // Deferred scroll: fires after the delegate height animation finishes
+    property int scrollTargetIndex: -1
+    Timer {
+        id: scrollToTimer
+        interval: 220
+        repeat: false
+        onTriggered: {
+            if (root.scrollTargetIndex >= 0 && root.scrollTargetIndex < notifList.count) {
+                notifList.positionViewAtIndex(root.scrollTargetIndex, ListView.Center);
+            }
+            root.scrollTargetIndex = -1;
         }
     }
 
@@ -269,7 +284,8 @@ Item {
                         } else {
                             notifDelegate.isExpanded = !notifDelegate.isExpanded;
                             if (notifDelegate.isExpanded) {
-                                notifList.positionViewAtIndex(index, ListView.Center);
+                                root.scrollTargetIndex = index;
+                                scrollToTimer.restart();
                             }
                         }
                         swiping = false;
