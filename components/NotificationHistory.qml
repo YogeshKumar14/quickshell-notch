@@ -176,19 +176,15 @@ Item {
                 }
             }
 
-            delegate: Rectangle {
-                id: notifDelegate
+            delegate: Item {
+                id: delegateWrapper
                 width: notifList.width
                 height: isExpanded ? Math.max(56, delegateContent.implicitHeight + 16) : 56
-                radius: Style.radiusSmall
-                color: notifItemM.containsMouse ? "#121214" : "#0A0A0C"
-                border.color: isExpanded ? Style.accent : "#222225"
-                border.width: 1
                 clip: true
 
                 property bool isExpanded: root.expandedIndex === index
                 property real dragOffset: 0
-                x: dragOffset
+                property bool isDragging: false
 
                 onIsExpandedChanged: {
                     if (isExpanded) {
@@ -203,103 +199,119 @@ Item {
                         epsilon: 0.25
                     }
                 }
-                Behavior on border.color { ColorAnimation { duration: 200; easing.type: Easing.OutCubic } }
-                Behavior on dragOffset {
-                    enabled: !notifItemM.dragActive
-                    NumberAnimation { duration: 200; easing.type: Easing.OutCubic }
-                }
 
-                RowLayout {
-                    id: delegateContent
-                    anchors.left: parent.left
-                    anchors.right: parent.right
-                    anchors.top: parent.top
-                    anchors.topMargin: 8
-                    anchors.leftMargin: 10
-                    anchors.rightMargin: 10
-                    spacing: 8
+                Rectangle {
+                    id: notifCard
+                    anchors.fill: parent
+                    x: delegateWrapper.dragOffset
+                    opacity: 1.0 - Math.min(0.8, Math.abs(delegateWrapper.dragOffset) / 160)
+                    radius: Style.radiusSmall
+                    color: notifItemM.containsMouse ? "#121214" : "#0A0A0C"
+                    border.color: delegateWrapper.isExpanded ? Style.accent : "#222225"
+                    border.width: 1
 
-                    onImplicitHeightChanged: {
-                        if (notifDelegate.isExpanded) {
-                            root.expandedExtraHeight = Math.max(0, delegateContent.implicitHeight + 16 - 56);
-                        }
+                    Behavior on border.color { ColorAnimation { duration: 200; easing.type: Easing.OutCubic } }
+                    Behavior on x {
+                        enabled: !delegateWrapper.isDragging
+                        NumberAnimation { duration: 200; easing.type: Easing.OutCubic }
+                    }
+                    Behavior on opacity {
+                        enabled: !delegateWrapper.isDragging
+                        NumberAnimation { duration: 200; easing.type: Easing.OutCubic }
                     }
 
-                    // App icon or default bell
-                    M3Icon {
-                        name: "notifications"
-                        color: Style.accent
-                        size: 16
-                        Layout.alignment: Qt.AlignTop
-                    }
+                    RowLayout {
+                        id: delegateContent
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        anchors.top: parent.top
+                        anchors.topMargin: 8
+                        anchors.leftMargin: 10
+                        anchors.rightMargin: 10
+                        spacing: 8
 
-                    ColumnLayout {
-                        Layout.fillWidth: true
-                        spacing: 2
+                        onImplicitHeightChanged: {
+                            if (delegateWrapper.isExpanded) {
+                                root.expandedExtraHeight = Math.max(0, delegateContent.implicitHeight + 16 - 56);
+                            }
+                        }
 
-                        Text {
-                            text: model.summary || "Notification"
-                            font.family: Style.fontFamily
-                            font.pixelSize: Style.fontSizeSmall
-                            font.weight: Font.Bold
-                            color: Style.textPrimary
+                        // App icon or default bell
+                        M3Icon {
+                            name: "notifications"
+                            color: Style.accent
+                            size: 16
+                            Layout.alignment: Qt.AlignTop
+                        }
+
+                        ColumnLayout {
                             Layout.fillWidth: true
-                            elide: Text.ElideRight
+                            spacing: 2
+
+                            Text {
+                                text: model.summary || "Notification"
+                                font.family: Style.fontFamily
+                                font.pixelSize: Style.fontSizeSmall
+                                font.weight: Font.Bold
+                                color: Style.textPrimary
+                                Layout.fillWidth: true
+                                elide: Text.ElideRight
+                            }
+
+                            Text {
+                                text: model.body || ""
+                                font.family: Style.fontFamily
+                                font.pixelSize: 9
+                                color: Style.textSecondary
+                                Layout.fillWidth: true
+                                wrapMode: delegateWrapper.isExpanded ? Text.WordWrap : Text.NoWrap
+                                elide: delegateWrapper.isExpanded ? Text.ElideNone : Text.ElideRight
+                                maximumLineCount: delegateWrapper.isExpanded ? -1 : 1
+                                visible: text !== ""
+                            }
+
+                            Text {
+                                text: model.appName || ""
+                                font.family: Style.fontFamily
+                                font.pixelSize: 8
+                                color: Style.textMuted
+                                Layout.fillWidth: true
+                                elide: Text.ElideRight
+                                visible: text !== ""
+                            }
                         }
 
                         Text {
-                            text: model.body || ""
-                            font.family: Style.fontFamily
-                            font.pixelSize: 9
-                            color: Style.textSecondary
-                            Layout.fillWidth: true
-                            wrapMode: notifDelegate.isExpanded ? Text.WordWrap : Text.NoWrap
-                            elide: notifDelegate.isExpanded ? Text.ElideNone : Text.ElideRight
-                            maximumLineCount: notifDelegate.isExpanded ? -1 : 1
-                            visible: text !== ""
-                        }
-
-                        Text {
-                            text: model.appName || ""
+                            text: model.timestamp || ""
                             font.family: Style.fontFamily
                             font.pixelSize: 8
                             color: Style.textMuted
-                            Layout.fillWidth: true
-                            elide: Text.ElideRight
-                            visible: text !== ""
-                        }
-                    }
-
-                    Text {
-                        text: model.timestamp || ""
-                        font.family: Style.fontFamily
-                        font.pixelSize: 8
-                        color: Style.textMuted
-                        Layout.alignment: Qt.AlignTop
-                    }
-
-                    // Quick dismiss button on hover
-                    Rectangle {
-                        width: 18
-                        height: 18
-                        radius: 9
-                        color: closeBtnM.containsMouse ? Style.cardBgHover : "transparent"
-                        visible: notifItemM.containsMouse && !notifItemM.dragActive
-                        Layout.alignment: Qt.AlignTop
-
-                        M3Icon {
-                            anchors.centerIn: parent
-                            name: "close"
-                            size: 12
-                            color: closeBtnM.containsMouse ? Style.danger : Style.textMuted
+                            Layout.alignment: Qt.AlignTop
                         }
 
-                        MouseArea {
-                            id: closeBtnM
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: root.dismissNotification(index)
+                        // Quick dismiss button on hover
+                        Rectangle {
+                            width: 18
+                            height: 18
+                            radius: 9
+                            color: closeBtnM.containsMouse ? Style.cardBgHover : "transparent"
+                            visible: notifItemM.containsMouse && !delegateWrapper.isDragging
+                            Layout.alignment: Qt.AlignTop
+
+                            M3Icon {
+                                anchors.centerIn: parent
+                                name: "close"
+                                size: 12
+                                color: closeBtnM.containsMouse ? Style.danger : Style.textMuted
+                            }
+
+                            MouseArea {
+                                id: closeBtnM
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: root.dismissNotification(index)
+                            }
                         }
                     }
                 }
@@ -309,36 +321,33 @@ Item {
                     id: notifItemM
                     anchors.fill: parent
                     hoverEnabled: true
-                    cursorShape: notifItemM.dragActive ? Qt.ClosedHandCursor : Qt.PointingHandCursor
+                    cursorShape: delegateWrapper.isDragging ? Qt.ClosedHandCursor : Qt.PointingHandCursor
 
-                    property real startGlobalX: 0
-                    property bool dragActive: false
+                    property real startX: 0
 
                     onPressed: function(mouse) {
-                        var pt = mapToItem(notifList, mouse.x, mouse.y);
-                        startGlobalX = pt.x;
-                        dragActive = false;
+                        startX = mouse.x;
+                        delegateWrapper.isDragging = false;
                     }
 
                     onPositionChanged: function(mouse) {
                         if (pressed) {
-                            var pt = mapToItem(notifList, mouse.x, mouse.y);
-                            var deltaX = pt.x - startGlobalX;
-                            if (Math.abs(deltaX) > 15) {
-                                dragActive = true;
-                                notifDelegate.dragOffset = deltaX;
+                            var dx = mouse.x - startX;
+                            if (Math.abs(dx) > 10) {
+                                delegateWrapper.isDragging = true;
+                                delegateWrapper.dragOffset = dx;
                             }
                         }
                     }
 
                     onReleased: {
-                        if (dragActive) {
-                            if (Math.abs(notifDelegate.dragOffset) > 80) {
+                        if (delegateWrapper.isDragging) {
+                            if (Math.abs(delegateWrapper.dragOffset) > 80) {
                                 root.dismissNotification(index);
                             } else {
-                                notifDelegate.dragOffset = 0;
+                                delegateWrapper.dragOffset = 0;
                             }
-                            dragActive = false;
+                            delegateWrapper.isDragging = false;
                         } else {
                             if (root.expandedIndex === index) {
                                 root.expandedIndex = -1;
@@ -351,8 +360,8 @@ Item {
                     }
 
                     onCanceled: {
-                        notifDelegate.dragOffset = 0;
-                        dragActive = false;
+                        delegateWrapper.dragOffset = 0;
+                        delegateWrapper.isDragging = false;
                     }
                 }
             }
