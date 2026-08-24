@@ -202,8 +202,10 @@ Item {
 
                 Rectangle {
                     id: notifCard
-                    anchors.fill: parent
                     x: delegateWrapper.dragOffset
+                    y: 0
+                    width: parent.width
+                    height: parent.height
                     opacity: 1.0 - Math.min(0.8, Math.abs(delegateWrapper.dragOffset) / 160)
                     radius: Style.radiusSmall
                     color: notifItemM.containsMouse ? "#121214" : "#0A0A0C"
