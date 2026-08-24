@@ -548,8 +548,10 @@ Item {
     property int notifStackEmptyHeight: 120
     property int notifStackHeight: {
         if (!root.notifModel || root.notifModel.count === 0) return root.notifStackEmptyHeight;
-        var contentH = notifHistoryOverlay.listContentHeight;
-        return Math.min(root.notifStackChrome + contentH, root.notifStackMaxHeight);
+        var count = root.notifModel.count;
+        var base = root.notifStackChrome + Math.min(count, 5) * 64;
+        var extra = notifHistoryOverlay.expandedExtraHeight;
+        return Math.min(base + extra, root.notifStackMaxHeight);
     }
 
     // Dynamic Ear Size scaling in sync with spring expansion (12px Compact -> 24px Expanded)

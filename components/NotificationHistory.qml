@@ -12,7 +12,8 @@ Item {
 
     property int notifCount: notifModel ? notifModel.count : 0
     property bool isClearing: false
-    property real listContentHeight: notifList.contentHeight
+    property int expandedIndex: -1
+    property int expandedExtraHeight: 0
     property real expandSpringTension: 4.5
     property real expandSpringDamping: 0.28
 
@@ -30,9 +31,16 @@ Item {
     }
 
     opacity: isOpen ? 1.0 : 0.0
-    visible: opacity > 0.01
+    visible: isOpen || opacity > 0.01
 
-    Behavior on opacity { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
+    Behavior on opacity { NumberAnimation { duration: 120; easing.type: Easing.OutCubic } }
+
+    onIsOpenChanged: {
+        if (!isOpen) {
+            expandedIndex = -1;
+            expandedExtraHeight = 0;
+        }
+    }
 
     Timer {
         id: clearTimer
@@ -172,7 +180,7 @@ Item {
                 border.width: 1
                 clip: true
 
-                property bool isExpanded: false
+                property bool isExpanded: root.expandedIndex === index
                 property real dragOffset: 0
                 x: dragOffset
 
@@ -283,8 +291,12 @@ Item {
                         } else if (swiping) {
                             dragOffset = 0;
                         } else {
-                            notifDelegate.isExpanded = !notifDelegate.isExpanded;
-                            if (notifDelegate.isExpanded) {
+                            if (root.expandedIndex === index) {
+                                root.expandedIndex = -1;
+                                root.expandedExtraHeight = 0;
+                            } else {
+                                root.expandedIndex = index;
+                                root.expandedExtraHeight = Math.max(0, delegateContent.implicitHeight + 16 - 60);
                                 notifList.positionViewAtIndex(index, ListView.Contain);
                             }
                         }
