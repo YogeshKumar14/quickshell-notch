@@ -639,7 +639,7 @@ Item {
     // Fixed root dimensions (624px width allows 32px padding for inverted ears)
     // Height tracks the configurable expanded height so it never clips
     implicitWidth: Style.notchWidthExpanded + 64
-    implicitHeight: Math.max(Style.notchHeightExpanded, root.maxPageNotchHeight)
+    implicitHeight: Math.max(Style.notchHeightExpanded, root.maxPageNotchHeight, root.notifStackHeight)
 
     // Clock string (pure JS — zero process spawns)
     property string timeStr: "00:00"

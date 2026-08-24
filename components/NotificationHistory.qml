@@ -59,20 +59,6 @@ Item {
         }
     }
 
-    // Deferred scroll: fires after the delegate height animation finishes
-    property int scrollTargetIndex: -1
-    Timer {
-        id: scrollToTimer
-        interval: 220
-        repeat: false
-        onTriggered: {
-            if (root.scrollTargetIndex >= 0 && root.scrollTargetIndex < notifList.count) {
-                notifList.positionViewAtIndex(root.scrollTargetIndex, ListView.Center);
-            }
-            root.scrollTargetIndex = -1;
-        }
-    }
-
     ColumnLayout {
         anchors.fill: parent
         anchors.margins: 14
@@ -182,7 +168,6 @@ Item {
                 property real dragOffset: 0
                 x: dragOffset
 
-                Behavior on height { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
                 Behavior on border.color { ColorAnimation { duration: 200; easing.type: Easing.OutCubic } }
                 Behavior on dragOffset { NumberAnimation { duration: 150; easing.type: Easing.OutCubic } }
 
@@ -284,8 +269,7 @@ Item {
                         } else {
                             notifDelegate.isExpanded = !notifDelegate.isExpanded;
                             if (notifDelegate.isExpanded) {
-                                root.scrollTargetIndex = index;
-                                scrollToTimer.restart();
+                                notifList.positionViewAtIndex(index, ListView.Contain);
                             }
                         }
                         swiping = false;
