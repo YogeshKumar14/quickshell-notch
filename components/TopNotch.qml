@@ -549,7 +549,7 @@ Item {
     property int notifStackHeight: {
         if (!root.notifModel || root.notifModel.count === 0) return root.notifStackEmptyHeight;
         var count = root.notifModel.count;
-        var base = root.notifStackChrome + Math.min(count, 5) * 64;
+        var base = root.notifStackChrome + Math.min(count, 5) * 60;
         var extra = notifHistoryOverlay.expandedExtraHeight;
         return Math.min(base + extra, root.notifStackMaxHeight);
     }

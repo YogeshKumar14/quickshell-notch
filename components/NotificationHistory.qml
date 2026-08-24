@@ -179,7 +179,7 @@ Item {
             delegate: Rectangle {
                 id: notifDelegate
                 width: notifList.width
-                height: delegateContent.implicitHeight + 16
+                height: isExpanded ? Math.max(56, delegateContent.implicitHeight + 16) : 56
                 radius: Style.radiusSmall
                 color: notifItemM.containsMouse ? "#121214" : "#0A0A0C"
                 border.color: isExpanded ? Style.accent : "#222225"
@@ -192,7 +192,7 @@ Item {
 
                 onIsExpandedChanged: {
                     if (isExpanded) {
-                        root.expandedExtraHeight = Math.max(0, delegateContent.implicitHeight + 16 - 60);
+                        root.expandedExtraHeight = Math.max(0, delegateContent.implicitHeight + 16 - 56);
                     }
                 }
 
@@ -218,7 +218,7 @@ Item {
 
                     onImplicitHeightChanged: {
                         if (notifDelegate.isExpanded) {
-                            root.expandedExtraHeight = Math.max(0, delegateContent.implicitHeight + 16 - 60);
+                            root.expandedExtraHeight = Math.max(0, delegateContent.implicitHeight + 16 - 56);
                         }
                     }
 
