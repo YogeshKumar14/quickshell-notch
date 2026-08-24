@@ -543,7 +543,7 @@ Item {
 
     // Notification stack geometry: grows dynamically with content (including
     // expanded notifications), capped so it doesn't exceed the expanded notch height.
-    property int notifStackChrome: 60
+    property int notifStackChrome: 56
     property int notifStackMaxHeight: 420
     property int notifStackEmptyHeight: 120
     property int notifStackHeight: {
