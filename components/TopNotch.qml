@@ -544,7 +544,7 @@ Item {
     // Notification stack geometry: grows with notification count, capped so the
     // tallest stack matches the 320px menu height (list scrolls beyond the cap)
     property int notifStackChrome: 60
-    property int notifStackRowHeight: 52
+    property int notifStackRowHeight: 64
     property int notifStackMaxRows: 5
     property int notifStackEmptyHeight: 120
     property int notifStackHeight: {

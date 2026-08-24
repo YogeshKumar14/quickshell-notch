@@ -156,7 +156,7 @@ Item {
 
             delegate: Rectangle {
                 width: notifList.width
-                height: 48
+                height: 60
                 radius: Style.radiusSmall
                 color: notifItemM.containsMouse ? "#121214" : "#0A0A0C"
                 border.color: "#222225"
@@ -192,6 +192,17 @@ Item {
                             color: Style.textPrimary
                             Layout.fillWidth: true
                             elide: Text.ElideRight
+                        }
+
+                        Text {
+                            text: model.body || ""
+                            font.family: Style.fontFamily
+                            font.pixelSize: 9
+                            color: Style.textSecondary
+                            Layout.fillWidth: true
+                            elide: Text.ElideRight
+                            maximumLineCount: 1
+                            visible: text !== ""
                         }
 
                         Text {
