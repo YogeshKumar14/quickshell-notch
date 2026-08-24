@@ -13,15 +13,10 @@ Item {
     property int notifCount: notifModel ? notifModel.count : 0
     property bool isClearing: false
     property int expandedIndex: -1
-    property int expandedExtraHeight: 0
+    property real currentExpandedExtraHeight: 0
+    readonly property real expandedExtraHeight: (expandedIndex >= 0 && expandedIndex < (notifModel ? notifModel.count : 0)) ? currentExpandedExtraHeight : 0
     property real expandSpringTension: 4.5
     property real expandSpringDamping: 0.28
-
-    onExpandedIndexChanged: {
-        if (expandedIndex === -1) {
-            expandedExtraHeight = 0;
-        }
-    }
 
     anchors.fill: parent
     z: 99
@@ -44,7 +39,7 @@ Item {
     onIsOpenChanged: {
         if (!isOpen) {
             expandedIndex = -1;
-            expandedExtraHeight = 0;
+            currentExpandedExtraHeight = 0;
         }
     }
 
@@ -65,7 +60,7 @@ Item {
     function dismissNotification(index) {
         if (root.expandedIndex === index) {
             root.expandedIndex = -1;
-            root.expandedExtraHeight = 0;
+            root.currentExpandedExtraHeight = 0;
         } else if (root.expandedIndex > index) {
             root.expandedIndex--;
         }
@@ -74,14 +69,14 @@ Item {
         }
         if (!notifModel || notifModel.count === 0) {
             root.expandedIndex = -1;
-            root.expandedExtraHeight = 0;
+            root.currentExpandedExtraHeight = 0;
         }
     }
 
     function clearAll() {
         if (notifModel && notifModel.count > 0 && !isClearing) {
             root.expandedIndex = -1;
-            root.expandedExtraHeight = 0;
+            root.currentExpandedExtraHeight = 0;
             isClearing = true;
             clearTimer.start();
         }
@@ -200,9 +195,7 @@ Item {
 
                 onIsExpandedChanged: {
                     if (isExpanded) {
-                        root.expandedExtraHeight = Math.max(0, delegateContent.implicitHeight + 16 - 56);
-                    } else if (root.expandedIndex === -1) {
-                        root.expandedExtraHeight = 0;
+                        root.currentExpandedExtraHeight = Math.max(0, delegateContent.implicitHeight + 16 - 56);
                     }
                 }
 
@@ -248,7 +241,7 @@ Item {
 
                         onImplicitHeightChanged: {
                             if (delegateWrapper.isExpanded) {
-                                root.expandedExtraHeight = Math.max(0, delegateContent.implicitHeight + 16 - 56);
+                                root.currentExpandedExtraHeight = Math.max(0, delegateContent.implicitHeight + 16 - 56);
                             }
                         }
 
