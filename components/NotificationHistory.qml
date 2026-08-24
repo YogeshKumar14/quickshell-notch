@@ -57,6 +57,10 @@ Item {
     }
 
     function dismissNotification(index) {
+        if (root.expandedIndex === index) {
+            root.expandedIndex = -1;
+            root.expandedExtraHeight = 0;
+        }
         if (notifModel) {
             notifModel.remove(index);
         }
@@ -64,6 +68,8 @@ Item {
 
     function clearAll() {
         if (notifModel && notifModel.count > 0 && !isClearing) {
+            root.expandedIndex = -1;
+            root.expandedExtraHeight = 0;
             isClearing = true;
             clearTimer.start();
         }
@@ -184,6 +190,12 @@ Item {
                 property real dragOffset: 0
                 x: dragOffset
 
+                onIsExpandedChanged: {
+                    if (isExpanded) {
+                        root.expandedExtraHeight = Math.max(0, delegateContent.implicitHeight + 16 - 60);
+                    }
+                }
+
                 Behavior on height {
                     SpringAnimation {
                         spring: root.expandSpringTension
@@ -203,6 +215,12 @@ Item {
                     anchors.leftMargin: 10
                     anchors.rightMargin: 10
                     spacing: 8
+
+                    onImplicitHeightChanged: {
+                        if (notifDelegate.isExpanded) {
+                            root.expandedExtraHeight = Math.max(0, delegateContent.implicitHeight + 16 - 60);
+                        }
+                    }
 
                     // App icon or default bell
                     M3Icon {
@@ -296,7 +314,6 @@ Item {
                                 root.expandedExtraHeight = 0;
                             } else {
                                 root.expandedIndex = index;
-                                root.expandedExtraHeight = Math.max(0, delegateContent.implicitHeight + 16 - 60);
                                 notifList.positionViewAtIndex(index, ListView.Contain);
                             }
                         }
