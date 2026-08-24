@@ -168,6 +168,7 @@ Item {
                 x: dragOffset
 
                 Behavior on height { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
+                Behavior on border.color { ColorAnimation { duration: 200; easing.type: Easing.OutCubic } }
                 Behavior on dragOffset { NumberAnimation { duration: 150; easing.type: Easing.OutCubic } }
 
                 RowLayout {
@@ -267,6 +268,9 @@ Item {
                             dragOffset = 0;
                         } else {
                             notifDelegate.isExpanded = !notifDelegate.isExpanded;
+                            if (notifDelegate.isExpanded) {
+                                notifList.positionViewAtIndex(index, ListView.Center);
+                            }
                         }
                         swiping = false;
                     }
