@@ -155,20 +155,26 @@ Item {
             }
 
             delegate: Rectangle {
+                id: notifDelegate
                 width: notifList.width
-                height: 60
+                height: delegateContent.implicitHeight + 16
                 radius: Style.radiusSmall
                 color: notifItemM.containsMouse ? "#121214" : "#0A0A0C"
-                border.color: "#222225"
+                border.color: isExpanded ? Style.accent : "#222225"
                 border.width: 1
 
+                property bool isExpanded: false
                 property real dragOffset: 0
                 x: dragOffset
 
+                Behavior on height { NumberAnimation { duration: 200; easing.type: Easing.OutCubic } }
                 Behavior on dragOffset { NumberAnimation { duration: 150; easing.type: Easing.OutCubic } }
 
                 RowLayout {
-                    anchors.fill: parent
+                    id: delegateContent
+                    anchors.left: parent.left
+                    anchors.right: parent.right
+                    anchors.verticalCenter: parent.verticalCenter
                     anchors.leftMargin: 10
                     anchors.rightMargin: 10
                     spacing: 8
@@ -178,6 +184,7 @@ Item {
                         name: "notifications"
                         color: Style.accent
                         size: 16
+                        Layout.alignment: Qt.AlignTop
                     }
 
                     ColumnLayout {
@@ -200,8 +207,9 @@ Item {
                             font.pixelSize: 9
                             color: Style.textSecondary
                             Layout.fillWidth: true
-                            elide: Text.ElideRight
-                            maximumLineCount: 1
+                            wrapMode: notifDelegate.isExpanded ? Text.WordWrap : Text.NoWrap
+                            elide: notifDelegate.isExpanded ? Text.ElideNone : Text.ElideRight
+                            maximumLineCount: notifDelegate.isExpanded ? -1 : 1
                             visible: text !== ""
                         }
 
@@ -221,10 +229,11 @@ Item {
                         font.family: Style.fontFamily
                         font.pixelSize: 8
                         color: Style.textMuted
+                        Layout.alignment: Qt.AlignTop
                     }
                 }
 
-                // Swipe-to-dismiss
+                // Swipe-to-dismiss + click-to-expand
                 MouseArea {
                     id: notifItemM
                     anchors.fill: parent
@@ -254,8 +263,10 @@ Item {
                     onReleased: {
                         if (swiping && Math.abs(dragOffset) > 80) {
                             root.dismissNotification(index);
-                        } else {
+                        } else if (swiping) {
                             dragOffset = 0;
+                        } else {
+                            notifDelegate.isExpanded = !notifDelegate.isExpanded;
                         }
                         swiping = false;
                     }
