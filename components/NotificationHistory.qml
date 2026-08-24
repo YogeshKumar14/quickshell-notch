@@ -13,6 +13,8 @@ Item {
     property int notifCount: notifModel ? notifModel.count : 0
     property bool isClearing: false
     property real listContentHeight: notifList.contentHeight
+    property real expandSpringTension: 4.5
+    property real expandSpringDamping: 0.28
 
     anchors.fill: parent
     z: 99
@@ -152,7 +154,12 @@ Item {
             }
 
             displaced: Transition {
-                NumberAnimation { properties: "y"; duration: 200; easing.type: Easing.OutCubic }
+                SpringAnimation {
+                    properties: "y"
+                    spring: root.expandSpringTension
+                    damping: root.expandSpringDamping
+                    epsilon: 0.25
+                }
             }
 
             delegate: Rectangle {
@@ -163,11 +170,19 @@ Item {
                 color: notifItemM.containsMouse ? "#121214" : "#0A0A0C"
                 border.color: isExpanded ? Style.accent : "#222225"
                 border.width: 1
+                clip: true
 
                 property bool isExpanded: false
                 property real dragOffset: 0
                 x: dragOffset
 
+                Behavior on height {
+                    SpringAnimation {
+                        spring: root.expandSpringTension
+                        damping: root.expandSpringDamping
+                        epsilon: 0.25
+                    }
+                }
                 Behavior on border.color { ColorAnimation { duration: 200; easing.type: Easing.OutCubic } }
                 Behavior on dragOffset { NumberAnimation { duration: 150; easing.type: Easing.OutCubic } }
 
@@ -175,7 +190,8 @@ Item {
                     id: delegateContent
                     anchors.left: parent.left
                     anchors.right: parent.right
-                    anchors.verticalCenter: parent.verticalCenter
+                    anchors.top: parent.top
+                    anchors.topMargin: 8
                     anchors.leftMargin: 10
                     anchors.rightMargin: 10
                     spacing: 8

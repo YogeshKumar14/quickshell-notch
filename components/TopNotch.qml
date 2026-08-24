@@ -2447,6 +2447,8 @@ Item {
             id: notifHistoryOverlay
             isOpen: root.isNotifMenuOpen
             notifModel: root.notifModel
+            expandSpringTension: root.expandSpringTension
+            expandSpringDamping: root.expandSpringDamping
             onCloseRequested: root.isNotifMenuOpen = false
             onNotifCountChanged: {
                 root.notifCount = notifHistoryOverlay.notifCount;
