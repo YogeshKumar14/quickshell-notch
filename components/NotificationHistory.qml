@@ -204,7 +204,10 @@ Item {
                     }
                 }
                 Behavior on border.color { ColorAnimation { duration: 200; easing.type: Easing.OutCubic } }
-                Behavior on dragOffset { NumberAnimation { duration: 150; easing.type: Easing.OutCubic } }
+                Behavior on dragOffset {
+                    enabled: !notifItemM.dragActive
+                    NumberAnimation { duration: 200; easing.type: Easing.OutCubic }
+                }
 
                 RowLayout {
                     id: delegateContent
@@ -274,6 +277,31 @@ Item {
                         color: Style.textMuted
                         Layout.alignment: Qt.AlignTop
                     }
+
+                    // Quick dismiss button on hover
+                    Rectangle {
+                        width: 18
+                        height: 18
+                        radius: 9
+                        color: closeBtnM.containsMouse ? Style.cardBgHover : "transparent"
+                        visible: notifItemM.containsMouse && !notifItemM.dragActive
+                        Layout.alignment: Qt.AlignTop
+
+                        M3Icon {
+                            anchors.centerIn: parent
+                            name: "close"
+                            size: 12
+                            color: closeBtnM.containsMouse ? Style.danger : Style.textMuted
+                        }
+
+                        MouseArea {
+                            id: closeBtnM
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: root.dismissNotification(index)
+                        }
+                    }
                 }
 
                 // Swipe-to-dismiss + click-to-expand
@@ -281,33 +309,36 @@ Item {
                     id: notifItemM
                     anchors.fill: parent
                     hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    drag.target: undefined
-                    drag.axis: Drag.XAxis
+                    cursorShape: notifItemM.dragActive ? Qt.ClosedHandCursor : Qt.PointingHandCursor
 
-                    property real startX: 0
-                    property bool swiping: false
+                    property real startGlobalX: 0
+                    property bool dragActive: false
 
                     onPressed: function(mouse) {
-                        startX = mouse.x;
-                        swiping = false;
+                        var pt = mapToItem(notifList, mouse.x, mouse.y);
+                        startGlobalX = pt.x;
+                        dragActive = false;
                     }
 
                     onPositionChanged: function(mouse) {
                         if (pressed) {
-                            var dx = mouse.x - startX;
-                            if (Math.abs(dx) > 10) {
-                                swiping = true;
-                                dragOffset = dx;
+                            var pt = mapToItem(notifList, mouse.x, mouse.y);
+                            var deltaX = pt.x - startGlobalX;
+                            if (Math.abs(deltaX) > 15) {
+                                dragActive = true;
+                                notifDelegate.dragOffset = deltaX;
                             }
                         }
                     }
 
                     onReleased: {
-                        if (swiping && Math.abs(dragOffset) > 80) {
-                            root.dismissNotification(index);
-                        } else if (swiping) {
-                            dragOffset = 0;
+                        if (dragActive) {
+                            if (Math.abs(notifDelegate.dragOffset) > 80) {
+                                root.dismissNotification(index);
+                            } else {
+                                notifDelegate.dragOffset = 0;
+                            }
+                            dragActive = false;
                         } else {
                             if (root.expandedIndex === index) {
                                 root.expandedIndex = -1;
@@ -317,12 +348,11 @@ Item {
                                 notifList.positionViewAtIndex(index, ListView.Contain);
                             }
                         }
-                        swiping = false;
                     }
 
                     onCanceled: {
-                        dragOffset = 0;
-                        swiping = false;
+                        notifDelegate.dragOffset = 0;
+                        dragActive = false;
                     }
                 }
             }
