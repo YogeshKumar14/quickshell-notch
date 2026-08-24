@@ -17,6 +17,12 @@ Item {
     property real expandSpringTension: 4.5
     property real expandSpringDamping: 0.28
 
+    onExpandedIndexChanged: {
+        if (expandedIndex === -1) {
+            expandedExtraHeight = 0;
+        }
+    }
+
     anchors.fill: parent
     z: 99
 
@@ -60,9 +66,15 @@ Item {
         if (root.expandedIndex === index) {
             root.expandedIndex = -1;
             root.expandedExtraHeight = 0;
+        } else if (root.expandedIndex > index) {
+            root.expandedIndex--;
         }
         if (notifModel) {
             notifModel.remove(index);
+        }
+        if (!notifModel || notifModel.count === 0) {
+            root.expandedIndex = -1;
+            root.expandedExtraHeight = 0;
         }
     }
 
@@ -189,6 +201,8 @@ Item {
                 onIsExpandedChanged: {
                     if (isExpanded) {
                         root.expandedExtraHeight = Math.max(0, delegateContent.implicitHeight + 16 - 56);
+                    } else if (root.expandedIndex === -1) {
+                        root.expandedExtraHeight = 0;
                     }
                 }
 
