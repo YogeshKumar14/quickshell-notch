@@ -623,6 +623,8 @@ Item {
         updateClock();
         root.refreshOccupied();
         root.refreshDeviceLevels();
+        wifiStatusProc.running = true;
+        btStatusProc.running = true;
     }
 
     // Restart the visualizer stream when the bar count changes so the new
@@ -860,6 +862,35 @@ Item {
     property string wifiPromptSsid: ""
     property string wifiPasswordText: ""
     property bool showWifiPassword: false
+
+    // Lightweight startup-only WiFi power check (no network scan)
+    Process {
+        id: wifiStatusProc
+        command: ["python3", "/home/yogesh/.config/quickshell/scripts/network/manage_wifi.py", "status"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    var data = JSON.parse(this.text);
+                    root.wifiPower = data.power;
+                    if (data.active) root.wifiActiveSsid = data.active;
+                } catch(e) {}
+            }
+        }
+    }
+
+    // Lightweight startup-only BT power check
+    Process {
+        id: btStatusProc
+        command: ["python3", "/home/yogesh/.config/quickshell/scripts/network/manage_bluetooth.py"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    var data = JSON.parse(this.text);
+                    root.btPower = data.power;
+                } catch(e) {}
+            }
+        }
+    }
 
 
 

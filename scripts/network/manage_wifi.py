@@ -68,9 +68,40 @@ def get_status():
 
     return {"power": is_on, "active": active_ssid, "networks": networks[:12]}
 
+def get_status_fast():
+    """Return power and active SSID without scanning for networks."""
+    try:
+        power_out = subprocess.check_output(
+            ["nmcli", "radio", "wifi"],
+            stderr=subprocess.DEVNULL, timeout=TIMEOUT
+        ).decode().strip()
+        is_on = (power_out == "enabled")
+    except Exception:
+        return {"power": False, "active": "", "networks": []}
+
+    active_ssid = ""
+    if is_on:
+        try:
+            conn_out = subprocess.check_output(
+                ["nmcli", "-t", "-f", "name,type,active", "connection", "show"],
+                stderr=subprocess.DEVNULL, timeout=TIMEOUT
+            ).decode()
+            for line in conn_out.splitlines():
+                parts = [p.replace(r'\:', ':') for p in re.split(r'(?<!\\):', line)]
+                if len(parts) >= 3 and "wireless" in parts[1] and parts[2] == "yes":
+                    active_ssid = parts[0]
+                    break
+        except Exception:
+            pass
+    return {"power": is_on, "active": active_ssid, "networks": []}
+
 if __name__ == "__main__":
     if len(sys.argv) > 1:
         action = sys.argv[1]
+        if action == "status":
+            # Fast power + active SSID only (no network scan)
+            print(json.dumps(get_status_fast()))
+            sys.exit(0)
         try:
             if action == "on":
                 subprocess.run(["nmcli", "radio", "wifi", "on"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=TIMEOUT)
