@@ -5,6 +5,11 @@ import json
 import hashlib
 from concurrent.futures import ThreadPoolExecutor
 
+try:
+    from PIL import Image
+except ImportError:
+    Image = None
+
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "core"))
 
 THUMB_DIR = os.path.expanduser("~/.cache/quickshell/thumbs")
@@ -12,29 +17,24 @@ THUMB_SIZE = (160, 110)
 
 def ensure_thumb(full_path):
     """Generate a thumbnail if it doesn't exist or is outdated. Returns thumb path."""
+    if not Image:
+        return full_path
 
     path_hash = hashlib.md5(full_path.encode()).hexdigest()[:12]
     thumb_name = f"{path_hash}.jpg"
     thumb_path = os.path.join(THUMB_DIR, thumb_name)
 
-    # Skip if thumb exists and is newer than original (and is not corrupt)
+    # Fast skip if thumb exists, is non-empty, and is newer than original
     if os.path.isfile(thumb_path):
         try:
-            if os.path.getmtime(thumb_path) >= os.path.getmtime(full_path):
-                try:
-                    from PIL import Image
-                    with Image.open(thumb_path) as existing:
-                        existing.verify()
-                    return thumb_path
-                except Exception:
-                    pass
+            if os.path.getmtime(thumb_path) >= os.path.getmtime(full_path) and os.path.getsize(thumb_path) > 0:
+                return thumb_path
         except OSError:
             pass
 
     # Generate thumbnail
-    tmp_path = thumb_path + ".tmp"
+    tmp_path = f"{thumb_path}.{os.getpid()}_{hash(full_path) & 0xffffffff}.tmp"
     try:
-        from PIL import Image
         with Image.open(full_path) as img:
             img.thumbnail(THUMB_SIZE, Image.LANCZOS)
             if img.mode in ("RGBA", "P", "LA"):
@@ -50,7 +50,8 @@ def ensure_thumb(full_path):
         return thumb_path
     except Exception:
         try:
-            os.unlink(tmp_path)
+            if os.path.exists(tmp_path):
+                os.unlink(tmp_path)
         except OSError:
             pass
         return full_path

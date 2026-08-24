@@ -43,8 +43,10 @@ FocusScope {
                         "path": "random",
                         "folder": "Action"
                     }];
-                    for (var i = 0; i < items.length; i++) {
-                        root.allWallpapers.push(items[i]);
+                    if (Array.isArray(items)) {
+                        for (var i = 0; i < items.length; i++) {
+                            root.allWallpapers.push(items[i]);
+                        }
                     }
                     root.filterWallpapers();
                 } catch (e) {
@@ -242,6 +244,7 @@ FocusScope {
                         border.color: Style.accent
                         border.width: 2
                         scale: 1.04 // Matches the popped delegate
+                        visible: root.selectedIndex >= 0 && root.selectedIndex < wallModel.count
                     }
                 }
 

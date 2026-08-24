@@ -30,8 +30,10 @@ Item {
             passwordText = "";
             promptSsid = "";
             showPassword = false;
+            wifiScanner.running = false;
+            wifiToggler.running = false;
         } else {
-            if (!wifiScanner.running) wifiScanner.running = true;
+            if (!wifiScanner.running && !wifiToggler.running) wifiScanner.running = true;
         }
     }
 
@@ -42,9 +44,9 @@ Item {
             onStreamFinished: {
                 try {
                     var data = JSON.parse(this.text);
-                    root.wifiPower = data.power;
-                    root.wifiActiveSsid = data.active;
-                    root.wifiNetworks = data.networks;
+                    root.wifiPower = data && data.power !== undefined ? data.power : false;
+                    root.wifiActiveSsid = (data && data.active) || "";
+                    root.wifiNetworks = (data && Array.isArray(data.networks)) ? data.networks : [];
                 } catch(e) {}
             }
         }
@@ -56,9 +58,9 @@ Item {
             onStreamFinished: {
                 try {
                     var data = JSON.parse(this.text);
-                    root.wifiPower = data.power;
-                    root.wifiActiveSsid = data.active;
-                    root.wifiNetworks = data.networks;
+                    root.wifiPower = data && data.power !== undefined ? data.power : false;
+                    root.wifiActiveSsid = (data && data.active) || "";
+                    root.wifiNetworks = (data && Array.isArray(data.networks)) ? data.networks : [];
                 } catch(e) {}
                 scanTimer.restart();
             }
@@ -70,20 +72,7 @@ Item {
         interval: 1000
         running: false
         repeat: false
-        onTriggered: if (!wifiScanner.running) wifiScanner.running = true
-    }
-
-    // Scan once when the menu opens, not in a 5s loop: the slow Realtek
-    // rtw88 chip cannot keep up with overlapping scans (wpa_supplicant
-    // rejects piled-up triggers and the driver/interface can wedge, which
-    // drops the wifi connection). Manual refresh + post-action rescans cover
-    // network changes.
-    Timer {
-        id: autoScanTimer
-        interval: 1000
-        running: root.isOpen
-        repeat: false
-        onTriggered: if (!wifiScanner.running) wifiScanner.running = true
+        onTriggered: if (!wifiScanner.running && !wifiToggler.running) wifiScanner.running = true
     }
 
     function connect(ssid, password) {
@@ -340,7 +329,7 @@ Item {
                 Rectangle {
                     Layout.fillWidth: true; Layout.fillHeight: true
                     color: "transparent"
-                    visible: !root.wifiPower || root.wifiNetworks.length === 0
+                    visible: !root.wifiPower || !root.wifiNetworks || root.wifiNetworks.length === 0
 
                     Column {
                         anchors.centerIn: parent
@@ -363,10 +352,10 @@ Item {
                 ListView {
                     id: wifiList
                     Layout.fillWidth: true; Layout.fillHeight: true
-                    model: root.wifiPower ? root.wifiNetworks : []
+                    model: root.wifiPower && root.wifiNetworks ? root.wifiNetworks : []
                     clip: true
                     spacing: 4
-                    visible: root.wifiPower && root.wifiNetworks.length > 0
+                    visible: root.wifiPower && root.wifiNetworks && root.wifiNetworks.length > 0
 
                     delegate: Rectangle {
                         width: wifiList.width; height: 32; radius: Style.radiusSmall

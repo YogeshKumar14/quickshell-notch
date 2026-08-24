@@ -13,7 +13,7 @@ Item {
 
     property bool isExpanded: false
     property bool isOsdActive: false
-    property string osdIcon: "󰕾"
+    property string osdIcon: "volume_up"
     property int osdValue: 50
     property real animatedOsdValue: root.osdValue
     property color osdColor: Style.accent
@@ -33,12 +33,12 @@ Item {
 
     function showOsd(type, value) {
         if (type === "volume") {
-            root.osdIcon = "󰕾";
+            root.osdIcon = "volume_up";
             root.osdColor = Style.accent;
             root.volumeLevel = value;
             root.osdValue = root.volumeLevel;
         } else if (type === "brightness") {
-            root.osdIcon = "󰃠";
+            root.osdIcon = "light_mode";
             root.osdColor = "#EBCB8B"; // Warm yellow
             root.brightnessLevel = value;
             root.osdValue = root.brightnessLevel;
@@ -752,7 +752,13 @@ Item {
     }
 
     // MPRIS Media properties
-    property var activePlayer: Mpris.players.values.length > 0 ? Mpris.players.values[0] : null
+    property var activePlayer: {
+        var players = Mpris.players.values;
+        for (var i = 0; i < players.length; i++) {
+            if (players[i].playbackState === MprisPlaybackState.Playing) return players[i];
+        }
+        return players.length > 0 ? players[0] : null;
+    }
     property string trackTitle: activePlayer && activePlayer.trackTitle ? activePlayer.trackTitle : "No Media Playing"
     property string trackArtist: activePlayer && activePlayer.trackArtist ? activePlayer.trackArtist : "Top Notch"
     property bool isPlaying: activePlayer ? (activePlayer.playbackState === MprisPlaybackState.Playing) : false
@@ -927,12 +933,12 @@ Item {
 
     Process {
         id: setVolProc
-        stdout: StdioCollector { onStreamFinished: deviceLevelsProc.running = true }
+        stdout: StdioCollector {}
     }
 
     Process {
         id: setMicProc
-        stdout: StdioCollector { onStreamFinished: deviceLevelsProc.running = true }
+        stdout: StdioCollector {}
     }
 
     // Poll device levels only while the notch is expanded or an OSD is up;
@@ -1514,13 +1520,7 @@ Item {
                             spacing: 0
                             z: 1 // Keep tabs above the sliding pill
 
-                            property int hoveredIndex: {
-                                for (var i = 0; i < segRepeater.count; i++) {
-                                    var item = segRepeater.itemAt(i);
-                                    if (item && item.isHovered) return i;
-                                }
-                                return -1;
-                            }
+                            property int hoveredIndex: -1
 
                             Repeater {
                                 id: segRepeater
@@ -1562,6 +1562,8 @@ Item {
                                             root.isWifiPasswordPromptOpen = false;
                                             root.isPowerConfirming = false;
                                         }
+                                        onEntered: segRow.hoveredIndex = index
+                                        onExited: if (segRow.hoveredIndex === index) segRow.hoveredIndex = -1
                                     }
 
                                     // Dynamic M3 Divider
@@ -1672,7 +1674,7 @@ Item {
 
                         M3Icon {
                             anchors.centerIn: parent
-                            name: "󰂜"
+                            name: "notifications"
                             size: 16
                             color: root.isNotifMenuOpen ? "#000" : (root.notifCount > 0 ? Style.accent : Style.textSecondary)
                         }
@@ -2293,7 +2295,8 @@ Item {
                                                     id: diskRadial
                                                     anchors.fill: parent
                                                     property real val: root.diskUsage
-                                                    onValChanged: requestPaint()
+                                                    onValChanged: if (visible && root.isExpanded && root.currentPage === 3) requestPaint()
+                                                    onVisibleChanged: if (visible && root.isExpanded && root.currentPage === 3) requestPaint()
 
                                                     onPaint: {
                                                         var ctx = getContext("2d");
@@ -2396,6 +2399,8 @@ Item {
             pendingTitle: root.pendingPowerTitle
             countdown: root.powerCountdown
             pendingCmd: root.pendingPowerCmd
+            onIsConfirmingChanged: root.isPowerConfirming = powerMenuOverlay.isConfirming
+            onSelectedIndexChanged: root.powerSelectedIndex = powerMenuOverlay.selectedIndex
             onTriggered: function(title, cmd) {
                 root.pendingPowerTitle = title;
                 root.pendingPowerCmd = cmd;

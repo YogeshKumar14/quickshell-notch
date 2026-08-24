@@ -64,8 +64,11 @@ Scope {
             anchors.fill: parent
             notifModel: notifHistoryModel
             onOpenFullSettings: {
-                if (!settingsLoader.active) settingsLoader.active = true;
-                if (settingsLoader.item) settingsLoader.item.toggle();
+                if (!settingsLoader.active) {
+                    settingsLoader.active = true;
+                } else if (settingsLoader.item) {
+                    settingsLoader.item.toggle();
+                }
             }
         }
     }
@@ -105,10 +108,10 @@ Scope {
                             notchComp.isBluetoothMenuOpen = false;
                         } else if (cmd.startsWith("osd:vol:")) {
                             var v = parseInt(cmd.split(":")[2]);
-                            if (!isNaN(v)) notchComp.showOsd("volume", v);
+                            if (!isNaN(v)) notchComp.showOsd("volume", Math.max(0, Math.min(150, v)));
                         } else if (cmd.startsWith("osd:bri:")) {
                             var b = parseInt(cmd.split(":")[2]);
-                            if (!isNaN(b)) notchComp.showOsd("brightness", b);
+                            if (!isNaN(b)) notchComp.showOsd("brightness", Math.max(0, Math.min(100, b)));
                         }
                         clientSocket.connected = false;
                     }
@@ -121,7 +124,9 @@ Scope {
     LazyLoader {
         id: settingsLoader
         SettingsWindow {
+            id: settingsWin
             onNotchSettingsChanged: notchComp.refreshNotchSettings()
+            Component.onCompleted: settingsWin.isOpen = true
         }
     }
 }

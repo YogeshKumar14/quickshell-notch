@@ -37,6 +37,17 @@ def get_mic():
 
 
 def get_brightness():
+    # Try fast direct sysfs read first (no subprocess overhead)
+    for dev in glob.glob("/sys/class/backlight/*"):
+        try:
+            with open(os.path.join(dev, "brightness"), "r") as fp:
+                cur = float(fp.read().strip())
+            with open(os.path.join(dev, "max_brightness"), "r") as fp:
+                mx = float(fp.read().strip())
+            if mx > 0:
+                return int(round((cur / mx) * 100))
+        except Exception:
+            pass
     try:
         out = subprocess.check_output(["brightnessctl", "-m"], text=True, stderr=subprocess.DEVNULL, timeout=5)
         for line in out.splitlines():
@@ -49,7 +60,16 @@ def get_brightness():
 
 
 def get_battery():
-    for dev in sorted(glob.glob("/sys/class/power_supply/BAT*")):
+    candidates = sorted(glob.glob("/sys/class/power_supply/BAT*"))
+    if not candidates:
+        for p in glob.glob("/sys/class/power_supply/*"):
+            try:
+                with open(os.path.join(p, "type"), "r") as fp:
+                    if fp.read().strip().lower() == "battery":
+                        candidates.append(p)
+            except Exception:
+                pass
+    for dev in candidates:
         try:
             with open(os.path.join(dev, "capacity"), "r") as fp:
                 capacity = int(fp.read().strip())

@@ -12,8 +12,8 @@ Canvas {
     property bool thresholdColors: false
 
     implicitHeight: 42
-
-    onHistChanged: requestPaint()
+    onHistChanged: if (visible && width > 0) requestPaint()
+    onVisibleChanged: if (visible && width > 0) requestPaint()
 
     onPaint: {
         var ctx = getContext("2d");

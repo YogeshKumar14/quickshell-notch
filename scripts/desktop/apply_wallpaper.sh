@@ -9,7 +9,8 @@ if [ -z "$TARGET_PIC" ] || [ ! -f "$TARGET_PIC" ]; then
 fi
 
 # Non-blocking lock: if another apply_wallpaper instance is running, exit cleanly
-exec 200>"/tmp/quickshell_wallpaper.lock"
+LOCK_FILE="${XDG_RUNTIME_DIR:-/tmp}/quickshell_wallpaper_${UID:-0}.lock"
+exec 200>"$LOCK_FILE"
 flock -n 200 || exit 0
 
 # Read transition duration and type from permanent config

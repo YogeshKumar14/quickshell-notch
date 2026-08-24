@@ -8,7 +8,7 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(
 from atomic_write import atomic_write
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__))))
-from persist_hypr_state import generate_lua, generate_conf, load_state, save_state, ensure_includes
+from persist_hypr_state import generate_lua, generate_conf, load_state, save_state, ensure_includes, validate_layout
 from apply_hypr_option import apply as apply_hyprctl_keyword, normalize_color
 
 CONFIG_DIR = os.path.expanduser("~/.config/quickshell")
@@ -27,7 +27,7 @@ KEYWORD_MAP = {
     "rounding": ("decoration:rounding", int),
     "border_size": ("general:border_size", int),
     "blur": ("decoration:blur:enabled", to_bool),
-    "layout": ("general:layout", str),
+    "layout": ("general:layout", validate_layout),
     "animations": ("animations:enabled", to_bool),
     "active_opacity": ("decoration:active_opacity", float),
     "inactive_opacity": ("decoration:inactive_opacity", float),

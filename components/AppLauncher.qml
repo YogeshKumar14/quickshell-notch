@@ -23,7 +23,8 @@ FocusScope {
         stdout: StdioCollector {
             onStreamFinished: {
                 try {
-                    root.allApps = JSON.parse(this.text);
+                    var parsed = JSON.parse(this.text);
+                    root.allApps = Array.isArray(parsed) ? parsed : [];
                     root.filterApps();
                 } catch (e) {
                     console.log("Error parsing apps JSON:", e);
@@ -191,6 +192,7 @@ FocusScope {
                         border.color: Style.accent
                         border.width: 2
                         scale: 1.03 // Matches the popped delegate
+                        visible: root.selectedIndex >= 0 && root.selectedIndex < appModel.count
                     }
                 }
 

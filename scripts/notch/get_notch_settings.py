@@ -45,13 +45,18 @@ DEFAULTS = {
 }
 
 def coerce_value(key, val):
-    default = DEFAULTS.get(key)
-    if isinstance(default, bool):
-        return str(val).lower() == "true"
-    if isinstance(default, int):
-        return int(float(val))
-    if isinstance(default, float):
-        return float(val)
+    if key not in DEFAULTS:
+        return None
+    default = DEFAULTS[key]
+    try:
+        if isinstance(default, bool):
+            return str(val).lower() == "true"
+        if isinstance(default, int):
+            return int(float(val))
+        if isinstance(default, float):
+            return float(val)
+    except (ValueError, TypeError):
+        return default
     return val
 
 def main():

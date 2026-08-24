@@ -41,6 +41,10 @@ if os.path.isfile(file_path):
         except Exception:
             print(f"WARNING: unreadable settings file could not be backed up: {e}", file=sys.stderr)
 
-data[key] = coerce_value(key, val)
-atomic_write(file_path, json.dumps(data, indent=2))
+coerced = coerce_value(key, val)
+if coerced is not None:
+    data[key] = coerced
+    atomic_write(file_path, json.dumps(data, indent=2))
+else:
+    print(f"Unknown or invalid notch setting key: {key}", file=sys.stderr)
 PY

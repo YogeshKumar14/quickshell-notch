@@ -3,6 +3,7 @@ import os
 import sys
 import json
 import configparser
+import re
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "core"))
 from atomic_write import atomic_write
@@ -138,7 +139,7 @@ def scan_apps():
                     
                     if name and exec_cmd and name not in seen:
                         seen.add(name)
-                        clean_exec = " ".join([w for w in exec_cmd.split() if not w.startswith("%")])
+                        clean_exec = re.sub(r'%[fFuUdnNickvm]', '', exec_cmd).strip()
                         
                         # Resolve icon path
                         icon_path = ""

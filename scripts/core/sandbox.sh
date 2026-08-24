@@ -2,8 +2,7 @@
 # sandbox.sh - Launches a temporary quickshell instance for UI testing without altering the live desktop configuration
 
 export QUICKSHELL_SANDBOX=1
-
-SANDBOX_PIDFILE="/tmp/quickshell-sandbox.pid"
+SANDBOX_PIDFILE="${XDG_RUNTIME_DIR:-/tmp}/quickshell-sandbox_${UID:-0}.pid"
 
 echo "========================================="
 echo "Quickshell Sandbox Environment Initialized"

@@ -110,7 +110,7 @@ if __name__ == "__main__":
             elif action == "connect" and len(sys.argv) > 2:
                 ssid = sys.argv[2]
                 password = sys.argv[3] if len(sys.argv) > 3 else None
-                args = ["nmcli", "dev", "wifi", "connect", ssid]
+                args = ["nmcli", "dev", "wifi", "connect", "--", ssid]
                 if password:
                     args += ["password", password]
                 subprocess.run(args, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=CONNECT_TIMEOUT, preexec_fn=set_pdeathsig)

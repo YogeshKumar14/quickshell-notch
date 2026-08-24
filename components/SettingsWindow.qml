@@ -199,24 +199,25 @@ PanelWindow {
     // Atomic Single Process Batch Executor
     Process {
         id: applyAllProc
-        stdout: StdioCollector { }
+        stdout: StdioCollector {
+            onStreamFinished: {
+                var statusText = this.text;
+                if (statusText.indexOf("\"status\": \"partial\"") >= 0 || statusText.indexOf("\"status\": \"error\"") >= 0) {
+                    root.isApplyFailed = true;
+                    applyFailedTimer.restart();
+                    return;
+                }
+                root.hasPendingChanges = false;
+                root.isAppliedSuccess = true;
+                appliedSuccessTimer.restart();
+                root.notchSettingsChanged();
+            }
+        }
         onExited: function(exitCode, exitStatus) {
             if (exitCode !== 0) {
                 root.isApplyFailed = true;
                 applyFailedTimer.restart();
-                return;
             }
-            var statusText = "";
-            try { statusText = applyAllProc.stdout.text; } catch (e) {}
-            if (statusText.indexOf("\"status\": \"partial\"") >= 0 || statusText.indexOf("\"status\": \"error\"") >= 0) {
-                root.isApplyFailed = true;
-                applyFailedTimer.restart();
-                return;
-            }
-            root.hasPendingChanges = false;
-            root.isAppliedSuccess = true;
-            appliedSuccessTimer.restart();
-            root.notchSettingsChanged();
         }
     }
 
@@ -377,13 +378,7 @@ PanelWindow {
                         spacing: 0
                         z: 1 // Keep tabs above the sliding pills
 
-                        property int hoveredIndex: {
-                            for (var i = 0; i < settingsSegRepeater.count; i++) {
-                                var item = settingsSegRepeater.itemAt(i);
-                                if (item && item.isHovered) return i;
-                            }
-                            return -1;
-                        }
+                        property int hoveredIndex: -1
 
                         Repeater {
                             id: settingsSegRepeater
@@ -398,19 +393,21 @@ PanelWindow {
                                 RowLayout {
                                     anchors.centerIn: parent
                                     spacing: 6
+
                                     M3Icon {
-                                        name: ["desktop_windows", "mouse", "auto_awesome", "settings"][index]
-                                        color: root.currentTab === index ? "#000" : Style.textSecondary
+                                        name: index === 0 ? "settings" : (index === 1 ? "memory" : (index === 2 ? "wallpaper" : "hard_drive"))
                                         size: 16
-                                        Behavior on color { ColorAnimation { duration: 150 } }
+                                        color: root.currentTab === index ? "#000000" : Style.textPrimary
+                                        Behavior on color { ColorAnimation { duration: root.buttonSpeedVal } }
                                     }
+
                                     Text {
                                         text: modelData
                                         font.family: Style.fontFamily
-                                        color: root.currentTab === index ? "#000" : Style.textSecondary
-                                        font.pixelSize: 12
-                                        font.weight: Font.Bold
-                                        Behavior on color { ColorAnimation { duration: 150 } }
+                                        font.pixelSize: Style.fontSizeSmall
+                                        font.weight: root.currentTab === index ? Font.Bold : Font.Normal
+                                        color: root.currentTab === index ? "#000000" : Style.textPrimary
+                                        Behavior on color { ColorAnimation { duration: root.buttonSpeedVal } }
                                     }
                                 }
 
@@ -420,6 +417,8 @@ PanelWindow {
                                     hoverEnabled: true
                                     cursorShape: Qt.PointingHandCursor
                                     onClicked: root.currentTab = index
+                                    onEntered: settingsSegRow.hoveredIndex = index
+                                    onExited: if (settingsSegRow.hoveredIndex === index) settingsSegRow.hoveredIndex = -1
                                 }
 
                                 // Dynamic M3 Divider

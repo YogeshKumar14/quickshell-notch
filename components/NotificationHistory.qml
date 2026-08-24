@@ -360,7 +360,6 @@ Item {
                         } else {
                             if (root.expandedIndex === index) {
                                 root.expandedIndex = -1;
-                                root.expandedExtraHeight = 0;
                             } else {
                                 root.expandedIndex = index;
                                 notifList.positionViewAtIndex(index, ListView.Contain);

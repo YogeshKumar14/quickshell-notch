@@ -5,7 +5,14 @@ import sys
 import signal
 import ctypes
 
+import re
+
 TIMEOUT = 5
+CONNECT_TIMEOUT = 15
+MAC_REGEX = re.compile(r"^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$")
+
+def is_valid_mac(mac_str):
+    return bool(MAC_REGEX.match(mac_str.strip()))
 
 def set_pdeathsig():
     try:
@@ -57,13 +64,14 @@ if __name__ == "__main__":
         elif action == "off":
             subprocess.run(["bluetoothctl", "power", "off"], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=TIMEOUT)
         elif action == "toggle_conn" and len(sys.argv) > 2:
-            mac = sys.argv[2]
-            try:
-                info = subprocess.check_output(["bluetoothctl", "info", mac], stderr=subprocess.DEVNULL, timeout=TIMEOUT).decode()
-                if "Connected: yes" in info:
-                    subprocess.run(["bluetoothctl", "disconnect", mac], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=TIMEOUT, preexec_fn=set_pdeathsig)
-                else:
-                    subprocess.run(["bluetoothctl", "connect", mac], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=TIMEOUT, preexec_fn=set_pdeathsig)
-            except Exception:
-                pass
+            mac = sys.argv[2].strip()
+            if is_valid_mac(mac):
+                try:
+                    info = subprocess.check_output(["bluetoothctl", "info", mac], stderr=subprocess.DEVNULL, timeout=TIMEOUT).decode()
+                    if "Connected: yes" in info:
+                        subprocess.run(["bluetoothctl", "disconnect", mac], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=CONNECT_TIMEOUT, preexec_fn=set_pdeathsig)
+                    else:
+                        subprocess.run(["bluetoothctl", "connect", mac], stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL, timeout=CONNECT_TIMEOUT, preexec_fn=set_pdeathsig)
+                except Exception:
+                    pass
     print(json.dumps(get_status()))

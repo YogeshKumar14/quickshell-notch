@@ -10,9 +10,12 @@ import signal
 
 import ctypes
 
+import re
+
 CONFIG_DIR = os.path.expanduser("~/.config/quickshell")
+RUNTIME_DIR = os.environ.get("XDG_RUNTIME_DIR", "/tmp")
 NOTCH_CONFIG_FILE = os.path.join(CONFIG_DIR, "notch_settings.json")
-CAVA_CONFIG_FILE = os.path.join(CONFIG_DIR, f"cava_config.{os.getpid()}")
+CAVA_CONFIG_FILE = os.path.join(RUNTIME_DIR, f"quickshell_cava.{os.getpid()}")
 DEFAULT_BAR_COUNT = 12
 ACTIVITY_THRESHOLD = 5
 MAX_BACKOFF = 30
@@ -36,33 +39,38 @@ def cleanup():
         except Exception:
             pass
     try:
-        os.unlink(CAVA_CONFIG_FILE)
+        if os.path.exists(CAVA_CONFIG_FILE):
+            os.unlink(CAVA_CONFIG_FILE)
     except OSError:
         pass
 
 def sweep_stale_configs():
-    try:
-        now = time.time()
-        for name in os.listdir(CONFIG_DIR):
-            if not name.startswith("cava_config."):
+    # Sweep legacy config dir and runtime dir
+    for scan_dir, prefix in [(CONFIG_DIR, "cava_config."), (RUNTIME_DIR, "quickshell_cava.")]:
+        try:
+            now = time.time()
+            if not os.path.isdir(scan_dir):
                 continue
-            path = os.path.join(CONFIG_DIR, name)
-            try:
-                pid = int(name.rsplit(".", 1)[1])
-            except ValueError:
-                continue
-            try:
-                if os.path.isdir(f"/proc/{pid}"):
+            for name in os.listdir(scan_dir):
+                if not name.startswith(prefix):
                     continue
-            except OSError:
-                pass
-            if now - os.path.getmtime(path) > 60:
+                path = os.path.join(scan_dir, name)
                 try:
-                    os.unlink(path)
+                    pid = int(name.rsplit(".", 1)[1])
+                except ValueError:
+                    continue
+                try:
+                    if os.path.isdir(f"/proc/{pid}"):
+                        continue
                 except OSError:
                     pass
-    except OSError:
-        pass
+                if now - os.path.getmtime(path) > 30:
+                    try:
+                        os.unlink(path)
+                    except OSError:
+                        pass
+        except OSError:
+            pass
 
 atexit.register(cleanup)
 
@@ -100,6 +108,8 @@ def get_bar_count():
     return DEFAULT_BAR_COUNT
 
 def write_cava_config(bar_count, monitor_source):
+    bar_count = max(2, min(64, int(bar_count)))
+    clean_source = re.sub(r"[^a-zA-Z0-9._-]", "", monitor_source) or "auto"
     config_content = f"""[general]
 bars = {bar_count}
 framerate = 15
@@ -108,7 +118,7 @@ sleep_timer = 2
 
 [input]
 method = pulse
-source = {monitor_source}
+source = {clean_source}
 
 [output]
 method = raw
@@ -117,7 +127,6 @@ data_format = ascii
 ascii_max_range = 100
 bar_delimiter = 59
 """
-    os.makedirs(CONFIG_DIR, exist_ok=True)
     with open(CAVA_CONFIG_FILE, "w", encoding="utf-8") as fp:
         fp.write(config_content)
 

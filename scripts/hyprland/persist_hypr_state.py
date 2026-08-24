@@ -39,6 +39,14 @@ def save_state(data):
     os.makedirs(os.path.dirname(CACHE_FILE), exist_ok=True)
     atomic_write(CACHE_FILE, json.dumps(data))
 
+ALLOWED_LAYOUTS = {"dwindle", "master"}
+
+def validate_layout(val):
+    s = str(val).strip().lower()
+    if s not in ALLOWED_LAYOUTS:
+        raise ValueError(f"Invalid layout: {val!r}")
+    return s
+
 def convert_type(t, v):
     try:
         if t in ["gaps_in", "gaps_out", "rounding", "border_size", "shadow_range", "blur_passes", "blur_size"]:
@@ -49,6 +57,8 @@ def convert_type(t, v):
             return str(v).lower() == "true"
         elif t in ["active_border", "inactive_border"]:
             return normalize_color(v)
+        elif t == "layout":
+            return validate_layout(v)
         return v
     except ValueError as e:
         print(f"Invalid value for {t}: {v} ({e})", file=sys.stderr)
@@ -99,7 +109,7 @@ def generate_conf(data):
 input {{
     sensitivity = {data.get("input_sensitivity", DEFAULTS["input_sensitivity"])}
     touchpad {{
-        tap-to-click = {"true" if data.get("input_tap_to_click", DEFAULTS["input_tap_to_click"]) else "false"}
+        tap_to_click = {"true" if data.get("input_tap_to_click", DEFAULTS["input_tap_to_click"]) else "false"}
         natural_scroll = {"true" if data.get("input_natural_scroll", DEFAULTS["input_natural_scroll"]) else "false"}
     }}
 }}

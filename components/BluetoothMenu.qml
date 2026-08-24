@@ -20,8 +20,13 @@ Item {
     Behavior on opacity { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
 
     onIsOpenChanged: {
-        if (isOpen && !btScanner.running) {
-            btScanner.running = true;
+        if (!isOpen) {
+            btScanner.running = false;
+            btToggler.running = false;
+        } else {
+            if (!btScanner.running && !btToggler.running) {
+                btScanner.running = true;
+            }
         }
     }
 
@@ -32,8 +37,8 @@ Item {
             onStreamFinished: {
                 try {
                     var data = JSON.parse(this.text);
-                    root.btPower = data.power;
-                    root.btDevices = data.devices;
+                    root.btPower = data && data.power !== undefined ? data.power : false;
+                    root.btDevices = (data && Array.isArray(data.devices)) ? data.devices : [];
                 } catch(e) {}
             }
         }
@@ -45,8 +50,8 @@ Item {
             onStreamFinished: {
                 try {
                     var data = JSON.parse(this.text);
-                    root.btPower = data.power;
-                    root.btDevices = data.devices;
+                    root.btPower = data && data.power !== undefined ? data.power : false;
+                    root.btDevices = (data && Array.isArray(data.devices)) ? data.devices : [];
                 } catch(e) {}
                 scanTimer.restart();
             }
@@ -58,15 +63,15 @@ Item {
         interval: 1000
         running: false
         repeat: false
-        onTriggered: btScanner.running = true
+        onTriggered: if (!btScanner.running && !btToggler.running) btScanner.running = true
     }
 
     Timer {
         id: autoScanTimer
         interval: 5000
-        running: root.isOpen
+        running: root.isOpen && root.btPower
         repeat: true
-        onTriggered: btScanner.running = true
+        onTriggered: if (!btScanner.running && !btToggler.running) btScanner.running = true
     }
 
     function toggleConnection(mac) {
@@ -180,7 +185,7 @@ Item {
         Rectangle {
             Layout.fillWidth: true; Layout.fillHeight: true
             color: "transparent"
-            visible: !root.btPower || root.btDevices.length === 0
+            visible: !root.btPower || !root.btDevices || root.btDevices.length === 0
 
             Column {
                 anchors.centerIn: parent
@@ -203,10 +208,10 @@ Item {
         ListView {
             id: btList
             Layout.fillWidth: true; Layout.fillHeight: true
-            model: root.btPower ? root.btDevices : []
+            model: root.btPower && root.btDevices ? root.btDevices : []
             clip: true
             spacing: 4
-            visible: root.btPower && root.btDevices.length > 0
+            visible: root.btPower && root.btDevices && root.btDevices.length > 0
 
             delegate: Rectangle {
                 width: btList.width; height: 32; radius: Style.radiusSmall

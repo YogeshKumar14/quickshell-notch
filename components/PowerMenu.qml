@@ -58,6 +58,7 @@ Item {
         root.countdown = 5;
         root.isConfirming = true;
         countdownTimer.restart();
+        root.triggered(title, cmd);
     }
 
     function execute() {
@@ -109,10 +110,10 @@ Item {
 
                 Repeater {
                     model: [
-                        { title: "Shutdown", icon: "󰐥", color: Style.danger, cmd: "systemctl poweroff" },
-                        { title: "Reboot", icon: "󰑐", color: Style.warning, cmd: "systemctl reboot" },
-                        { title: "Sleep", icon: "󰤄", color: Style.teal, cmd: "systemctl suspend" },
-                        { title: "Logout", icon: "󰍃", color: Style.purple, cmd: "hyprctl dispatch exit" }
+                        { title: "Shutdown", icon: "power_settings_new", color: Style.danger, cmd: "systemctl poweroff" },
+                        { title: "Reboot", icon: "restart_alt", color: Style.warning, cmd: "systemctl reboot" },
+                        { title: "Sleep", icon: "coffee", color: Style.teal, cmd: "systemctl suspend" },
+                        { title: "Logout", icon: "logout", color: Style.purple, cmd: "hyprctl dispatch exit" }
                     ]
 
                     Rectangle {
