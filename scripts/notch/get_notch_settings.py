@@ -41,7 +41,11 @@ DEFAULTS = {
     "clock_format": "h:mm A",
     "clock_font_size": 14,
     "battery_warning_threshold": 20,
-    "wallpaper_dir": ""
+    "wallpaper_dir": "",
+    "highlight_anim_type": "spring",
+    "highlight_spring_tension": 5.5,
+    "highlight_spring_damping": 0.25,
+    "grid_anim_duration": 120
 }
 
 def coerce_value(key, val):

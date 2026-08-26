@@ -53,6 +53,7 @@ QtObject {
     readonly property color success: "#30D158"
     readonly property color warning: "#FF9F0A"
     readonly property color danger: "#FF453A"
+    readonly property color iosYellow: "#FFD60A"
     readonly property color purple: "#BF5AF2"
     readonly property color teal: "#64D2FF"
 

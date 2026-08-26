@@ -17,6 +17,12 @@ FocusScope {
     // Wallpaper source folder; empty = default folders (Pictures/Wallpapers, WallpaperMinimal)
     property string wallpaperDir: ""
 
+    // Highlight & Grid Animation Customization
+    property string highlightAnimType: "spring"
+    property real highlightSpringTension: 5.5
+    property real highlightSpringDamping: 0.25
+    property int gridAnimDuration: 120
+
     signal wallpaperSelected(string path)
 
     property var allWallpapers: []
@@ -226,11 +232,11 @@ FocusScope {
                 highlightFollowsCurrentItem: false
 
                 add: Transition {
-                    NumberAnimation { property: "opacity"; from: 0; to: 1; duration: Style.animFast; easing.type: Easing.OutQuad }
-                    NumberAnimation { property: "scale"; from: 0.92; to: 1.0; duration: Style.animFast; easing.type: Easing.OutQuad }
+                    NumberAnimation { property: "opacity"; from: 0; to: 1; duration: root.gridAnimDuration; easing.type: Easing.OutQuad }
+                    NumberAnimation { property: "scale"; from: 0.92; to: 1.0; duration: root.gridAnimDuration; easing.type: Easing.OutQuad }
                 }
                 displaced: Transition {
-                    NumberAnimation { properties: "x,y"; duration: Style.animNormal; easing.type: Easing.OutQuad }
+                    NumberAnimation { properties: "x,y"; duration: root.gridAnimDuration; easing.type: Easing.OutQuad }
                 }
 
                 highlight: Item {
@@ -240,8 +246,22 @@ FocusScope {
                     x: gridView.currentItem ? gridView.currentItem.x : 0
                     y: gridView.currentItem ? gridView.currentItem.y : 0
                     
-                    Behavior on x { enabled: gridView.currentItem !== null; SpringAnimation { spring: Style.springTabTension; damping: Style.springTabDamping } }
-                    Behavior on y { enabled: gridView.currentItem !== null; SpringAnimation { spring: Style.springTabTension; damping: Style.springTabDamping } }
+                    Behavior on x {
+                        enabled: gridView.currentItem !== null && root.highlightAnimType !== "none"
+                        SpringAnimation {
+                            spring: root.highlightAnimType === "linear" ? 14.0 : (root.highlightAnimType === "smooth" ? 4.0 : root.highlightSpringTension)
+                            damping: root.highlightAnimType === "linear" ? 0.99 : (root.highlightAnimType === "smooth" ? 0.65 : root.highlightSpringDamping)
+                            epsilon: Style.springEpsilon
+                        }
+                    }
+                    Behavior on y {
+                        enabled: gridView.currentItem !== null && root.highlightAnimType !== "none"
+                        SpringAnimation {
+                            spring: root.highlightAnimType === "linear" ? 14.0 : (root.highlightAnimType === "smooth" ? 4.0 : root.highlightSpringTension)
+                            damping: root.highlightAnimType === "linear" ? 0.99 : (root.highlightAnimType === "smooth" ? 0.65 : root.highlightSpringDamping)
+                            epsilon: Style.springEpsilon
+                        }
+                    }
 
                     Rectangle {
                         anchors.centerIn: parent

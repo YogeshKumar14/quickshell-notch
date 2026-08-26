@@ -4,6 +4,21 @@ All notable changes to QuickShell Top Notch are documented here.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.2.0] - 2026-08-26
+
+### Added
+- Modern Material 3 Expressive Dynamic Battery Capsule (19×10.5px) with animated fluid fill bar and embedded charging lightning bolt
+- Apple iOS 4-tier Dark Mode Battery Palette (Charging Green `#30D158`, Normal White `#FFFFFF`, Low Power Yellow `#FFD60A`, Critical Red `#FF453A`) with crisp solid white percentage text
+- Customizable Magic Highlight Animation settings in Settings App (Spring, Smooth, Linear, and Off modes)
+- Magic Highlight Glide Tension (1.0–10.0) and Damping (0.10–0.80) slider controls in Settings App
+- Grid Card Entrance Duration (60ms–300ms) slider control for Wallpaper Selector and App Launcher
+- Spinning spring physics animation on Brightness OSD icon (+45° on increase, -45° on decrease)
+- Comprehensive 80-test aggressive end-to-end test suite (`scripts/core/test_all_features.py`) covering QML syntax, backend schemas, Hyprland dual-write, IPC socket stress & fuzzing, D-Bus floods, and process lifecycle / leak auditing
+- Full sandbox isolation (`tempfile.TemporaryDirectory`) for test harness to protect user config and live Hyprland settings
+
+### Changed
+- Scaled OSD icon size to 20px for balanced proportions
+
 ## [1.1.1] - 2026-08-26
 
 ### Fixed
