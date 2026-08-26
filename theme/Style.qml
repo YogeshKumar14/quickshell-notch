@@ -23,6 +23,15 @@ QtObject {
     readonly property color overlayLight: "#1AFFFFFF"
     readonly property color textOnAccent: "#000000"
 
+    // List item & card delegate backgrounds
+    readonly property color itemBg: "#0A0A0C"
+    readonly property color itemBgHover: "#121214"
+    readonly property color itemBgActive: "#1C1C1E"
+    readonly property color itemBorder: "#222225"
+
+    // OSD Accent Colors
+    readonly property color warningYellow: "#EBCB8B"
+
     // === Animation & Transition Timing ===
     readonly property int animFast: 120        // micro-interactions (press feedback, icon colors)
     readonly property int animNormal: 180      // standard transitions (opacity, list hovers, dialogs)
