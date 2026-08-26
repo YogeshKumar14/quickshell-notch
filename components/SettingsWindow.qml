@@ -117,6 +117,11 @@ PanelWindow {
     property real tabSpringTension: 5.5
     property real tabSpringDamping: 0.22
 
+    property string highlightAnimTypeVal: "spring"
+    property real highlightSpringTensionVal: 5.5
+    property real highlightSpringDampingVal: 0.25
+    property int gridAnimDurationVal: 120
+
     Process {
         id: getOptionsProc
         command: ["python3", "/home/yogesh/.config/quickshell/scripts/hyprland/get_hypr_options.py"]
@@ -189,6 +194,10 @@ PanelWindow {
                     if (data.clock_format !== undefined) root.clockFormatVal = data.clock_format;
                     if (data.clock_font_size !== undefined) root.clockFontSizeVal = data.clock_font_size;
                     if (data.battery_warning_threshold !== undefined) root.batteryWarningThresholdVal = data.battery_warning_threshold;
+                    if (data.highlight_anim_type !== undefined) root.highlightAnimTypeVal = data.highlight_anim_type;
+                    if (data.highlight_spring_tension !== undefined) root.highlightSpringTensionVal = data.highlight_spring_tension;
+                    if (data.highlight_spring_damping !== undefined) root.highlightSpringDampingVal = data.highlight_spring_damping;
+                    if (data.grid_anim_duration !== undefined) root.gridAnimDurationVal = data.grid_anim_duration;
                 } catch (e) {
                     console.log("Error parsing notch settings:", e);
                 }
@@ -299,7 +308,11 @@ PanelWindow {
                 "osd_timeout": root.osdTimeoutVal,
                 "clock_format": root.clockFormatVal,
                 "clock_font_size": root.clockFontSizeVal,
-                "battery_warning_threshold": root.batteryWarningThresholdVal
+                "battery_warning_threshold": root.batteryWarningThresholdVal,
+                "highlight_anim_type": root.highlightAnimTypeVal,
+                "highlight_spring_tension": root.highlightSpringTensionVal,
+                "highlight_spring_damping": root.highlightSpringDampingVal,
+                "grid_anim_duration": root.gridAnimDurationVal
             }
         };
 
@@ -1410,6 +1423,97 @@ PanelWindow {
                                     CustomSlider {
                                         width: parent.width; from: 0.10; to: 0.80; value: root.tabSpringDamping; stepSize: 0.02
                                         onMoved: function(val) { root.tabSpringDamping = val; root.hasPendingChanges = true; }
+                                    }
+                                }
+                            }
+                        }
+                    }
+
+                    // SECTION 7: MAGIC HIGHLIGHT & GRID ANIMATIONS
+                    Column {
+                        width: parent.width; spacing: 8
+                        RowLayout {
+                            width: parent.width; spacing: 6
+                            M3Icon { name: "auto_awesome"; color: Style.accent; size: 16 }
+                            Text { text: "MAGIC HIGHLIGHT & GRID ANIMATIONS"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeSmall; font.weight: Font.Bold; color: Style.textMuted }
+                        }
+
+                        Rectangle {
+                            width: parent.width; height: secHighInner.height + 24; radius: Style.radiusMedium; color: Style.cardBg; border.color: Style.cardBorder
+                            Column {
+                                id: secHighInner
+                                anchors.left: parent.left; anchors.right: parent.right; anchors.top: parent.top; anchors.margins: 14; spacing: 14
+
+                                RowLayout {
+                                    width: parent.width
+                                    Text { text: "Highlight Glide Animation"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeNormal; color: Style.textPrimary; Layout.alignment: Qt.AlignVCenter }
+                                    Item { Layout.fillWidth: true }
+                                    RowLayout {
+                                        spacing: 6; Layout.alignment: Qt.AlignVCenter
+                                        Repeater {
+                                            model: [
+                                                { "id": "spring", "label": "Spring" },
+                                                { "id": "smooth", "label": "Smooth" },
+                                                { "id": "linear", "label": "Linear" },
+                                                { "id": "none", "label": "Off" }
+                                            ]
+                                            Rectangle {
+                                                implicitWidth: 60; implicitHeight: 28; radius: 14
+                                                color: root.highlightAnimTypeVal === modelData.id ? Style.accent : Style.cardBgHover
+                                                Text { anchors.centerIn: parent; text: modelData.label; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeSmall; font.weight: Font.Bold; color: root.highlightAnimTypeVal === modelData.id ? "#000" : Style.textSecondary }
+                                                MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { root.highlightAnimTypeVal = modelData.id; root.hasPendingChanges = true; } }
+                                            }
+                                        }
+                                    }
+                                }
+
+                                Rectangle { width: parent.width; height: 1; color: Style.divider; visible: root.highlightAnimTypeVal === "spring" }
+
+                                Column {
+                                    width: parent.width; spacing: 6
+                                    visible: root.highlightAnimTypeVal === "spring"
+                                    RowLayout {
+                                        width: parent.width
+                                        Text { text: "Highlight Glide Tension"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeNormal; color: Style.textPrimary }
+                                        Item { Layout.fillWidth: true }
+                                        Text { text: root.highlightSpringTensionVal.toFixed(1); font.family: Style.fontFamilyMono; font.pixelSize: Style.fontSizeSmall; color: Style.accent; font.weight: Font.Bold }
+                                    }
+                                    CustomSlider {
+                                        width: parent.width; from: 1.0; to: 10.0; value: root.highlightSpringTensionVal; stepSize: 0.5
+                                        onMoved: function(val) { root.highlightSpringTensionVal = val; root.hasPendingChanges = true; }
+                                    }
+                                }
+
+                                Rectangle { width: parent.width; height: 1; color: Style.divider; visible: root.highlightAnimTypeVal === "spring" }
+
+                                Column {
+                                    width: parent.width; spacing: 6
+                                    visible: root.highlightAnimTypeVal === "spring"
+                                    RowLayout {
+                                        width: parent.width
+                                        Text { text: "Highlight Glide Damping"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeNormal; color: Style.textPrimary }
+                                        Item { Layout.fillWidth: true }
+                                        Text { text: root.highlightSpringDampingVal.toFixed(2); font.family: Style.fontFamilyMono; font.pixelSize: Style.fontSizeSmall; color: Style.accent; font.weight: Font.Bold }
+                                    }
+                                    CustomSlider {
+                                        width: parent.width; from: 0.10; to: 0.80; value: root.highlightSpringDampingVal; stepSize: 0.02
+                                        onMoved: function(val) { root.highlightSpringDampingVal = val; root.hasPendingChanges = true; }
+                                    }
+                                }
+
+                                Rectangle { width: parent.width; height: 1; color: Style.divider }
+
+                                Column {
+                                    width: parent.width; spacing: 6
+                                    RowLayout {
+                                        width: parent.width
+                                        Text { text: "Grid Card Entrance Duration"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeNormal; color: Style.textPrimary }
+                                        Item { Layout.fillWidth: true }
+                                        Text { text: root.gridAnimDurationVal + " ms"; font.family: Style.fontFamilyMono; font.pixelSize: Style.fontSizeSmall; color: Style.accent; font.weight: Font.Bold }
+                                    }
+                                    CustomSlider {
+                                        width: parent.width; from: 60; to: 300; value: root.gridAnimDurationVal; stepSize: 10
+                                        onMoved: function(val) { root.gridAnimDurationVal = Math.round(val); root.hasPendingChanges = true; }
                                     }
                                 }
                             }

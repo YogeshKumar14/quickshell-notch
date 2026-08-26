@@ -325,6 +325,10 @@ Item {
     property bool buttonAnimsVal: true
     property int buttonSpeedVal: 180
     property int appColumnsVal: 4
+    property string highlightAnimTypeVal: "spring"
+    property real highlightSpringTensionVal: 5.5
+    property real highlightSpringDampingVal: 0.25
+    property int gridAnimDurationVal: 120
 
     // Visualizer Parameters & Counterparts
     property bool visualizerEnabledVal: true
@@ -620,6 +624,10 @@ Item {
                     if (data.clock_font_size !== undefined) root.clockFontSizeVal = data.clock_font_size;
                     if (data.battery_warning_threshold !== undefined) root.batteryWarningThresholdVal = data.battery_warning_threshold;
                     if (data.wallpaper_dir !== undefined) root.wallpaperDirVal = data.wallpaper_dir;
+                    if (data.highlight_anim_type !== undefined) root.highlightAnimTypeVal = data.highlight_anim_type;
+                    if (data.highlight_spring_tension !== undefined) root.highlightSpringTensionVal = data.highlight_spring_tension;
+                    if (data.highlight_spring_damping !== undefined) root.highlightSpringDampingVal = data.highlight_spring_damping;
+                    if (data.grid_anim_duration !== undefined) root.gridAnimDurationVal = data.grid_anim_duration;
                 } catch (e) {
                     console.log("Error loading notch settings:", e);
                 }
@@ -2249,6 +2257,10 @@ Item {
                                 sourceComponent: WallpaperSelector {
                                     isOpen: true
                                     wallpaperDir: root.wallpaperDirVal
+                                    highlightAnimType: root.highlightAnimTypeVal
+                                    highlightSpringTension: root.highlightSpringTensionVal
+                                    highlightSpringDamping: root.highlightSpringDampingVal
+                                    gridAnimDuration: root.gridAnimDurationVal
                                     onWallpaperSelected: function(path) {
                                         root.handleWallpaperSelected(path);
                                     }
@@ -2269,6 +2281,10 @@ Item {
                                 focus: true
                                 sourceComponent: AppLauncher {
                                     appColumns: root.appColumnsVal
+                                    highlightAnimType: root.highlightAnimTypeVal
+                                    highlightSpringTension: root.highlightSpringTensionVal
+                                    highlightSpringDamping: root.highlightSpringDampingVal
+                                    gridAnimDuration: root.gridAnimDurationVal
                                     onAppLaunched: {
                                         root.isExpanded = false;
                                     }
