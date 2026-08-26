@@ -33,13 +33,13 @@ Item {
 
     function showOsd(type, value) {
         if (type === "volume") {
-            root.osdIcon = "volume_up";
+            root.osdIcon = value === 0 ? "volume_off" : (value < 50 ? "volume_down" : "volume_up");
             root.osdColor = Style.accent;
             root.volumeLevel = value;
             root.osdValue = root.volumeLevel;
         } else if (type === "brightness") {
             root.osdIcon = "light_mode";
-            root.osdColor = Style.warning;
+            root.osdColor = Style.warningYellow;
             root.brightnessLevel = value;
             root.osdValue = root.brightnessLevel;
         }

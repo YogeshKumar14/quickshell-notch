@@ -4,6 +4,16 @@ All notable changes to QuickShell Top Notch are documented here.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.1.1] - 2026-08-26
+
+### Fixed
+- Restored dark solid surface colors (`itemBg`, `itemBgHover`, `itemBgActive`, `itemBorder`) in `Style.qml` to fix white popup rectangles across Notification, Power, Wi-Fi, and Bluetooth panels
+- Fixed unassigned property warnings on Power menu confirmation button scale animation
+
+### Changed
+- Restored warm gold/yellow (`#EBCB8B` via `Style.warningYellow`) for Brightness OSD
+- Restored dynamic volume level icons (`volume_off`, `volume_down`, `volume_up`) for Volume OSD
+
 ## [1.1.0] - 2026-08-26
 
 ### Added

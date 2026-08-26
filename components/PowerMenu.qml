@@ -246,8 +246,8 @@ Item {
                         radius: 18
                         color: Style.danger
 
-                        scale: (root.buttonAnimsVal && pConfirmM.pressed) ? 0.95 : ((root.buttonAnimsVal && pConfirmM.containsMouse) ? 1.05 : 1.0)
-                        Behavior on scale { enabled: root.buttonAnimsVal; NumberAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
+                        scale: pConfirmM.pressed ? 0.95 : (pConfirmM.containsMouse ? 1.05 : 1.0)
+                        Behavior on scale { NumberAnimation { duration: Style.animFast; easing.type: Easing.OutQuad } }
 
                         Text {
                             anchors.centerIn: parent
