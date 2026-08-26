@@ -15,10 +15,10 @@ Item {
         id: track
         anchors.fill: parent
         radius: 13
-        color: root.checked ? Style.accent : "#3A3A3C"
+        color: root.checked ? Style.accent : Style.controlBorder
 
         Behavior on color {
-            ColorAnimation { duration: 180 }
+            ColorAnimation { duration: Style.animNormal; easing.type: Easing.OutQuad }
         }
     }
 
@@ -28,7 +28,7 @@ Item {
         width: 22
         height: 22
         radius: 11
-        color: "#FFFFFF"
+        color: Style.textPrimary
         anchors.verticalCenter: parent.verticalCenter
         x: root.checked ? root.width - width - 2 : 2
 

@@ -310,9 +310,15 @@ PanelWindow {
     Rectangle {
         anchors.fill: parent
         radius: Style.radiusLarge
-        color: "#141416"
-        border.color: "#2C2C2E"
+        color: Style.surfaceWindow
+        border.color: Style.cardBorder
         border.width: 1
+
+        opacity: root.isOpen ? 1.0 : 0.0
+        scale: root.isOpen ? 1.0 : 0.96
+
+        Behavior on opacity { NumberAnimation { duration: Style.animSlow; easing.type: Easing.OutQuad } }
+        Behavior on scale { NumberAnimation { duration: Style.animSlow; easing.type: Easing.OutQuad } }
 
         ColumnLayout {
             anchors.fill: parent
@@ -330,8 +336,8 @@ PanelWindow {
                     Layout.maximumWidth: 700
                     implicitHeight: 34
                     radius: 17
-                    color: "#1C1C1E"
-                    border.color: "#2C2C2E"
+                    color: Style.cardBg
+                    border.color: Style.cardBorder
 
                     // Sliding Hover Pill (master handle — springs to the hovered tab)
                     Rectangle {
@@ -350,7 +356,7 @@ PanelWindow {
 
                         Behavior on x { enabled: settingsHoverPill.width > 0; SpringAnimation { spring: root.tabSpringTension; damping: root.tabSpringDamping } }
                         Behavior on width { enabled: settingsHoverPill.width > 0; SpringAnimation { spring: root.tabSpringTension; damping: root.tabSpringDamping } }
-                        Behavior on opacity { NumberAnimation { duration: root.buttonSpeedVal } }
+                        Behavior on opacity { NumberAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
                     }
 
                     // Sliding Highlight Pill (master highlight handle — springs to the active tab)
@@ -397,8 +403,8 @@ PanelWindow {
                                     M3Icon {
                                         name: index === 0 ? "settings" : (index === 1 ? "memory" : (index === 2 ? "wallpaper" : "hard_drive"))
                                         size: 16
-                                        color: root.currentTab === index ? "#000000" : Style.textPrimary
-                                        Behavior on color { ColorAnimation { duration: root.buttonSpeedVal } }
+                                        color: root.currentTab === index ? Style.textOnAccent : Style.textPrimary
+                                        Behavior on color { ColorAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
                                     }
 
                                     Text {
@@ -406,8 +412,8 @@ PanelWindow {
                                         font.family: Style.fontFamily
                                         font.pixelSize: Style.fontSizeSmall
                                         font.weight: root.currentTab === index ? Font.Bold : Font.Normal
-                                        color: root.currentTab === index ? "#000000" : Style.textPrimary
-                                        Behavior on color { ColorAnimation { duration: root.buttonSpeedVal } }
+                                        color: root.currentTab === index ? Style.textOnAccent : Style.textPrimary
+                                        Behavior on color { ColorAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
                                     }
                                 }
 
@@ -447,13 +453,14 @@ PanelWindow {
 
                     scale: (root.buttonAnimsVal && closeM.pressed) ? 0.95 : ((root.buttonAnimsVal && closeM.containsMouse) ? 1.08 : 1.0)
                     Behavior on scale { enabled: root.buttonAnimsVal; NumberAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
+                    Behavior on color { ColorAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
 
-                    Text {
+                    M3Icon {
                         anchors.centerIn: parent
-                        text: "󰅖"
-                        font.family: Style.fontFamilyMono
-                        font.pixelSize: 13
-                        color: closeM.containsMouse ? "#FFF" : Style.textSecondary
+                        name: "close"
+                        size: 16
+                        color: closeM.containsMouse ? Style.textPrimary : Style.textSecondary
+                        Behavior on color { ColorAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
                     }
 
                     MouseArea {
@@ -485,7 +492,12 @@ PanelWindow {
                     id: hyprCol
                     width: parent.width - 6
                     spacing: 20
-                    visible: root.currentTab === 0
+                    opacity: root.currentTab === 0 ? 1.0 : 0.0
+                    visible: opacity > 0.01
+
+                    Behavior on opacity {
+                        NumberAnimation { duration: Style.animFast; easing.type: Easing.OutQuad }
+                    }
 
                     // SECTION 1: Window Layout & Gaps
                     Column {
@@ -529,7 +541,7 @@ PanelWindow {
                                     }
                                 }
 
-                                Rectangle { width: parent.width; height: 1; color: "#2A2A2D"; visible: root.layoutVal === "master" }
+                                Rectangle { width: parent.width; height: 1; color: Style.divider; visible: root.layoutVal === "master" }
 
                                 Column {
                                     width: parent.width; spacing: 6; visible: root.layoutVal === "master"
@@ -545,7 +557,7 @@ PanelWindow {
                                     }
                                 }
 
-                                Rectangle { width: parent.width; height: 1; color: "#2A2A2D" }
+                                Rectangle { width: parent.width; height: 1; color: Style.divider }
 
                                 Column {
                                     width: parent.width; spacing: 6
@@ -561,7 +573,7 @@ PanelWindow {
                                     }
                                 }
 
-                                Rectangle { width: parent.width; height: 1; color: "#2A2A2D" }
+                                Rectangle { width: parent.width; height: 1; color: Style.divider }
 
                                 Column {
                                     width: parent.width; spacing: 6
@@ -609,7 +621,7 @@ PanelWindow {
                                     }
                                 }
 
-                                Rectangle { width: parent.width; height: 1; color: "#2A2A2D" }
+                                Rectangle { width: parent.width; height: 1; color: Style.divider }
 
                                 Column {
                                     width: parent.width; spacing: 6
@@ -625,7 +637,7 @@ PanelWindow {
                                     }
                                 }
 
-                                Rectangle { width: parent.width; height: 1; color: "#2A2A2D" }
+                                Rectangle { width: parent.width; height: 1; color: Style.divider }
 
                                 RowLayout {
                                     width: parent.width; height: 32
@@ -634,7 +646,7 @@ PanelWindow {
                                     CustomSwitch { Layout.alignment: Qt.AlignVCenter; checked: root.dimInactiveVal; onToggled: function(val) { root.dimInactiveVal = val; root.hasPendingChanges = true; } }
                                 }
 
-                                Rectangle { width: parent.width; height: 1; color: "#2A2A2D" }
+                                Rectangle { width: parent.width; height: 1; color: Style.divider }
 
                                 RowLayout {
                                     width: parent.width; height: 32
@@ -690,7 +702,7 @@ PanelWindow {
                                     }
                                 }
 
-                                Rectangle { width: parent.width; height: 1; color: "#2A2A2D" }
+                                Rectangle { width: parent.width; height: 1; color: Style.divider }
 
                                 Column {
                                     width: parent.width; spacing: 6
@@ -706,7 +718,7 @@ PanelWindow {
                                     }
                                 }
 
-                                Rectangle { width: parent.width; height: 1; color: "#2A2A2D" }
+                                Rectangle { width: parent.width; height: 1; color: Style.divider }
 
                                 RowLayout {
                                     width: parent.width; height: 32
@@ -745,7 +757,7 @@ PanelWindow {
                                     }
                                 }
 
-                                Rectangle { width: parent.width; height: 1; color: "#2A2A2D" }
+                                Rectangle { width: parent.width; height: 1; color: Style.divider }
 
                                 RowLayout {
                                     width: parent.width; height: 32
@@ -763,7 +775,12 @@ PanelWindow {
                     id: inputCol
                     width: parent.width - 6
                     spacing: 20
-                    visible: root.currentTab === 1
+                    opacity: root.currentTab === 1 ? 1.0 : 0.0
+                    visible: opacity > 0.01
+
+                    Behavior on opacity {
+                        NumberAnimation { duration: Style.animFast; easing.type: Easing.OutQuad }
+                    }
 
                     Column {
                         width: parent.width; spacing: 8
@@ -793,7 +810,7 @@ PanelWindow {
                                     }
                                 }
 
-                                Rectangle { width: parent.width; height: 1; color: "#2A2A2D" }
+                                Rectangle { width: parent.width; height: 1; color: Style.divider }
 
                                 RowLayout {
                                     width: parent.width; height: 32
@@ -802,7 +819,7 @@ PanelWindow {
                                     CustomSwitch { Layout.alignment: Qt.AlignVCenter; checked: root.inputTapToClickVal; onToggled: function(val) { root.inputTapToClickVal = val; root.hasPendingChanges = true; } }
                                 }
 
-                                Rectangle { width: parent.width; height: 1; color: "#2A2A2D" }
+                                Rectangle { width: parent.width; height: 1; color: Style.divider }
 
                                 RowLayout {
                                     width: parent.width; height: 32
@@ -820,7 +837,12 @@ PanelWindow {
                     id: notchCol
                     width: parent.width - 6
                     spacing: 20
-                    visible: root.currentTab === 2
+                    opacity: root.currentTab === 2 ? 1.0 : 0.0
+                    visible: opacity > 0.01
+
+                    Behavior on opacity {
+                        NumberAnimation { duration: Style.animFast; easing.type: Easing.OutQuad }
+                    }
 
                     // SECTION 1: MUSIC VISUALIZER OVERLAY & STYLES
                     Column {
@@ -844,7 +866,7 @@ PanelWindow {
                                     CustomSwitch { Layout.alignment: Qt.AlignVCenter; checked: root.visualizerEnabledVal; onToggled: function(val) { root.visualizerEnabledVal = val; root.hasPendingChanges = true; } }
                                 }
 
-                                Rectangle { width: parent.width; height: 1; color: "#2A2A2D" }
+                                Rectangle { width: parent.width; height: 1; color: Style.divider }
 
                                 RowLayout {
                                     width: parent.width
@@ -868,7 +890,7 @@ PanelWindow {
                                     }
                                 }
 
-                                Rectangle { width: parent.width; height: 1; color: "#2A2A2D" }
+                                Rectangle { width: parent.width; height: 1; color: Style.divider }
 
                                 // Style-Specific Counterparts
                                 Column {
@@ -913,7 +935,7 @@ PanelWindow {
                                     }
                                 }
 
-                                Rectangle { width: parent.width; height: 1; color: "#2A2A2D" }
+                                Rectangle { width: parent.width; height: 1; color: Style.divider }
 
                                 Column {
                                     width: parent.width; spacing: 6
@@ -929,7 +951,7 @@ PanelWindow {
                                     }
                                 }
 
-                                Rectangle { width: parent.width; height: 1; color: "#2A2A2D" }
+                                Rectangle { width: parent.width; height: 1; color: Style.divider }
 
                                 Column {
                                     width: parent.width; spacing: 6
@@ -963,7 +985,7 @@ PanelWindow {
                                     }
                                 }
 
-                                Rectangle { width: parent.width; height: 1; color: "#2A2A2D" }
+                                Rectangle { width: parent.width; height: 1; color: Style.divider }
 
                                 Column {
                                     width: parent.width; spacing: 6
@@ -1017,7 +1039,7 @@ PanelWindow {
                                     CustomSwitch { Layout.alignment: Qt.AlignVCenter; checked: root.buttonAnimsVal; onToggled: function(val) { root.buttonAnimsVal = val; root.hasPendingChanges = true; } }
                                 }
 
-                                Rectangle { width: parent.width; height: 1; color: "#2A2A2D" }
+                                Rectangle { width: parent.width; height: 1; color: Style.divider }
 
                                 RowLayout {
                                     width: parent.width
@@ -1082,7 +1104,7 @@ PanelWindow {
                                     }
                                 }
 
-                                Rectangle { width: parent.width; height: 1; color: "#2A2A2D" }
+                                Rectangle { width: parent.width; height: 1; color: Style.divider }
 
                                 RowLayout {
                                     width: parent.width; height: 32
@@ -1091,7 +1113,7 @@ PanelWindow {
                                     CustomSwitch { Layout.alignment: Qt.AlignVCenter; checked: root.workspaceOverlayVal; onToggled: function(val) { root.workspaceOverlayVal = val; root.hasPendingChanges = true; } }
                                 }
 
-                                Rectangle { width: parent.width; height: 1; color: "#2A2A2D" }
+                                Rectangle { width: parent.width; height: 1; color: Style.divider }
 
                                 Column {
                                     width: parent.width; spacing: 6
@@ -1132,7 +1154,7 @@ PanelWindow {
                                     CustomSwitch { Layout.alignment: Qt.AlignVCenter; checked: root.drippingEarsVal; onToggled: function(val) { root.drippingEarsVal = val; root.hasPendingChanges = true; } }
                                 }
 
-                                Rectangle { width: parent.width; height: 1; color: "#2A2A2D" }
+                                Rectangle { width: parent.width; height: 1; color: Style.divider }
 
                                 RowLayout {
                                     width: parent.width; height: 32
@@ -1145,14 +1167,14 @@ PanelWindow {
                                     }
                                 }
 
-                                Rectangle { width: parent.width; height: 1; color: "#2A2A2D" }
+                                Rectangle { width: parent.width; height: 1; color: Style.divider }
 
                                 RowLayout {
                                     width: parent.width; height: 32
                                     Text { text: "Clock String Format (Qt QML)"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeNormal; color: Style.textPrimary; Layout.alignment: Qt.AlignVCenter }
                                     Item { Layout.fillWidth: true }
                                     Rectangle {
-                                        width: 140; height: 28; radius: 6; color: Style.cardBgHover; border.color: "#3C3C3E"
+                                        width: 140; height: 28; radius: 6; color: Style.cardBgHover; border.color: Style.inputBorder
                                         TextInput {
                                             anchors.fill: parent; anchors.margins: 4
                                             verticalAlignment: TextInput.AlignVCenter
@@ -1166,7 +1188,7 @@ PanelWindow {
                                     }
                                 }
 
-                                Rectangle { width: parent.width; height: 1; color: "#2A2A2D" }
+                                Rectangle { width: parent.width; height: 1; color: Style.divider }
 
                                 Column {
                                     width: parent.width; spacing: 6
@@ -1182,7 +1204,7 @@ PanelWindow {
                                     }
                                 }
 
-                                Rectangle { width: parent.width; height: 1; color: "#2A2A2D" }
+                                Rectangle { width: parent.width; height: 1; color: Style.divider }
 
                                 Column {
                                     width: parent.width; spacing: 6
@@ -1198,7 +1220,7 @@ PanelWindow {
                                     }
                                 }
 
-                                Rectangle { width: parent.width; height: 1; color: "#2A2A2D" }
+                                Rectangle { width: parent.width; height: 1; color: Style.divider }
 
                                 Column {
                                     width: parent.width; spacing: 6
@@ -1214,7 +1236,7 @@ PanelWindow {
                                     }
                                 }
 
-                                Rectangle { width: parent.width; height: 1; color: "#2A2A2D" }
+                                Rectangle { width: parent.width; height: 1; color: Style.divider }
 
                                 Column {
                                     width: parent.width; spacing: 6
@@ -1271,7 +1293,7 @@ PanelWindow {
                                     }
                                 }
 
-                                Rectangle { width: parent.width; height: 1; color: "#2A2A2D" }
+                                Rectangle { width: parent.width; height: 1; color: Style.divider }
 
                                 Column {
                                     width: parent.width; spacing: 6
@@ -1287,7 +1309,7 @@ PanelWindow {
                                     }
                                 }
 
-                                Rectangle { width: parent.width; height: 1; color: "#2A2A2D" }
+                                Rectangle { width: parent.width; height: 1; color: Style.divider }
 
                                 Column {
                                     width: parent.width; spacing: 6
@@ -1296,7 +1318,7 @@ PanelWindow {
                                         Text { text: "Wallpaper Folder"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeNormal; color: Style.textPrimary; Layout.alignment: Qt.AlignVCenter }
                                         Item { Layout.fillWidth: true }
                                         Rectangle {
-                                            width: 240; height: 28; radius: 6; color: Style.cardBgHover; border.color: "#3C3C3E"
+                                            width: 240; height: 28; radius: 6; color: Style.cardBgHover; border.color: Style.inputBorder
                                             TextInput {
                                                 anchors.fill: parent; anchors.margins: 6
                                                 verticalAlignment: TextInput.AlignVCenter
@@ -1343,7 +1365,7 @@ PanelWindow {
                                     }
                                 }
 
-                                Rectangle { width: parent.width; height: 1; color: "#2A2A2D" }
+                                Rectangle { width: parent.width; height: 1; color: Style.divider }
 
                                 Column {
                                     width: parent.width; spacing: 6
@@ -1359,7 +1381,7 @@ PanelWindow {
                                     }
                                 }
 
-                                Rectangle { width: parent.width; height: 1; color: "#2A2A2D" }
+                                Rectangle { width: parent.width; height: 1; color: Style.divider }
 
                                 Column {
                                     width: parent.width; spacing: 6
@@ -1375,7 +1397,7 @@ PanelWindow {
                                     }
                                 }
 
-                                Rectangle { width: parent.width; height: 1; color: "#2A2A2D" }
+                                Rectangle { width: parent.width; height: 1; color: Style.divider }
 
                                 Column {
                                     width: parent.width; spacing: 6
@@ -1401,7 +1423,12 @@ PanelWindow {
                     id: notchSysCol
                     width: parent.width - 6
                     spacing: 20
-                    visible: root.currentTab === 3
+                    opacity: root.currentTab === 3 ? 1.0 : 0.0
+                    visible: opacity > 0.01
+
+                    Behavior on opacity {
+                        NumberAnimation { duration: Style.animFast; easing.type: Easing.OutQuad }
+                    }
 
                     // SECTION 5.1: POWER & OSD
                     Column {
@@ -1432,7 +1459,7 @@ PanelWindow {
                                     }
                                 }
 
-                                Rectangle { width: parent.width; height: 1; color: "#2A2A2D" }
+                                Rectangle { width: parent.width; height: 1; color: Style.divider }
 
                                 Column {
                                     width: parent.width; spacing: 6
@@ -1539,19 +1566,20 @@ PanelWindow {
                         anchors.centerIn: parent
                         spacing: 6
 
-                        Text {
-                            text: root.isApplyFailed ? "󰅙" : (root.isAppliedSuccess ? "󰄬" : (root.hasPendingChanges ? "󰄲" : "󰄬"))
-                            font.family: Style.fontFamilyMono
-                            color: root.isApplyFailed ? "#FFFFFF" : (root.isAppliedSuccess ? "#FFFFFF" : (root.hasPendingChanges ? "#000000" : Style.textSecondary))
-                            font.pixelSize: 13
+                        M3Icon {
+                            name: root.isApplyFailed ? "error" : (root.isAppliedSuccess ? "done" : (root.hasPendingChanges ? "auto_awesome" : "done"))
+                            size: 16
+                            color: (root.isApplyFailed || root.isAppliedSuccess) ? Style.textPrimary : (root.hasPendingChanges ? Style.textOnAccent : Style.textSecondary)
+                            Behavior on color { ColorAnimation { duration: 180; easing.type: Easing.OutQuad } }
                         }
 
                         Text {
                             text: root.isApplyFailed ? "Apply Failed" : (root.isAppliedSuccess ? "Applied ✓" : (root.hasPendingChanges ? "Apply Changes *" : "Apply Changes"))
                             font.family: Style.fontFamily
                             font.pixelSize: Style.fontSizeSmall
-                            color: root.isApplyFailed ? "#FFFFFF" : (root.isAppliedSuccess ? "#FFFFFF" : (root.hasPendingChanges ? "#000000" : Style.textPrimary))
+                            color: (root.isApplyFailed || root.isAppliedSuccess) ? Style.textPrimary : (root.hasPendingChanges ? Style.textOnAccent : Style.textPrimary)
                             font.weight: Font.Bold
+                            Behavior on color { ColorAnimation { duration: 180; easing.type: Easing.OutQuad } }
                         }
                     }
 

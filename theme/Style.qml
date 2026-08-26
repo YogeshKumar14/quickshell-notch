@@ -12,6 +12,32 @@ QtObject {
     readonly property color textSecondary: "#A0A0A5"
     readonly property color textMuted: "#636366"
 
+    // === Surface & Item Colors ===
+    readonly property color surfaceDark: "#0A0A0C"
+    readonly property color surfaceHover: "#121214"
+    readonly property color surfaceBorderSubtle: "#222225"
+    readonly property color surfaceWindow: "#141416"
+    readonly property color divider: "#2A2A2D"
+    readonly property color inputBorder: "#3C3C3E"
+    readonly property color controlBorder: "#3A3A3C"
+    readonly property color overlayLight: "#1AFFFFFF"
+    readonly property color textOnAccent: "#000000"
+
+    // === Animation & Transition Timing ===
+    readonly property int animFast: 120        // micro-interactions (press feedback, icon colors)
+    readonly property int animNormal: 180      // standard transitions (opacity, list hovers, dialogs)
+    readonly property int animSlow: 250        // entrance/exit, window scales, crossfades
+    readonly property int animSpinner: 1000    // continuous spinner cycle
+
+    // === Spring Physics Profiles ===
+    readonly property real springExpandTension: 4.5
+    readonly property real springExpandDamping: 0.28
+    readonly property real springTabTension: 5.5
+    readonly property real springTabDamping: 0.22
+    readonly property real springMicroTension: 4.0
+    readonly property real springMicroDamping: 0.60
+    readonly property real springEpsilon: 0.25
+
     // Dynamic accent from wallust (default fallback)
     property color accent: "#0A84FF"
 

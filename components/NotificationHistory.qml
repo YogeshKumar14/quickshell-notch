@@ -135,7 +135,10 @@ Item {
             Layout.fillWidth: true
             Layout.fillHeight: true
             color: "transparent"
-            visible: root.notifCount === 0
+            opacity: root.notifCount === 0 ? 1.0 : 0.0
+            visible: opacity > 0.01
+
+            Behavior on opacity { NumberAnimation { duration: Style.animNormal; easing.type: Easing.OutQuad } }
 
             Column {
                 anchors.centerIn: parent
@@ -165,7 +168,10 @@ Item {
             model: root.notifModel
             clip: true
             spacing: 4
-            visible: root.notifCount > 0
+            opacity: root.notifCount > 0 ? 1.0 : 0.0
+            visible: opacity > 0.01
+
+            Behavior on opacity { NumberAnimation { duration: Style.animNormal; easing.type: Easing.OutQuad } }
 
             remove: Transition {
                 ParallelAnimation {
@@ -215,11 +221,12 @@ Item {
                     height: parent.height
                     opacity: 1.0 - Math.min(0.8, Math.abs(delegateWrapper.dragOffset) / 160)
                     radius: Style.radiusSmall
-                    color: notifItemM.containsMouse ? "#121214" : "#0A0A0C"
-                    border.color: delegateWrapper.isExpanded ? Style.accent : "#222225"
+                    color: notifItemM.containsMouse ? Style.itemBgHover : Style.itemBg
+                    border.color: delegateWrapper.isExpanded ? Style.accent : Style.itemBorder
                     border.width: 1
 
-                    Behavior on border.color { ColorAnimation { duration: 200; easing.type: Easing.OutCubic } }
+                    Behavior on color { ColorAnimation { duration: Style.animFast; easing.type: Easing.OutQuad } }
+                    Behavior on border.color { ColorAnimation { duration: Style.animFast; easing.type: Easing.OutQuad } }
                     Behavior on x {
                         enabled: !delegateWrapper.isDragging
                         NumberAnimation { duration: 200; easing.type: Easing.OutCubic }
