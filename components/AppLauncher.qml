@@ -174,6 +174,14 @@ FocusScope {
                 currentIndex: root.selectedIndex
                 highlightFollowsCurrentItem: false
 
+                add: Transition {
+                    NumberAnimation { property: "opacity"; from: 0; to: 1; duration: Style.animFast; easing.type: Easing.OutQuad }
+                    NumberAnimation { property: "scale"; from: 0.92; to: 1.0; duration: Style.animFast; easing.type: Easing.OutQuad }
+                }
+                displaced: Transition {
+                    NumberAnimation { properties: "x,y"; duration: Style.animNormal; easing.type: Easing.OutQuad }
+                }
+
                 highlight: Item {
                     z: 10
                     width: appGrid.cellWidth
@@ -181,14 +189,14 @@ FocusScope {
                     x: appGrid.currentItem ? appGrid.currentItem.x : 0
                     y: appGrid.currentItem ? appGrid.currentItem.y : 0
                     
-                    Behavior on x { NumberAnimation { duration: 250; easing.type: Easing.OutCubic } }
-                    Behavior on y { NumberAnimation { duration: 250; easing.type: Easing.OutCubic } }
+                    Behavior on x { enabled: appGrid.currentItem !== null; SpringAnimation { spring: Style.springTabTension; damping: Style.springTabDamping } }
+                    Behavior on y { enabled: appGrid.currentItem !== null; SpringAnimation { spring: Style.springTabTension; damping: Style.springTabDamping } }
 
                     Rectangle {
                         anchors.fill: parent
                         anchors.margins: 4
                         radius: Style.radiusMedium
-                        color: "#1AFFFFFF" // Subtle overlay
+                        color: Style.overlayLight
                         border.color: Style.accent
                         border.width: 2
                         scale: 1.03 // Matches the popped delegate
@@ -214,7 +222,7 @@ FocusScope {
                         border.width: 1
                         scale: isSelected ? 1.03 : 1.0
 
-                        Behavior on scale { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
+                        Behavior on scale { NumberAnimation { duration: 180; easing.type: Easing.OutQuad } }
 
                         ColumnLayout {
                             anchors.centerIn: parent
@@ -230,10 +238,11 @@ FocusScope {
                                     anchors.fill: parent
                                     source: model.iconPath ? "file://" + model.iconPath : ""
                                     fillMode: Image.PreserveAspectFit
-                                    asynchronous: true
-                                    visible: status === Image.Ready
                                     sourceSize.width: 32
                                     sourceSize.height: 32
+                                    smooth: true
+                                    asynchronous: true
+                                    visible: status === Image.Ready
                                 }
 
                                 M3Icon {
@@ -248,7 +257,7 @@ FocusScope {
                             Text {
                                 text: model.name
                                 font.family: Style.fontFamily
-                                font.pixelSize: 11
+                                font.pixelSize: Style.fontSizeSmall
                                 font.weight: Font.Bold
                                 color: Style.textPrimary
                                 elide: Text.ElideRight

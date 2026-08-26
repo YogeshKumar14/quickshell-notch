@@ -150,7 +150,7 @@ Item {
             Layout.fillWidth: true
             height: 36
             radius: Style.radiusSmall
-            color: "#0F0F12"
+            color: Style.surfaceDark
             border.color: Style.accent
             border.width: 1
             visible: root.btPower && btToggler.running
@@ -215,9 +215,12 @@ Item {
 
             delegate: Rectangle {
                 width: btList.width; height: 32; radius: Style.radiusSmall
-                color: modelData.connected ? "#1C1C1E" : (devM.containsMouse ? "#121214" : "#0A0A0C")
-                border.color: modelData.connected ? Style.accent : "#222225"
+                color: modelData.connected ? Style.itemBgActive : (devM.containsMouse ? Style.itemBgHover : Style.itemBg)
+                border.color: modelData.connected ? Style.accent : Style.itemBorder
                 border.width: 1
+
+                Behavior on color { ColorAnimation { duration: Style.animFast; easing.type: Easing.OutQuad } }
+                Behavior on border.color { ColorAnimation { duration: Style.animFast; easing.type: Easing.OutQuad } }
 
                 RowLayout {
                     anchors.fill: parent

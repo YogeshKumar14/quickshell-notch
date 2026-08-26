@@ -4,6 +4,27 @@ All notable changes to QuickShell Top Notch are documented here.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [1.1.0] - 2026-08-26
+
+### Added
+- Standardized animation tokens and spring physics profiles in `Style.qml`
+- Corner radius morphing on notch pill with `Easing.OutQuad` during menu transitions
+- Coordinated scale and opacity entrance/exit animations for Settings window and OSD overlay
+- Tab crossfade transitions in Settings window replacing abrupt switches
+- Breathing scale pulse animation on Power menu confirmation countdown
+- Spring-physics scale pop entrance for notification count badges
+- Smooth delegate hover transitions in Wi-Fi and Bluetooth network lists
+- Crossfade transitions for notification history empty states
+- `add` and `displaced` transitions for App Launcher and Wallpaper Selector search grids
+- Spring physics tracking on App Launcher and Wallpaper Selector highlight boxes
+- Official Material Symbols `close.svg` and `error.svg` icon assets
+
+### Changed
+- Replaced all legacy NerdFont glyphs with native `M3Icon` components
+- Centralized 80+ hardcoded hex colors across all components to `Style.*` properties
+- Standardized all opacity and micro-interaction animations to use `Easing.OutQuad` curves
+- Added startup layout guards to prevent component fly-in on initialization
+
 ## [1.0.0] - 2026-08-26
 
 ### Added

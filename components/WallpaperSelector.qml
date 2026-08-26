@@ -225,6 +225,14 @@ FocusScope {
                 currentIndex: root.selectedIndex
                 highlightFollowsCurrentItem: false
 
+                add: Transition {
+                    NumberAnimation { property: "opacity"; from: 0; to: 1; duration: Style.animFast; easing.type: Easing.OutQuad }
+                    NumberAnimation { property: "scale"; from: 0.92; to: 1.0; duration: Style.animFast; easing.type: Easing.OutQuad }
+                }
+                displaced: Transition {
+                    NumberAnimation { properties: "x,y"; duration: Style.animNormal; easing.type: Easing.OutQuad }
+                }
+
                 highlight: Item {
                     z: 10
                     width: gridView.cellWidth
@@ -232,15 +240,15 @@ FocusScope {
                     x: gridView.currentItem ? gridView.currentItem.x : 0
                     y: gridView.currentItem ? gridView.currentItem.y : 0
                     
-                    Behavior on x { NumberAnimation { duration: 250; easing.type: Easing.OutCubic } }
-                    Behavior on y { NumberAnimation { duration: 250; easing.type: Easing.OutCubic } }
+                    Behavior on x { enabled: gridView.currentItem !== null; SpringAnimation { spring: Style.springTabTension; damping: Style.springTabDamping } }
+                    Behavior on y { enabled: gridView.currentItem !== null; SpringAnimation { spring: Style.springTabTension; damping: Style.springTabDamping } }
 
                     Rectangle {
                         anchors.centerIn: parent
                         width: parent.width - 12
                         height: parent.height - 10
                         radius: Style.radiusMedium
-                        color: "#1AFFFFFF" // Subtle overlay
+                        color: Style.overlayLight
                         border.color: Style.accent
                         border.width: 2
                         scale: 1.04 // Matches the popped delegate
@@ -268,7 +276,7 @@ FocusScope {
                         border.width: 1
                         scale: isSelected ? 1.04 : 1.0
 
-                        Behavior on scale { NumberAnimation { duration: 180; easing.type: Easing.OutCubic } }
+                        Behavior on scale { NumberAnimation { duration: 180; easing.type: Easing.OutQuad } }
 
                         ClippingRectangle {
                             anchors.fill: parent

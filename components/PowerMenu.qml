@@ -120,14 +120,14 @@ Item {
                         Layout.fillWidth: true
                         Layout.fillHeight: true
                         radius: Style.radiusMedium
-                        color: index === root.selectedIndex ? "#1C1C1E" : (pCardM.containsMouse ? "#121214" : "#0D0D0F")
-                        border.color: index === root.selectedIndex ? modelData.color : "#222225"
+                        color: index === root.selectedIndex ? Style.itemBgActive : (pCardM.containsMouse ? Style.itemBgHover : Style.itemBg)
+                        border.color: index === root.selectedIndex ? modelData.color : Style.itemBorder
                         border.width: index === root.selectedIndex ? 2 : 1
                         scale: index === root.selectedIndex ? 1.04 : 1.0
 
                         Behavior on scale { NumberAnimation { duration: 180; easing.type: Easing.OutBack } }
-                        Behavior on color { ColorAnimation { duration: 150 } }
-                        Behavior on border.color { ColorAnimation { duration: 150 } }
+                        Behavior on color { ColorAnimation { duration: Style.animFast; easing.type: Easing.OutQuad } }
+                        Behavior on border.color { ColorAnimation { duration: Style.animFast; easing.type: Easing.OutQuad } }
 
                         ColumnLayout {
                             anchors.centerIn: parent
@@ -192,11 +192,21 @@ Item {
                 }
 
                 Text {
+                    id: countdownText
                     Layout.alignment: Qt.AlignHCenter
                     text: "Executing in " + root.countdown + "s"
                     font.family: Style.fontFamily
                     font.pixelSize: Style.fontSizeNormal
+                    font.weight: Font.Bold
                     color: Style.accent
+                    scale: 1.0
+
+                    SequentialAnimation on scale {
+                        running: root.isConfirming
+                        loops: Animation.Infinite
+                        NumberAnimation { to: 1.06; duration: 500; easing.type: Easing.OutQuad }
+                        NumberAnimation { to: 1.0; duration: 500; easing.type: Easing.InQuad }
+                    }
                 }
 
                 RowLayout {
@@ -207,8 +217,10 @@ Item {
                         implicitWidth: 100
                         implicitHeight: 36
                         radius: 18
-                        color: pCancelM.containsMouse ? "#2C2C2E" : "#1C1C1E"
-                        border.color: "#3A3A3C"
+                        color: pCancelM.containsMouse ? Style.cardBgHover : Style.cardBg
+                        border.color: Style.controlBorder
+
+                        Behavior on color { ColorAnimation { duration: Style.animFast; easing.type: Easing.OutQuad } }
 
                         Text {
                             anchors.centerIn: parent
@@ -234,13 +246,16 @@ Item {
                         radius: 18
                         color: Style.danger
 
+                        scale: (root.buttonAnimsVal && pConfirmM.pressed) ? 0.95 : ((root.buttonAnimsVal && pConfirmM.containsMouse) ? 1.05 : 1.0)
+                        Behavior on scale { enabled: root.buttonAnimsVal; NumberAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
+
                         Text {
                             anchors.centerIn: parent
                             text: "Confirm"
                             font.family: Style.fontFamily
                             font.pixelSize: Style.fontSizeNormal
                             font.weight: Font.Bold
-                            color: "#FFFFFF"
+                            color: Style.textPrimary
                         }
 
                         MouseArea {

@@ -54,7 +54,9 @@ Item {
         "󰎆": "music_note",
         "󰅂": "chevron_right",
         "󰈈": "visibility",
-        "󰈉": "visibility_off"
+        "󰈉": "visibility_off",
+        "󰅖": "close",
+        "󰅙": "error"
     })
 
     function getSvgName(inputName) {

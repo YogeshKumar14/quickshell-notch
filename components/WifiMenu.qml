@@ -174,8 +174,8 @@ Item {
                     Layout.fillWidth: true
                     height: 40
                     radius: Style.radiusSmall
-                    color: "#0E0E10"
-                    border.color: wifiPasswordInput.activeFocus ? Style.accent : "#222225"
+                    color: Style.surfaceDark
+                    border.color: wifiPasswordInput.activeFocus ? Style.accent : Style.itemBorder
                     border.width: 1
 
                     RowLayout {
@@ -243,8 +243,10 @@ Item {
                     Rectangle {
                         id: wifiCancelBtn
                         implicitWidth: 80; implicitHeight: 32; radius: 16
-                        color: wifiCancelM.containsMouse ? "#2C2C2E" : "#1C1C1E"
-                        border.color: "#3A3A3C"
+                        color: wifiCancelM.containsMouse ? Style.cardBgHover : Style.cardBg
+                        border.color: Style.controlBorder
+
+                        Behavior on color { ColorAnimation { duration: Style.animFast; easing.type: Easing.OutQuad } }
 
                         Text {
                             anchors.centerIn: parent
@@ -265,7 +267,7 @@ Item {
                         Text {
                             anchors.centerIn: parent
                             text: "Connect"
-                            font.family: Style.fontFamily; font.pixelSize: Style.fontSizeSmall; font.weight: Font.Bold; color: "#000000"
+                            font.family: Style.fontFamily; font.pixelSize: Style.fontSizeSmall; font.weight: Font.Bold; color: Style.textOnAccent
                         }
                         MouseArea {
                             anchors.fill: parent; cursorShape: Qt.PointingHandCursor
@@ -292,7 +294,7 @@ Item {
                     Layout.fillWidth: true
                     height: 36
                     radius: Style.radiusSmall
-                    color: "#0F0F12"
+                    color: Style.surfaceDark
                     border.color: Style.accent
                     border.width: 1
                     visible: root.wifiPower && (root.wifiActiveSsid !== "" || wifiToggler.running)
@@ -359,9 +361,12 @@ Item {
 
                     delegate: Rectangle {
                         width: wifiList.width; height: 32; radius: Style.radiusSmall
-                        color: modelData.active ? "#1C1C1E" : (netM.containsMouse ? "#121214" : "#0A0A0C")
-                        border.color: modelData.active ? Style.accent : "#222225"
+                        color: modelData.active ? Style.itemBgActive : (netM.containsMouse ? Style.itemBgHover : Style.itemBg)
+                        border.color: modelData.active ? Style.accent : Style.itemBorder
                         border.width: 1
+
+                        Behavior on color { ColorAnimation { duration: Style.animFast; easing.type: Easing.OutQuad } }
+                        Behavior on border.color { ColorAnimation { duration: Style.animFast; easing.type: Easing.OutQuad } }
 
                         RowLayout {
                             anchors.fill: parent

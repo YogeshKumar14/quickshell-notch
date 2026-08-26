@@ -39,7 +39,7 @@ Item {
             root.osdValue = root.volumeLevel;
         } else if (type === "brightness") {
             root.osdIcon = "light_mode";
-            root.osdColor = "#EBCB8B"; // Warm yellow
+            root.osdColor = Style.warning;
             root.brightnessLevel = value;
             root.osdValue = root.brightnessLevel;
         }
@@ -1047,8 +1047,16 @@ Item {
 
         clip: true
 
+        Behavior on bottomLeftRadius {
+            NumberAnimation { duration: Style.animNormal; easing.type: Easing.OutQuad }
+        }
+        Behavior on bottomRightRadius {
+            NumberAnimation { duration: Style.animNormal; easing.type: Easing.OutQuad }
+        }
+
         // Expansion Morphing Animation: Spring Physics
         Behavior on width {
+            enabled: notchBox.width > 0
             SpringAnimation {
                 spring: root.expandSpringTension
                 damping: root.expandSpringDamping
@@ -1057,6 +1065,7 @@ Item {
         }
 
         Behavior on height {
+            enabled: notchBox.height > 0
             SpringAnimation {
                 spring: root.expandSpringTension
                 damping: root.expandSpringDamping
@@ -1099,7 +1108,7 @@ Item {
             visible: opacity > 0.01
 
             Behavior on opacity {
-                NumberAnimation { duration: 160 }
+                NumberAnimation { duration: 160; easing.type: Easing.OutQuad }
             }
 
             // 1. COMPACT CLOCK DISPLAY
@@ -1109,7 +1118,7 @@ Item {
                 visible: opacity > 0.01
 
                 Behavior on opacity {
-                    NumberAnimation { duration: 180 }
+                    NumberAnimation { duration: 180; easing.type: Easing.OutQuad }
                 }
 
                 RowLayout {
@@ -1151,7 +1160,7 @@ Item {
                 visible: opacity > 0.01
 
                 Behavior on opacity {
-                    NumberAnimation { duration: 180 }
+                    NumberAnimation { duration: 180; easing.type: Easing.OutQuad }
                 }
 
                 // Background click area for Workspace Overlay to expand notch
@@ -1186,9 +1195,9 @@ Item {
                                 Rectangle {
                                     anchors.centerIn: parent
                                     width: parent.width; height: parent.height; radius: 3
-                                    color: isOccupied ? '#ffffff' : "#3A3A3C"
+                                    color: isOccupied ? '#ffffff' : Style.controlBorder
 
-                                    Behavior on color { ColorAnimation { duration: 150 } }
+                                    Behavior on color { ColorAnimation { duration: 150; easing.type: Easing.OutQuad } }
                                 }
 
                                 MouseArea {
@@ -1228,7 +1237,7 @@ Item {
                 visible: opacity > 0.01
 
                 Behavior on opacity {
-                    NumberAnimation { duration: 180 }
+                    NumberAnimation { duration: 180; easing.type: Easing.OutQuad }
                 }
 
                 RowLayout {
@@ -1388,10 +1397,14 @@ Item {
             Item {
                 anchors.fill: parent
                 opacity: root.isOsdActive ? 1.0 : 0.0
+                scale: root.isOsdActive ? 1.0 : 0.92
                 visible: opacity > 0.01
 
                 Behavior on opacity {
-                    NumberAnimation { duration: 180 }
+                    NumberAnimation { duration: 180; easing.type: Easing.OutQuad }
+                }
+                Behavior on scale {
+                    NumberAnimation { duration: Style.animSlow; easing.type: Easing.OutQuad }
                 }
 
                 RowLayout {
@@ -1457,7 +1470,7 @@ Item {
             visible: opacity > 0.01
 
             Behavior on opacity {
-                NumberAnimation { duration: 200 }
+                NumberAnimation { duration: 200; easing.type: Easing.OutQuad }
             }
 
             ColumnLayout {
@@ -1495,7 +1508,7 @@ Item {
 
                             Behavior on x { enabled: hoverPill.width > 0; SpringAnimation { spring: root.tabSpringTension; damping: root.tabSpringDamping } }
                             Behavior on width { enabled: hoverPill.width > 0; SpringAnimation { spring: root.tabSpringTension; damping: root.tabSpringDamping } }
-                            Behavior on opacity { NumberAnimation { duration: root.buttonSpeedVal } }
+                            Behavior on opacity { NumberAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
                         }
 
                         // Sliding Highlight Pill
@@ -1587,9 +1600,10 @@ Item {
                         spacing: 6
                         Layout.rightMargin: 4
                         M3Icon {
-                            name: root.batteryStatus === "Charging" ? "󰂄" : (root.batteryLevel > 90 ? "󰁹" : (root.batteryLevel > 50 ? "󰁾" : (root.batteryLevel > root.batteryWarningThresholdVal ? "󰁻" : "󰂎")))
+                            name: root.batteryStatus === "Charging" ? "battery_charging_full" : (root.batteryLevel > 90 ? "battery_full" : (root.batteryLevel > 50 ? "battery_full" : (root.batteryLevel > root.batteryWarningThresholdVal ? "battery_alert" : "battery_alert")))
                             size: 18
-                            color: root.batteryStatus === "Charging" ? "#A3BE8C" : (root.batteryLevel <= root.batteryWarningThresholdVal ? "#BF616A" : Style.textPrimary)
+                            color: root.batteryStatus === "Charging" ? Style.success : (root.batteryLevel <= root.batteryWarningThresholdVal ? Style.danger : Style.textPrimary)
+                            Behavior on color { ColorAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
                         }
                         Text {
                             text: root.batteryLevel + "%"
@@ -1612,9 +1626,10 @@ Item {
 
                         M3Icon {
                             anchors.centerIn: parent
-                            name: root.wifiPower ? "󰖩" : "󰖪"
+                            name: root.wifiPower ? "wifi" : "wifi_off"
                             size: 16
-                            color: root.isWifiMenuOpen ? "#000" : (root.wifiPower ? Style.accent : Style.textSecondary)
+                            color: root.isWifiMenuOpen ? Style.textOnAccent : (root.wifiPower ? Style.accent : Style.textSecondary)
+                            Behavior on color { ColorAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
                         }
 
                         MouseArea {
@@ -1643,9 +1658,10 @@ Item {
 
                         M3Icon {
                             anchors.centerIn: parent
-                            name: root.btPower ? "󰂯" : "󰂲"
+                            name: root.btPower ? "bluetooth" : "bluetooth_disabled"
                             size: 16
-                            color: root.isBluetoothMenuOpen ? "#000" : (root.btPower ? Style.accent : Style.textSecondary)
+                            color: root.isBluetoothMenuOpen ? Style.textOnAccent : (root.btPower ? Style.accent : Style.textSecondary)
+                            Behavior on color { ColorAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
                         }
 
                         MouseArea {
@@ -1676,12 +1692,15 @@ Item {
                             anchors.centerIn: parent
                             name: "notifications"
                             size: 16
-                            color: root.isNotifMenuOpen ? "#000" : (root.notifCount > 0 ? Style.accent : Style.textSecondary)
+                            color: root.isNotifMenuOpen ? Style.textOnAccent : (root.notifCount > 0 ? Style.accent : Style.textSecondary)
+                            Behavior on color { ColorAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
                         }
 
-                        // Notification count badge
+                        // Notification count badge with spring entrance pop
                         Rectangle {
                             visible: root.notifCount > 0
+                            scale: root.notifCount > 0 ? 1.0 : 0.0
+                            Behavior on scale { SpringAnimation { spring: 6.0; damping: 0.4 } }
                             width: 14; height: 14; radius: 7
                             color: Style.accent
                             anchors.top: parent.top
@@ -1695,7 +1714,7 @@ Item {
                                 font.family: Style.fontFamily
                                 font.pixelSize: 8
                                 font.weight: Font.Bold
-                                color: "#000"
+                                color: Style.textOnAccent
                             }
                         }
 
@@ -1726,9 +1745,10 @@ Item {
 
                         M3Icon {
                             anchors.centerIn: parent
-                            name: "󰐥"
+                            name: "power_settings_new"
                             size: 16
-                            color: root.isPowerMenuOpen ? "#FFF" : (powerM.containsMouse ? Style.danger : Style.textSecondary)
+                            color: root.isPowerMenuOpen ? Style.textPrimary : (powerM.containsMouse ? Style.danger : Style.textSecondary)
+                            Behavior on color { ColorAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
                         }
 
                         MouseArea {
@@ -1759,9 +1779,10 @@ Item {
 
                         M3Icon {
                             anchors.centerIn: parent
-                            name: "󰒓"
+                            name: "settings"
                             size: 16
                             color: gearM.containsMouse ? Style.accent : Style.textSecondary
+                            Behavior on color { ColorAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
                         }
 
                         MouseArea {
@@ -1984,7 +2005,7 @@ Item {
                                                     Layout.alignment: Qt.AlignVCenter
                                                     width: 32; height: 32; radius: 16; color: Style.cardBgHover
                                                     scale: (root.buttonAnimsVal && prevM.pressed) ? 0.90 : ((root.buttonAnimsVal && prevM.containsMouse) ? 1.15 : 1.0)
-                                                    Behavior on scale { enabled: root.buttonAnimsVal; SpringAnimation { spring: 3.5; damping: 0.6; mass: 1.0 } }
+                                                    Behavior on scale { enabled: root.buttonAnimsVal; SpringAnimation { spring: root.tabSpringTension; damping: root.tabSpringDamping } }
                                                     Behavior on color { ColorAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
 
                                                     M3Icon { anchors.centerIn: parent; name: "skip_previous"; color: Style.textPrimary; size: 24 }
@@ -1996,10 +2017,10 @@ Item {
                                                     Layout.alignment: Qt.AlignVCenter
                                                     width: 40; height: 40; radius: 20; color: Style.accent
                                                     scale: (root.buttonAnimsVal && playM.pressed) ? 0.90 : ((root.buttonAnimsVal && playM.containsMouse) ? 1.15 : 1.0)
-                                                    Behavior on scale { enabled: root.buttonAnimsVal; SpringAnimation { spring: 3.5; damping: 0.6; mass: 1.0 } }
+                                                    Behavior on scale { enabled: root.buttonAnimsVal; SpringAnimation { spring: root.tabSpringTension; damping: root.tabSpringDamping } }
                                                     Behavior on color { ColorAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
 
-                                                    M3Icon { anchors.centerIn: parent; name: root.isPlaying ? "pause" : "play_arrow"; color: "#000000"; size: 28 }
+                                                    M3Icon { anchors.centerIn: parent; name: root.isPlaying ? "pause" : "play_arrow"; color: Style.textOnAccent; size: 28 }
                                                     MouseArea { id: playM; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: if (root.activePlayer) root.activePlayer.togglePlaying() }
                                                 }
 
@@ -2008,7 +2029,7 @@ Item {
                                                     Layout.alignment: Qt.AlignVCenter
                                                     width: 32; height: 32; radius: 16; color: Style.cardBgHover
                                                     scale: (root.buttonAnimsVal && nextM.pressed) ? 0.90 : ((root.buttonAnimsVal && nextM.containsMouse) ? 1.15 : 1.0)
-                                                    Behavior on scale { enabled: root.buttonAnimsVal; SpringAnimation { spring: 3.5; damping: 0.6; mass: 1.0 } }
+                                                    Behavior on scale { enabled: root.buttonAnimsVal; SpringAnimation { spring: root.tabSpringTension; damping: root.tabSpringDamping } }
                                                     Behavior on color { ColorAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
 
                                                     M3Icon { anchors.centerIn: parent; name: "skip_next"; color: Style.textPrimary; size: 24 }
@@ -2356,7 +2377,7 @@ Item {
                             model: root.totalPages
                             Rectangle {
                                 width: 7; height: 7; radius: 4
-                                color: "#3A3A3C"
+                                color: Style.controlBorder
                             }
                         }
                     }
@@ -2369,7 +2390,7 @@ Item {
                         x: 14.5 + (root.currentPage * 19)
 
                         Behavior on x {
-                            SpringAnimation { spring: 5.0; damping: 0.3 }
+                            SpringAnimation { spring: root.tabSpringTension; damping: root.tabSpringDamping }
                         }
                     }
                 }
