@@ -17,6 +17,8 @@ Item {
     property int osdValue: 50
     property real animatedOsdValue: root.osdValue
     property color osdColor: Style.accent
+    property real osdIconRotation: 0
+    property int prevBrightnessLevel: -1
     property ListModel notifModel: null
 
     Behavior on osdColor {
@@ -37,9 +39,18 @@ Item {
             root.osdColor = Style.accent;
             root.volumeLevel = value;
             root.osdValue = root.volumeLevel;
+            root.osdIconRotation = 0;
         } else if (type === "brightness") {
             root.osdIcon = "light_mode";
             root.osdColor = Style.warningYellow;
+            if (root.prevBrightnessLevel >= 0) {
+                if (value > root.prevBrightnessLevel) {
+                    root.osdIconRotation += 45;
+                } else if (value < root.prevBrightnessLevel) {
+                    root.osdIconRotation -= 45;
+                }
+            }
+            root.prevBrightnessLevel = value;
             root.brightnessLevel = value;
             root.osdValue = root.brightnessLevel;
         }
@@ -910,6 +921,34 @@ Item {
     property int batteryLevel: 100
     property string batteryStatus: "Unknown"
 
+    function getBatteryIcon(level, status, warningThreshold) {
+        if (status === "Charging") {
+            if (level >= 95) return "battery_charging_full";
+            if (level >= 85) return "battery_charging_90";
+            if (level >= 75) return "battery_charging_80";
+            if (level >= 55) return "battery_charging_60";
+            if (level >= 40) return "battery_charging_50";
+            if (level >= 25) return "battery_charging_30";
+            return "battery_charging_20";
+        }
+        if (level <= 10) return "battery_alert";
+        if (level >= 95) return "battery_full";
+        if (level >= 85) return "battery_6_bar";
+        if (level >= 70) return "battery_5_bar";
+        if (level >= 55) return "battery_4_bar";
+        if (level >= 40) return "battery_3_bar";
+        if (level >= 25) return "battery_2_bar";
+        if (level >= 10) return "battery_1_bar";
+        return "battery_0_bar";
+    }
+
+    function getBatteryColor(level, status, warningThreshold) {
+        if (status === "Charging") return Style.success;
+        if (level <= 10) return Style.danger;
+        if (level <= warningThreshold) return Style.iosYellow;
+        return Style.textPrimary;
+    }
+
     // Single-process device poll: volume, mic, brightness and battery levels
     // in one spawn (replaces 4 per-poll processes)
     Process {
@@ -1417,9 +1456,18 @@ Item {
 
                     M3Icon {
                         name: root.osdIcon
-                        size: 24
+                        size: 20
                         color: root.osdColor
                         Layout.alignment: Qt.AlignVCenter
+                        rotation: root.osdIconRotation
+
+                        Behavior on rotation {
+                            SpringAnimation {
+                                spring: Style.springExpandTension
+                                damping: Style.springExpandDamping
+                                epsilon: 0.25
+                            }
+                        }
                     }
 
                     Rectangle {
@@ -1595,22 +1643,81 @@ Item {
 
                     Item { Layout.fillWidth: true }
 
-                    // Compact Battery Status
+                    // Modern M3 Expressive Dynamic Battery Capsule
                     RowLayout {
                         spacing: 6
                         Layout.rightMargin: 4
-                        M3Icon {
-                            name: root.batteryStatus === "Charging" ? "battery_charging_full" : (root.batteryLevel > 90 ? "battery_full" : (root.batteryLevel > 50 ? "battery_full" : (root.batteryLevel > root.batteryWarningThresholdVal ? "battery_alert" : "battery_alert")))
-                            size: 18
-                            color: root.batteryStatus === "Charging" ? Style.success : (root.batteryLevel <= root.batteryWarningThresholdVal ? Style.danger : Style.textPrimary)
-                            Behavior on color { ColorAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
+                        Layout.alignment: Qt.AlignVCenter
+
+                        readonly property color batColor: root.getBatteryColor(root.batteryLevel, root.batteryStatus, root.batteryWarningThresholdVal)
+
+                        // Rounded Battery Capsule
+                        Item {
+                            implicitWidth: 23
+                            implicitHeight: 12
+                            Layout.alignment: Qt.AlignVCenter
+
+                            // Outer Pill Body
+                            Rectangle {
+                                id: batBody
+                                width: 19
+                                height: 10.5
+                                radius: 3.5
+                                anchors.left: parent.left
+                                anchors.verticalCenter: parent.verticalCenter
+                                color: "transparent"
+                                border.color: parent.parent.batColor
+                                border.width: 1.2
+
+                                Behavior on border.color { ColorAnimation { duration: Style.animNormal; easing.type: Easing.OutQuad } }
+
+                                // Fluid Inner Fill Bar
+                                Rectangle {
+                                    id: batFill
+                                    x: 1.5
+                                    y: 1.5
+                                    height: parent.height - 3
+                                    width: Math.max(0, Math.min(parent.width - 3, (parent.width - 3) * (root.batteryLevel / 100.0)))
+                                    radius: 1.8
+                                    color: parent.parent.parent.batColor
+                                    opacity: root.batteryStatus === "Charging" ? 0.35 : 0.90
+
+                                    Behavior on width { NumberAnimation { duration: 300; easing.type: Easing.OutQuad } }
+                                    Behavior on color { ColorAnimation { duration: Style.animNormal; easing.type: Easing.OutQuad } }
+                                }
+
+                                // Centered Bolt Icon when Charging
+                                M3Icon {
+                                    name: "bolt"
+                                    size: 8
+                                    color: Style.textPrimary
+                                    visible: root.batteryStatus === "Charging"
+                                    anchors.centerIn: parent
+                                }
+                            }
+
+                            // Positive Terminal Cap
+                            Rectangle {
+                                anchors.left: batBody.right
+                                anchors.leftMargin: 1
+                                anchors.verticalCenter: batBody.verticalCenter
+                                width: 1.5
+                                height: 4
+                                radius: 0.8
+                                color: parent.parent.batColor
+
+                                Behavior on color { ColorAnimation { duration: Style.animNormal; easing.type: Easing.OutQuad } }
+                            }
                         }
+
+                        // Crisp White Percentage Text
                         Text {
                             text: root.batteryLevel + "%"
-                            font.family: Style.fontFamily
+                            font.family: Style.fontFamilyMono
                             font.pixelSize: Style.fontSizeSmall
                             font.weight: Font.Bold
                             color: Style.textPrimary
+                            Layout.alignment: Qt.AlignVCenter
                         }
                     }
 
