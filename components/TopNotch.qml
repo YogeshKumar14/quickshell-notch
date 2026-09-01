@@ -302,16 +302,16 @@ FocusScope {
     property real singleHandleX: 0
 
     Behavior on targetHandleX {
-        SpringAnimation { spring: 5.5; damping: 0.22; epsilon: 0.1 }
+        SpringAnimation { spring: root.tabSpringTension; damping: root.tabSpringDamping; epsilon: 0.1 }
     }
     Behavior on singleHandleX {
-        SpringAnimation { spring: 5.5; damping: 0.22; epsilon: 0.1 }
+        SpringAnimation { spring: root.tabSpringTension; damping: root.tabSpringDamping; epsilon: 0.1 }
     }
     Behavior on handleLeft {
-        SpringAnimation { spring: 4.8; damping: 0.24; epsilon: 0.1 }
+        SpringAnimation { spring: root.tabSpringTension * 0.9; damping: root.tabSpringDamping * 1.05; epsilon: 0.1 }
     }
     Behavior on handleRight {
-        SpringAnimation { spring: 6.2; damping: 0.20; epsilon: 0.1 }
+        SpringAnimation { spring: root.tabSpringTension * 1.1; damping: root.tabSpringDamping * 0.95; epsilon: 0.1 }
     }
 
     function updateHandlePosition(wsNum) {

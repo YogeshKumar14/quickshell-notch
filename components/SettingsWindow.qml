@@ -50,7 +50,7 @@ PanelWindow {
 
     visible: isOpen
     implicitWidth: 780
-    implicitHeight: 700
+    implicitHeight: 740
 
     color: "transparent"
 
@@ -338,6 +338,10 @@ PanelWindow {
             root.wsAnimTypeVal = "stretch";
             root.buttonAnimsVal = true;
             root.buttonSpeedVal = 180;
+            root.expandSpringTension = 4.5;
+            root.expandSpringDamping = 0.28;
+            root.tabSpringTension = 5.5;
+            root.tabSpringDamping = 0.22;
         } else if (root.currentTab === 2) {
             root.visualizerEnabledVal = true;
             root.visualizerStyleVal = "bars";
@@ -350,6 +354,8 @@ PanelWindow {
         } else if (root.currentTab === 3) {
             root.appColumnsVal = 4;
             root.highlightAnimTypeVal = "spring";
+            root.highlightSpringTensionVal = 5.5;
+            root.highlightSpringDampingVal = 0.25;
             root.gridAnimDurationVal = 120;
             root.wallTypeVal = "outer";
             root.wallDurationVal = 0.5;
@@ -520,13 +526,34 @@ PanelWindow {
                 Layout.fillWidth: true
                 Layout.fillHeight: true
                 contentWidth: width
-                contentHeight: activeCol.implicitHeight + 20
+                contentHeight: activeCol.implicitHeight + 24
                 clip: true
                 boundsBehavior: Flickable.StopAtBounds
 
+                ScrollBar.vertical: ScrollBar {
+                    id: vScroll
+                    active: flickView.moving || flickView.dragging
+                    policy: ScrollBar.AsNeeded
+                    contentItem: Rectangle {
+                        implicitWidth: 4
+                        radius: 2
+                        color: Style.accent
+                        opacity: vScroll.active ? 0.8 : 0.0
+                        Behavior on opacity { NumberAnimation { duration: 200 } }
+                    }
+                }
+
+                Connections {
+                    target: root
+                    function onCurrentTabChanged() {
+                        flickView.contentY = 0;
+                    }
+                }
+
                 Item {
                     id: activeCol
-                    width: parent.width - 8
+                    width: flickView.width - (vScroll.visible ? 12 : 4)
+                    height: implicitHeight
                     implicitHeight: {
                         if (root.currentTab === 0) return tab0Col.implicitHeight;
                         if (root.currentTab === 1) return tab1Col.implicitHeight;
@@ -934,7 +961,150 @@ PanelWindow {
                             }
                         }
 
-                        // CARD 3: Tactile Interactions
+                        // CARD 3: Spring Physics & Motion Dynamics
+                        Rectangle {
+                            Layout.fillWidth: true
+                            implicitHeight: nPhysicsCol.implicitHeight + 28
+                            radius: 16
+                            color: "#1C1C1E"
+                            border.color: "#2C2C2E"
+
+                            ColumnLayout {
+                                id: nPhysicsCol
+                                anchors.fill: parent
+                                anchors.margins: 14
+                                spacing: 12
+
+                                RowLayout {
+                                    spacing: 8
+                                    M3Icon { name: "tune"; size: 14; color: Style.accent }
+                                    Text { text: "Spring Physics & Motion Dynamics"; font.family: Style.fontFamily; font.pixelSize: 12; font.weight: Font.Bold; color: Style.textSecondary }
+                                }
+
+                                // Quick Motion Presets
+                                RowLayout {
+                                    Layout.fillWidth: true
+                                    Text { text: "Motion Dynamics Presets"; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
+                                    Item { Layout.fillWidth: true }
+                                    Rectangle {
+                                        implicitWidth: 260; implicitHeight: 28; radius: 14; color: "#2C2C2E"
+                                        property string activePreset: (Math.abs(root.expandSpringTension - 4.5) < 0.15 && Math.abs(root.expandSpringDamping - 0.22) < 0.03) ? "bouncy" :
+                                                                      ((Math.abs(root.expandSpringTension - 6.5) < 0.15 && Math.abs(root.expandSpringDamping - 0.45) < 0.03) ? "snappy" :
+                                                                      ((Math.abs(root.expandSpringTension - 3.5) < 0.15 && Math.abs(root.expandSpringDamping - 0.35) < 0.03) ? "gentle" : "custom"))
+                                        RowLayout {
+                                            anchors.fill: parent; spacing: 0
+                                            Rectangle {
+                                                Layout.fillWidth: true; Layout.fillHeight: true; radius: 14
+                                                color: parent.parent.activePreset === "bouncy" ? Style.accent : "transparent"
+                                                Text { anchors.centerIn: parent; text: "Bouncy"; font.pixelSize: 11; font.weight: Font.Bold; color: parent.parent.parent.activePreset === "bouncy" ? Style.textOnAccent : Style.textPrimary }
+                                                MouseArea {
+                                                    anchors.fill: parent; cursorShape: Qt.PointingHandCursor
+                                                    onClicked: {
+                                                        root.expandSpringTension = 4.5; root.expandSpringDamping = 0.22;
+                                                        root.tabSpringTension = 5.5; root.tabSpringDamping = 0.22;
+                                                        root.hasPendingChanges = true;
+                                                    }
+                                                }
+                                            }
+                                            Rectangle {
+                                                Layout.fillWidth: true; Layout.fillHeight: true; radius: 14
+                                                color: parent.parent.activePreset === "snappy" ? Style.accent : "transparent"
+                                                Text { anchors.centerIn: parent; text: "Snappy"; font.pixelSize: 11; font.weight: Font.Bold; color: parent.parent.parent.activePreset === "snappy" ? Style.textOnAccent : Style.textPrimary }
+                                                MouseArea {
+                                                    anchors.fill: parent; cursorShape: Qt.PointingHandCursor
+                                                    onClicked: {
+                                                        root.expandSpringTension = 6.5; root.expandSpringDamping = 0.45;
+                                                        root.tabSpringTension = 7.0; root.tabSpringDamping = 0.40;
+                                                        root.hasPendingChanges = true;
+                                                    }
+                                                }
+                                            }
+                                            Rectangle {
+                                                Layout.fillWidth: true; Layout.fillHeight: true; radius: 14
+                                                color: parent.parent.activePreset === "gentle" ? Style.accent : "transparent"
+                                                Text { anchors.centerIn: parent; text: "Gentle"; font.pixelSize: 11; font.weight: Font.Bold; color: parent.parent.parent.activePreset === "gentle" ? Style.textOnAccent : Style.textPrimary }
+                                                MouseArea {
+                                                    anchors.fill: parent; cursorShape: Qt.PointingHandCursor
+                                                    onClicked: {
+                                                        root.expandSpringTension = 3.5; root.expandSpringDamping = 0.35;
+                                                        root.tabSpringTension = 4.0; root.tabSpringDamping = 0.30;
+                                                        root.hasPendingChanges = true;
+                                                    }
+                                                }
+                                            }
+                                            Rectangle {
+                                                Layout.fillWidth: true; Layout.fillHeight: true; radius: 14
+                                                color: parent.parent.activePreset === "custom" ? Style.accent : "transparent"
+                                                Text { anchors.centerIn: parent; text: "Custom"; font.pixelSize: 11; font.weight: Font.Bold; color: parent.parent.parent.activePreset === "custom" ? Style.textOnAccent : Style.textPrimary }
+                                                MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor }
+                                            }
+                                        }
+                                    }
+                                }
+
+                                // Notch Expand Tension (Stiffness)
+                                ColumnLayout {
+                                    Layout.fillWidth: true; spacing: 4
+                                    RowLayout {
+                                        Layout.fillWidth: true
+                                        Text { text: "Notch Expand / Collapse Spring Stiffness"; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
+                                        Item { Layout.fillWidth: true }
+                                        Text { text: root.expandSpringTension.toFixed(1); font.family: Style.fontFamilyMono; font.pixelSize: 12; font.weight: Font.Bold; color: Style.accent }
+                                    }
+                                    CustomSlider {
+                                        Layout.fillWidth: true; from: 2.0; to: 9.0; stepSize: 0.1; value: root.expandSpringTension
+                                        onMoved: function(val) { root.expandSpringTension = Number(val.toFixed(1)); root.hasPendingChanges = true; }
+                                    }
+                                }
+
+                                // Notch Expand Damping (Bounciness)
+                                ColumnLayout {
+                                    Layout.fillWidth: true; spacing: 4
+                                    RowLayout {
+                                        Layout.fillWidth: true
+                                        Text { text: "Notch Expand / Collapse Damping (Bounciness)"; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
+                                        Item { Layout.fillWidth: true }
+                                        Text { text: root.expandSpringDamping.toFixed(2); font.family: Style.fontFamilyMono; font.pixelSize: 12; font.weight: Font.Bold; color: Style.accent }
+                                    }
+                                    CustomSlider {
+                                        Layout.fillWidth: true; from: 0.10; to: 0.80; stepSize: 0.02; value: root.expandSpringDamping
+                                        onMoved: function(val) { root.expandSpringDamping = Number(val.toFixed(2)); root.hasPendingChanges = true; }
+                                    }
+                                }
+
+                                // Tab Switch Tension
+                                ColumnLayout {
+                                    Layout.fillWidth: true; spacing: 4
+                                    RowLayout {
+                                        Layout.fillWidth: true
+                                        Text { text: "Tab Glider Switch Spring Stiffness"; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
+                                        Item { Layout.fillWidth: true }
+                                        Text { text: root.tabSpringTension.toFixed(1); font.family: Style.fontFamilyMono; font.pixelSize: 12; font.weight: Font.Bold; color: Style.accent }
+                                    }
+                                    CustomSlider {
+                                        Layout.fillWidth: true; from: 2.0; to: 9.0; stepSize: 0.1; value: root.tabSpringTension
+                                        onMoved: function(val) { root.tabSpringTension = Number(val.toFixed(1)); root.hasPendingChanges = true; }
+                                    }
+                                }
+
+                                // Tab Switch Damping
+                                ColumnLayout {
+                                    Layout.fillWidth: true; spacing: 4
+                                    RowLayout {
+                                        Layout.fillWidth: true
+                                        Text { text: "Tab Glider Switch Damping (Bounciness)"; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
+                                        Item { Layout.fillWidth: true }
+                                        Text { text: root.tabSpringDamping.toFixed(2); font.family: Style.fontFamilyMono; font.pixelSize: 12; font.weight: Font.Bold; color: Style.accent }
+                                    }
+                                    CustomSlider {
+                                        Layout.fillWidth: true; from: 0.10; to: 0.80; stepSize: 0.02; value: root.tabSpringDamping
+                                        onMoved: function(val) { root.tabSpringDamping = Number(val.toFixed(2)); root.hasPendingChanges = true; }
+                                    }
+                                }
+                            }
+                        }
+
+                        // CARD 4: Tactile Interactions
                         Rectangle {
                             Layout.fillWidth: true
                             implicitHeight: n3Col.implicitHeight + 28
@@ -1246,6 +1416,54 @@ PanelWindow {
                                                 MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { root.highlightAnimTypeVal = "off"; root.hasPendingChanges = true; } }
                                             }
                                         }
+                                    }
+                                }
+
+                                // Magic Highlight Spring Tension (visible when style is spring)
+                                ColumnLayout {
+                                    Layout.fillWidth: true; spacing: 4
+                                    visible: root.highlightAnimTypeVal === "spring"
+                                    RowLayout {
+                                        Layout.fillWidth: true
+                                        Text { text: "Magic Highlight Spring Stiffness"; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
+                                        Item { Layout.fillWidth: true }
+                                        Text { text: root.highlightSpringTensionVal.toFixed(1); font.family: Style.fontFamilyMono; font.pixelSize: 12; font.weight: Font.Bold; color: Style.accent }
+                                    }
+                                    CustomSlider {
+                                        Layout.fillWidth: true; from: 2.0; to: 9.0; stepSize: 0.1; value: root.highlightSpringTensionVal
+                                        onMoved: function(val) { root.highlightSpringTensionVal = Number(val.toFixed(1)); root.hasPendingChanges = true; }
+                                    }
+                                }
+
+                                // Magic Highlight Spring Damping (visible when style is spring)
+                                ColumnLayout {
+                                    Layout.fillWidth: true; spacing: 4
+                                    visible: root.highlightAnimTypeVal === "spring"
+                                    RowLayout {
+                                        Layout.fillWidth: true
+                                        Text { text: "Magic Highlight Damping (Bounciness)"; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
+                                        Item { Layout.fillWidth: true }
+                                        Text { text: root.highlightSpringDampingVal.toFixed(2); font.family: Style.fontFamilyMono; font.pixelSize: 12; font.weight: Font.Bold; color: Style.accent }
+                                    }
+                                    CustomSlider {
+                                        Layout.fillWidth: true; from: 0.10; to: 0.80; stepSize: 0.02; value: root.highlightSpringDampingVal
+                                        onMoved: function(val) { root.highlightSpringDampingVal = Number(val.toFixed(2)); root.hasPendingChanges = true; }
+                                    }
+                                }
+
+                                // Grid Movement Duration (visible when style is smooth or linear)
+                                ColumnLayout {
+                                    Layout.fillWidth: true; spacing: 4
+                                    visible: root.highlightAnimTypeVal === "smooth" || root.highlightAnimTypeVal === "linear"
+                                    RowLayout {
+                                        Layout.fillWidth: true
+                                        Text { text: "Grid Transition Duration"; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
+                                        Item { Layout.fillWidth: true }
+                                        Text { text: root.gridAnimDurationVal + " ms"; font.family: Style.fontFamilyMono; font.pixelSize: 12; font.weight: Font.Bold; color: Style.accent }
+                                    }
+                                    CustomSlider {
+                                        Layout.fillWidth: true; from: 60; to: 400; stepSize: 20; value: root.gridAnimDurationVal
+                                        onMoved: function(val) { root.gridAnimDurationVal = Math.round(val); root.hasPendingChanges = true; }
                                     }
                                 }
 

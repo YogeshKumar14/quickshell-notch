@@ -473,11 +473,15 @@ def test_module_7():
         ("auto_close", "3000", 3000),
         ("compact_width", "180", 180),
         ("expand_tension", "6.5", 6.5),
+        ("expand_damping", "0.34", 0.34),
+        ("tab_tension", "5.8", 5.8),
+        ("tab_damping", "0.26", 0.26),
         ("dripping_ears", "false", False),
         ("dripping_ears", True, True),
         ("clock_format", "HH:mm", "HH:mm"),
         ("highlight_anim_type", "spring", "spring"),
         ("highlight_spring_tension", "4.2", 4.2),
+        ("highlight_spring_damping", "0.28", 0.28),
         ("grid_anim_duration", "150", 150)
     ]
     for key, raw, expected in coercion_cases:
