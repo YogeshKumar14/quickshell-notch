@@ -4,6 +4,17 @@ All notable changes to QuickShell Top Notch are documented here.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.1.0] - 2026-09-01
+
+### Added
+- **Audio & Sound Devices Notch Drawer**: Dedicated sub-notch quick settings overlay (`components/AudioMenu.qml` & `scripts/desktop/manage_audio.py`) featuring Master Output Volume & Microphone Level cards with instant mute toggles, interactive pill sliders, and dynamic Output & Input device switching with Bluetooth badges.
+- **Interactive Scrubber Seeking**: Direct click-to-seek and drag-to-seek progress timeline bar in `components/MediaController.qml` with dual Quickshell MPRIS and `playerctl` fallback.
+- **Dynamic Track Length Calculation**: Accurate track duration formatting replacing legacy static fallbacks.
+- **Retina 2x Mipmapped Vector Icons**: Enabled 2x density, smooth filtering, and mipmapping in `components/M3Icon.qml` for crisp retina navigation glyphs.
+- **Zero Card Clipping Geometry**: Inset App Launcher and Wallpaper Selector cards (60px height with 6px vertical headroom) preventing magic highlight borders and card edges from clipping against the viewport AABB scissor.
+- **Zero-Delay OSD Pipeline**: Optimized `scripts/core/osd.sh` and spring dynamics for instantaneous volume and brightness feedback.
+- **149-Test Comprehensive Verification Suite**: Added Module 14 testing PipeWire wpctl audio backend and drawer integrations with 100% pass rate.
+
 ## [2.0.0] - 2026-09-01
 
 ### Added

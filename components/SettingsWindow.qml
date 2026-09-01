@@ -96,8 +96,8 @@ PanelWindow {
     // --- TOP NOTCH DRAFT & APPLIED OPTIONS ---
     property int notchAutoClose: 5000
     property int notchCompactWidth: 130
-    property int notchExpandedHeight: 420
-    property int notchBottomRadius: 16
+    property int notchExpandedHeight: 106
+    property int notchBottomRadius: 22
     property bool drippingEarsVal: true
     property real wallDurationVal: 0.5
     property string wallTypeVal: "outer"
@@ -1258,7 +1258,7 @@ PanelWindow {
                                         Text { text: root.notchExpandedHeight + " px"; font.family: Style.fontFamilyMono; font.pixelSize: Style.fontSizeSmall; color: Style.accent; font.weight: Font.Bold }
                                     }
                                     CustomSlider {
-                                        width: parent.width; from: 350; to: 480; value: root.notchExpandedHeight; stepSize: 10
+                                        width: parent.width; from: 88; to: 160; value: root.notchExpandedHeight; stepSize: 2
                                         onMoved: function(val) { root.notchExpandedHeight = Math.round(val); root.hasPendingChanges = true; }
                                     }
                                 }
@@ -1274,7 +1274,7 @@ PanelWindow {
                                         Text { text: root.notchBottomRadius + " px"; font.family: Style.fontFamilyMono; font.pixelSize: Style.fontSizeSmall; color: Style.accent; font.weight: Font.Bold }
                                     }
                                     CustomSlider {
-                                        width: parent.width; from: 8; to: 24; value: root.notchBottomRadius; stepSize: 1
+                                        width: parent.width; from: 8; to: 32; value: root.notchBottomRadius; stepSize: 1
                                         onMoved: function(val) { root.notchBottomRadius = Math.round(val); root.hasPendingChanges = true; }
                                     }
                                 }

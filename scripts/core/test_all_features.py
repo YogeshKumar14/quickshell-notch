@@ -818,6 +818,26 @@ def test_module_13():
     record(mod, "Visualizer DSP Noise Floor Gate (<6% Deadband)", noise_gate_valid, dur)
 
 
+# ==============================================================================
+# MODULE 14: AUDIO & SOUND DEVICES BACKEND (NEW)
+# ==============================================================================
+def test_module_14():
+    print(f"\n{Colors.BOLD}{Colors.BLUE}=== [MODULE 14] Audio & Sound Devices Backend ==={Colors.RESET}")
+    mod = "Module 14: Audio & Devices"
+
+    audio_script = SCRIPTS_DIR / "desktop/manage_audio.py"
+    record(mod, "manage_audio.py Executable Existence", audio_script.exists() and os.access(str(audio_script), os.X_OK), 0.001)
+
+    code, out, err, dur = run_cmd(["python3", str(audio_script), "status"])
+    try:
+        data = json.loads(out)
+        has_schema = all(k in data for k in ("volume", "volume_muted", "mic", "mic_muted", "sinks", "sources"))
+        record(mod, "PipeWire wpctl Audio Status Schema", code == 0 and has_schema, dur, err)
+        record(mod, "Audio Sinks & Sources List Types", isinstance(data.get("sinks"), list) and isinstance(data.get("sources"), list), 0.001)
+    except Exception as e:
+        record(mod, "PipeWire wpctl Audio Status Schema", False, dur, str(e))
+
+
 def main():
     print(f"{Colors.BOLD}======================================================{Colors.RESET}")
     print(f"{Colors.BOLD}🚀 Starting QuickShell Notch v2.0.0 Comprehensive Test Suite{Colors.RESET}")
@@ -837,6 +857,7 @@ def main():
     test_module_11()
     test_module_12()
     test_module_13()
+    test_module_14()
     total_time = time.perf_counter() - t_start
 
     generate_report()
@@ -853,3 +874,4 @@ def main():
 
 if __name__ == "__main__":
     main()
+
