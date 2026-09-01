@@ -12,6 +12,7 @@ import QtQuick.Layouts
 import QtQuick.Controls
 import Qt5Compat.GraphicalEffects
 import Quickshell
+import Quickshell.Io
 import Quickshell.Services.Mpris
 import "../theme"
 
@@ -58,13 +59,30 @@ Item {
     clip: false
 
     /** Current track total length in seconds */
-    property real trackLength: (root.activePlayer && root.activePlayer.length > 0) ? (root.activePlayer.length / 1000000.0) : 0
+    property real trackLength: (root.activePlayer && root.activePlayer.length > 0) ? (root.activePlayer.length > 10000 ? (root.activePlayer.length / 1000000.0) : root.activePlayer.length) : 0
 
     function formatTime(sec) {
         if (!sec || isNaN(sec) || sec <= 0) return "0:00";
         var mins = Math.floor(sec / 60);
         var secs = Math.floor(sec % 60);
         return mins + ":" + (secs < 10 ? "0" : "") + secs;
+    }
+
+    function seekAbsolute(sec) {
+        if (root.activePlayer && root.activePlayer.canSeek) {
+            root.activePlayer.position = sec;
+        }
+        playerctlSeek.command = ["playerctl", "position", sec.toFixed(1)];
+        playerctlSeek.running = true;
+    }
+
+    function seekRelative(deltaSec) {
+        if (root.activePlayer && root.activePlayer.canSeek) {
+            root.activePlayer.position = Math.max(0, root.trackPosition + deltaSec);
+        }
+        var arg = deltaSec < 0 ? (Math.abs(deltaSec) + "-") : (deltaSec + "+");
+        playerctlSeek.command = ["playerctl", "position", arg];
+        playerctlSeek.running = true;
     }
 
     // Real-time clock for calendar
@@ -249,24 +267,53 @@ Item {
                         color: "#8E8E93"
                     }
 
-                    Rectangle {
+                    Item {
                         Layout.fillWidth: true
-                        height: 3
-                        radius: 1.5
-                        color: "#3A3A3C"
+                        height: 12
+                        Layout.alignment: Qt.AlignVCenter
 
                         Rectangle {
                             anchors.left: parent.left
-                            anchors.top: parent.top
-                            anchors.bottom: parent.bottom
-                            width: (root.trackLength > 0) ? Math.min(parent.width, Math.max(0, (root.trackPosition / root.trackLength) * parent.width)) : (root.isPlaying ? 40 : 0)
-                            radius: 1.5
-                            color: "#FFFFFF"
+                            anchors.right: parent.right
+                            anchors.verticalCenter: parent.verticalCenter
+                            height: scrubMouse.containsMouse ? 4 : 3
+                            radius: height / 2
+                            color: "#3A3A3C"
+
+                            Behavior on height { NumberAnimation { duration: 100 } }
+
+                            Rectangle {
+                                anchors.left: parent.left
+                                anchors.top: parent.top
+                                anchors.bottom: parent.bottom
+                                width: (root.trackLength > 0) ? Math.min(parent.width, Math.max(0, (root.trackPosition / root.trackLength) * parent.width)) : (root.isPlaying ? 40 : 0)
+                                radius: height / 2
+                                color: "#FFFFFF"
+                            }
+                        }
+
+                        MouseArea {
+                            id: scrubMouse
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: function(mouse) {
+                                if (root.trackLength > 0) {
+                                    var targetPos = Math.max(0, Math.min(root.trackLength, (mouse.x / width) * root.trackLength));
+                                    root.seekAbsolute(targetPos);
+                                }
+                            }
+                            onPositionChanged: function(mouse) {
+                                if (pressed && root.trackLength > 0) {
+                                    var targetPos = Math.max(0, Math.min(root.trackLength, (mouse.x / width) * root.trackLength));
+                                    root.seekAbsolute(targetPos);
+                                }
+                            }
                         }
                     }
 
                     Text {
-                        text: (root.trackLength > 0) ? root.formatTime(root.trackLength) : "3:16"
+                        text: (root.trackLength > 0) ? root.formatTime(root.trackLength) : "0:00"
                         font.family: Style.fontFamilyMono
                         font.pixelSize: 8
                         color: "#8E8E93"
@@ -295,7 +342,7 @@ Item {
                             anchors.fill: parent
                             hoverEnabled: true
                             cursorShape: Qt.PointingHandCursor
-                            onClicked: if (root.activePlayer && root.activePlayer.canSeek) root.activePlayer.seek(-10000000)
+                            onClicked: root.seekRelative(-10)
                         }
                     }
 
@@ -316,7 +363,10 @@ Item {
                             anchors.fill: parent
                             hoverEnabled: true
                             cursorShape: Qt.PointingHandCursor
-                            onClicked: if (root.activePlayer) root.activePlayer.previous()
+                            onClicked: {
+                                if (root.activePlayer) root.activePlayer.previous();
+                                else playerctlPrev.running = true;
+                            }
                         }
                     }
 
@@ -337,7 +387,10 @@ Item {
                             anchors.fill: parent
                             hoverEnabled: true
                             cursorShape: Qt.PointingHandCursor
-                            onClicked: if (root.activePlayer) root.activePlayer.togglePlaying()
+                            onClicked: {
+                                if (root.activePlayer) root.activePlayer.togglePlaying();
+                                else playerctlPlayPause.running = true;
+                            }
                         }
                     }
 
@@ -358,7 +411,10 @@ Item {
                             anchors.fill: parent
                             hoverEnabled: true
                             cursorShape: Qt.PointingHandCursor
-                            onClicked: if (root.activePlayer) root.activePlayer.next()
+                            onClicked: {
+                                if (root.activePlayer) root.activePlayer.next();
+                                else playerctlNext.running = true;
+                            }
                         }
                     }
 
@@ -503,5 +559,25 @@ Item {
                 }
             }
         }
+    }
+
+    Process {
+        id: playerctlPrev
+        command: ["playerctl", "previous"]
+    }
+
+    Process {
+        id: playerctlPlayPause
+        command: ["playerctl", "play-pause"]
+    }
+
+    Process {
+        id: playerctlNext
+        command: ["playerctl", "next"]
+    }
+
+    Process {
+        id: playerctlSeek
+        command: ["playerctl", "position", "0"]
     }
 }
