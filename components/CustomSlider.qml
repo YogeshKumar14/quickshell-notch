@@ -22,12 +22,14 @@ Item {
     property real to: 100
     /** Granularity increment for step snaps */
     property real stepSize: 1
+    /** Height of the track in pixels */
+    property int trackHeight: 8
 
     /** Emitted when slider value changes via user interaction */
     signal moved(real val)
 
     implicitWidth: 200
-    implicitHeight: 22
+    implicitHeight: 20
 
     Slider {
         id: control
@@ -55,14 +57,15 @@ Item {
             }
         }
 
-        scale: control.pressed ? 0.99 : (control.hovered ? 1.005 : 1.0)
-        Behavior on scale { SpringAnimation { spring: 4.0; damping: 0.6; mass: 1.0 } }
+        scale: control.pressed ? 0.98 : (control.hovered ? 1.01 : 1.0)
+        Behavior on scale { SpringAnimation { spring: 5.0; damping: 0.3 } }
 
         background: Rectangle {
             width: control.availableWidth
-            height: control.height
-            radius: height / 2
-            color: Style.cardBgHover
+            height: root.trackHeight
+            radius: root.trackHeight / 2
+            anchors.centerIn: parent
+            color: "#2C2C2E"
 
             Rectangle {
                 width: Math.max(height, control.visualPosition * parent.width)
@@ -72,11 +75,23 @@ Item {
 
                 Behavior on width {
                     enabled: !control.pressed
-                    SpringAnimation { spring: 3.5; damping: 0.7; mass: 1.0 }
+                    SpringAnimation { spring: 4.0; damping: 0.3 }
                 }
             }
         }
 
-        handle: Item {}
+        handle: Rectangle {
+            x: control.leftPadding + control.visualPosition * (control.availableWidth - width)
+            anchors.verticalCenter: parent.verticalCenter
+            width: 14
+            height: 14
+            radius: 7
+            color: "#FFFFFF"
+            border.color: "#000000"
+            border.width: 1.5
+
+            scale: control.pressed ? 1.25 : (control.hovered ? 1.15 : 1.0)
+            Behavior on scale { SpringAnimation { spring: 5.5; damping: 0.25 } }
+        }
     }
 }

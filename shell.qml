@@ -107,8 +107,19 @@ Scope {
                             notchComp.toggleTab(1);
                         } else if (cmd === "walls") {
                             notchComp.toggleTab(2);
-                        } else if (cmd === "stats") {
-                            notchComp.toggleTab(3);
+                        } else if (cmd.startsWith("settings:tab:")) {
+                            var tabIdx = parseInt(cmd.split(":")[2]);
+                            if (!settingsLoader.active) settingsLoader.active = true;
+                            if (settingsLoader.item) {
+                                settingsLoader.item.isOpen = true;
+                                settingsLoader.item.currentTab = tabIdx;
+                            }
+                        } else if (cmd === "settings") {
+                            if (!settingsLoader.active) {
+                                settingsLoader.active = true;
+                            } else if (settingsLoader.item) {
+                                settingsLoader.item.toggle();
+                            }
                         } else if (cmd === "audio") {
                             notchComp.toggleAudioMenu();
                         } else if (cmd === "toggle") {
