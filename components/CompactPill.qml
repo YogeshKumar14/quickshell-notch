@@ -284,7 +284,7 @@ Item {
                         id: visBar
                         width: barContainer.barW
                         x: index * (barContainer.barW + barContainer.barSpacing)
-                        anchors.verticalCenter: parent.verticalCenter
+                        y: Math.round((parent.height - height) / 2)
 
                         property real rawVal: (root.visualizerFrame && index < root.visualizerFrame.length) ? root.visualizerFrame[index] : 0
                         // Apply epsilon deadband (< 6% treated as 0 to eliminate floor noise)
@@ -294,12 +294,14 @@ Item {
                         height: targetH
                         radius: 1
                         color: Style.accent
+                        smooth: true
+                        antialiasing: true
 
                         Behavior on height {
                             SpringAnimation {
-                                spring: 4.5
-                                damping: 0.35
-                                epsilon: 0.1
+                                spring: 5.5
+                                damping: 0.60
+                                epsilon: 0.25
                             }
                         }
                     }

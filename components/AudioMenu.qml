@@ -105,22 +105,26 @@ Item {
     }
 
     function setVolume(val) {
+        root.volumeLevel = val;
         audioActionProc.command = ["python3", Quickshell.shellDir + "/scripts/desktop/manage_audio.py", "set-volume", val.toString()];
         audioActionProc.running = true;
         root.volumeChanged(val);
     }
 
     function setMic(val) {
+        root.micLevel = val;
         audioActionProc.command = ["python3", Quickshell.shellDir + "/scripts/desktop/manage_audio.py", "set-mic", val.toString()];
         audioActionProc.running = true;
     }
 
     function toggleVolumeMute() {
+        root.volumeMuted = !root.volumeMuted;
         audioActionProc.command = ["python3", Quickshell.shellDir + "/scripts/desktop/manage_audio.py", "toggle-volume-mute"];
         audioActionProc.running = true;
     }
 
     function toggleMicMute() {
+        root.micMuted = !root.micMuted;
         audioActionProc.command = ["python3", Quickshell.shellDir + "/scripts/desktop/manage_audio.py", "toggle-mic-mute"];
         audioActionProc.running = true;
     }
@@ -133,6 +137,13 @@ Item {
     function setSource(id) {
         audioActionProc.command = ["python3", Quickshell.shellDir + "/scripts/desktop/manage_audio.py", "set-source", id.toString()];
         audioActionProc.running = true;
+    }
+
+    // Transparent Background MouseArea to absorb clicks and dismiss on empty area click
+    MouseArea {
+        anchors.fill: parent
+        cursorShape: Qt.ArrowCursor
+        onClicked: root.closeRequested()
     }
 
     ColumnLayout {

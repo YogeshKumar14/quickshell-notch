@@ -379,8 +379,8 @@ FocusScope {
     property int notifStackHeight: notifHistoryComp ? notifHistoryComp.notifStackHeight : 140
 
     // Spring Constants
-    property real expandSpringTension: 4.5
-    property real expandSpringDamping: 0.28
+    property real expandSpringTension: 5.0
+    property real expandSpringDamping: 0.40
     property real tabSpringTension: 5.5
     property real tabSpringDamping: 0.22
 
@@ -977,7 +977,7 @@ FocusScope {
             SpringAnimation {
                 spring: root.expandSpringTension
                 damping: root.expandSpringDamping
-                epsilon: Style.springEpsilon
+                epsilon: 0.20
                 mass: 1.0
             }
         }
@@ -985,7 +985,7 @@ FocusScope {
             SpringAnimation {
                 spring: root.expandSpringTension
                 damping: root.expandSpringDamping
-                epsilon: Style.springEpsilon
+                epsilon: 0.20
                 mass: 1.0
             }
         }
@@ -995,13 +995,13 @@ FocusScope {
             id: notchMouseArea
             anchors.fill: parent
             hoverEnabled: true
-            cursorShape: (!root.isExpanded && !root.isNotifMenuOpen && !root.isPowerMenuOpen && !root.isWifiMenuOpen && !root.isBluetoothMenuOpen) ? Qt.PointingHandCursor : Qt.ArrowCursor
+            cursorShape: (!root.isExpanded && !root.isNotifMenuOpen && !root.isPowerMenuOpen && !root.isWifiMenuOpen && !root.isBluetoothMenuOpen && !root.isAudioMenuOpen) ? Qt.PointingHandCursor : Qt.ArrowCursor
             onEntered: autoCloseTimer.stop()
             onExited: {
                 if (root.isExpanded) autoCloseTimer.restart();
             }
             onClicked: function(mouse) {
-                if (!root.isExpanded && !root.isNotifMenuOpen && !root.isPowerMenuOpen && !root.isWifiMenuOpen && !root.isBluetoothMenuOpen) {
+                if (!root.isExpanded && !root.isNotifMenuOpen && !root.isPowerMenuOpen && !root.isWifiMenuOpen && !root.isBluetoothMenuOpen && !root.isAudioMenuOpen) {
                     if (root.showVisualizer) root.currentPage = 0;
                     root.isExpanded = true;
                     root.isOsdActive = false;
@@ -1012,6 +1012,7 @@ FocusScope {
                     else if (root.isWifiMenuOpen) root.isWifiMenuOpen = false;
                     else if (root.isBluetoothMenuOpen) root.isBluetoothMenuOpen = false;
                     else if (root.isNotifMenuOpen) root.isNotifMenuOpen = false;
+                    else if (root.isAudioMenuOpen) root.isAudioMenuOpen = false;
                     else if (root.isExpanded) root.isExpanded = false;
                 }
             }
@@ -1021,7 +1022,7 @@ FocusScope {
         CompactPill {
             id: compactPillComp
             anchors.fill: parent
-            opacity: (root.isExpanded || root.isNotifMenuOpen || root.isPowerMenuOpen || root.isWifiMenuOpen || root.isBluetoothMenuOpen) ? 0.0 : 1.0
+            opacity: (root.isExpanded || root.isNotifMenuOpen || root.isPowerMenuOpen || root.isWifiMenuOpen || root.isBluetoothMenuOpen || root.isAudioMenuOpen) ? 0.0 : 1.0
             visible: opacity > 0.01
 
             timeStr: root.timeStr
@@ -1089,9 +1090,9 @@ FocusScope {
                 anchors.top: parent.top
                 anchors.topMargin: 4
                 anchors.left: parent.left
-                anchors.leftMargin: 8
+                anchors.leftMargin: 12
                 anchors.right: parent.right
-                anchors.rightMargin: 8
+                anchors.rightMargin: 12
                 height: 20
 
                 currentPage: root.currentPage
@@ -1163,9 +1164,9 @@ FocusScope {
                 anchors.top: parent.top
                 anchors.topMargin: 28
                 anchors.left: parent.left
-                anchors.leftMargin: 10
+                anchors.leftMargin: 12
                 anchors.right: parent.right
-                anchors.rightMargin: 10
+                anchors.rightMargin: 12
                 anchors.bottom: parent.bottom
                 anchors.bottomMargin: 6
                 clip: true

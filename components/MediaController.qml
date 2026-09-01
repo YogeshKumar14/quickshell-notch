@@ -60,8 +60,24 @@ Item {
 
     clip: false
 
-    /** Current track total length in seconds */
-    property real trackLength: (root.activePlayer && root.activePlayer.length > 0) ? (root.activePlayer.length > 10000 ? (root.activePlayer.length / 1000000.0) : root.activePlayer.length) : 0
+    /** Local optimistically synced track position in seconds */
+    property real localTrackPosition: 0
+
+    /** Current track total length in seconds (auto-normalized from microseconds if needed) */
+    property real trackLength: {
+        if (!root.activePlayer || !root.activePlayer.length || root.activePlayer.length <= 0) return 0;
+        var len = root.activePlayer.length;
+        return len > 10000 ? (len / 1000000.0) : len;
+    }
+
+    /** Clean track elapsed position in seconds (auto-normalized and clamped) */
+    property real cleanTrackPosition: {
+        var pos = root.localTrackPosition > 0 ? root.localTrackPosition : root.trackPosition;
+        if (!pos || pos <= 0) return 0;
+        if (pos > 10000) pos = pos / 1000000.0;
+        if (root.trackLength > 0) pos = Math.min(root.trackLength, pos);
+        return Math.max(0, pos);
+    }
 
     function formatTime(sec) {
         if (!sec || isNaN(sec) || sec <= 0) return "0:00";
@@ -71,6 +87,7 @@ Item {
     }
 
     function seekAbsolute(sec) {
+        root.localTrackPosition = sec;
         if (root.activePlayer && root.activePlayer.canSeek) {
             root.activePlayer.position = sec;
         }
@@ -79,12 +96,40 @@ Item {
     }
 
     function seekRelative(deltaSec) {
+        var targetPos = Math.max(0, root.cleanTrackPosition + deltaSec);
+        root.localTrackPosition = targetPos;
         if (root.activePlayer && root.activePlayer.canSeek) {
-            root.activePlayer.position = Math.max(0, root.trackPosition + deltaSec);
+            root.activePlayer.position = targetPos;
         }
         var arg = deltaSec < 0 ? (Math.abs(deltaSec) + "-") : (deltaSec + "+");
         playerctlSeek.command = ["playerctl", "position", arg];
         playerctlSeek.running = true;
+    }
+
+    // Active 500ms playerctl position polling for sub-second accurate playback timeline
+    Process {
+        id: playerctlPosProc
+        command: ["playerctl", "position"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                var p = parseFloat(this.text.trim());
+                if (!isNaN(p) && p >= 0) {
+                    root.localTrackPosition = p;
+                }
+            }
+        }
+    }
+
+    Timer {
+        id: posPollingTimer
+        interval: 500
+        running: root.isPlaying
+        repeat: true
+        onTriggered: {
+            if (!playerctlPosProc.running) {
+                playerctlPosProc.running = true;
+            }
+        }
     }
 
     // Real-time clock for calendar
@@ -263,7 +308,7 @@ Item {
                     spacing: 6
 
                     Text {
-                        text: root.formatTime(root.trackPosition)
+                        text: root.formatTime(root.cleanTrackPosition)
                         font.family: Style.fontFamilyMono
                         font.pixelSize: 8
                         color: "#8E8E93"
@@ -288,7 +333,7 @@ Item {
                                 anchors.left: parent.left
                                 anchors.top: parent.top
                                 anchors.bottom: parent.bottom
-                                width: (root.trackLength > 0) ? Math.min(parent.width, Math.max(0, (root.trackPosition / root.trackLength) * parent.width)) : (root.isPlaying ? 40 : 0)
+                                width: (root.trackLength > 0) ? Math.min(parent.width, Math.max(0, (root.cleanTrackPosition / root.trackLength) * parent.width)) : (root.isPlaying ? 40 : 0)
                                 radius: height / 2
                                 color: "#FFFFFF"
                             }
@@ -455,7 +500,8 @@ Item {
         width: 245
 
         Column {
-            anchors.centerIn: parent
+            anchors.verticalCenter: parent.verticalCenter
+            anchors.right: parent.right
             spacing: 3
 
             // Top Row: Month/Year + 7-Day Horizontal Strip

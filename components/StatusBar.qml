@@ -11,7 +11,7 @@ import QtQuick
 import QtQuick.Layouts
 import "../theme"
 
-RowLayout {
+Item {
     id: root
 
     /** Currently active tab index (0=Media, 1=Walls, 2=Apps, 3=Stats) */
@@ -71,59 +71,15 @@ RowLayout {
     /** Emitted when user clicks Settings gear */
     signal settingsClicked()
 
-    Layout.fillWidth: true
-    Layout.preferredHeight: 20
-    Layout.maximumHeight: 20
     implicitHeight: 20
-    spacing: 6
 
-    // Minimal Borderless Tab Switcher (Matching Reference)
-    Row {
-        id: tabRow
-        spacing: 12
-        Layout.alignment: Qt.AlignVCenter
-
-        Repeater {
-            id: tabRepeater
-            model: [ "home", "inbox", "wallpaper", "trending_up" ]
-
-            Item {
-                width: 16
-                height: 16
-
-                property bool isSelected: root.currentPage === index
-                property bool isHovered: tabMouse.containsMouse
-
-                scale: (root.buttonAnims && tabMouse.pressed) ? 0.85 : ((root.buttonAnims && (isSelected || isHovered)) ? 1.15 : 1.0)
-                Behavior on scale { enabled: root.buttonAnims; SpringAnimation { spring: root.tabSpringTension; damping: root.tabSpringDamping } }
-
-                M3Icon {
-                    anchors.centerIn: parent
-                    name: modelData
-                    size: 13
-                    color: isSelected ? "#FFFFFF" : (isHovered ? "#E5E5EA" : "#7C7C80")
-                    Behavior on color { ColorAnimation { duration: root.buttonSpeed; easing.type: Easing.OutQuad } }
-                }
-
-                MouseArea {
-                    id: tabMouse
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: root.tabSelected(index)
-                }
-            }
-        }
-    }
-
-    Item { Layout.fillWidth: true }
-
-    // Center Hardware Camera Privacy Indicator Dot
+    // Center Hardware Camera Privacy Indicator Dot (Exact Mathematical Center of Notch)
     Rectangle {
-        Layout.alignment: Qt.AlignVCenter
+        anchors.centerIn: parent
         width: 4; height: 4; radius: 2
         color: "#22C55E"
         opacity: 0.95
+        z: 10
 
         SequentialAnimation on opacity {
             loops: Animation.Infinite
@@ -133,7 +89,50 @@ RowLayout {
         }
     }
 
-    Item { Layout.fillWidth: true }
+    RowLayout {
+        anchors.fill: parent
+        spacing: 6
+
+        // Minimal Borderless Tab Switcher (Matching Reference)
+        Row {
+            id: tabRow
+            spacing: 12
+            Layout.alignment: Qt.AlignVCenter
+
+            Repeater {
+                id: tabRepeater
+                model: [ "home", "inbox", "wallpaper", "trending_up" ]
+
+                Item {
+                    width: 16
+                    height: 16
+
+                    property bool isSelected: root.currentPage === index
+                    property bool isHovered: tabMouse.containsMouse
+
+                    scale: (root.buttonAnims && tabMouse.pressed) ? 0.85 : ((root.buttonAnims && (isSelected || isHovered)) ? 1.15 : 1.0)
+                    Behavior on scale { enabled: root.buttonAnims; SpringAnimation { spring: root.tabSpringTension; damping: root.tabSpringDamping } }
+
+                    M3Icon {
+                        anchors.centerIn: parent
+                        name: modelData
+                        size: 13
+                        color: isSelected ? "#FFFFFF" : (isHovered ? "#E5E5EA" : "#7C7C80")
+                        Behavior on color { ColorAnimation { duration: root.buttonSpeed; easing.type: Easing.OutQuad } }
+                    }
+
+                    MouseArea {
+                        id: tabMouse
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: root.tabSelected(index)
+                    }
+                }
+            }
+        }
+
+        Item { Layout.fillWidth: true }
 
     // Modern M3 Expressive Dynamic Battery Capsule
     RowLayout {
@@ -349,4 +348,5 @@ RowLayout {
             onClicked: root.settingsClicked()
         }
     }
+}
 }
