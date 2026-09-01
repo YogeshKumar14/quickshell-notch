@@ -31,12 +31,22 @@ PanelWindow {
     /** Toggles window visibility and triggers options sync */
     function toggle() {
         isOpen = !isOpen;
-        if (isOpen) {
-            hasPendingChanges = false;
-            getOptionsProc.running = true;
-            getNotchProc.running = true;
-        }
     }
+
+    /** Reads all persisted settings from disk into the draft properties */
+    function syncFromDisk() {
+        hasPendingChanges = false;
+        getOptionsProc.running = true;
+        getNotchProc.running = true;
+    }
+
+    // Foolproof: always re-read persisted settings from disk when opening
+    onIsOpenChanged: {
+        if (isOpen) syncFromDisk();
+    }
+
+    // Foolproof: read persisted settings immediately on first instantiation
+    Component.onCompleted: syncFromDisk()
 
     visible: isOpen
     implicitWidth: 780
