@@ -1,4 +1,10 @@
 #!/usr/bin/env bash
+# set_hypr_option.sh — CLI Helper to Persist & Apply Individual Hyprland Options.
+#
+# Usage:
+#   bash set_hypr_option.sh <setting_name> <value>
+#   bash set_hypr_option.sh reset_defaults ""
+
 if [ "$QUICKSHELL_SANDBOX" = "1" ]; then
     echo "sandbox_skipped"
     exit 0
@@ -7,8 +13,9 @@ fi
 TYPE="$1"
 VAL="$2"
 
-PERSIST_SCRIPT="$HOME/.config/quickshell/scripts/hyprland/persist_hypr_state.py"
-APPLY_SCRIPT="$HOME/.config/quickshell/scripts/hyprland/apply_hypr_option.py"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+PERSIST_SCRIPT="${SCRIPT_DIR}/persist_hypr_state.py"
+APPLY_SCRIPT="${SCRIPT_DIR}/apply_hypr_option.py"
 
 # Map setting name to the hyprctl key (dotted path).
 case "$TYPE" in

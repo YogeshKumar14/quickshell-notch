@@ -1,4 +1,22 @@
 #!/usr/bin/env python3
+"""
+get_device_levels.py — Hardware Audio, Brightness, and Battery State Poller.
+
+Queries system hardware states in a single batch process:
+  - Master Volume level and mute state (via wpctl)
+  - Microphone Input level and mute state (via wpctl)
+  - Screen Brightness percentage (via brightnessctl / sysfs backlight)
+  - Battery capacity percentage and charging status (via sysfs power_supply)
+
+CLI Output:
+    JSON object: {
+        "volume": int, "volume_muted": bool,
+        "mic": int, "mic_muted": bool,
+        "brightness": int,
+        "battery": int, "battery_status": str
+    }
+"""
+
 import glob
 import json
 import os

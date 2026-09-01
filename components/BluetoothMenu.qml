@@ -1,3 +1,12 @@
+/**
+ * BluetoothMenu.qml — Bluetooth Device Manager Drawer for QuickShell Notch
+ *
+ * Renders the Bluetooth quick-settings overlay:
+ *   - Hardware adapter radio toggle (bluetoothctl power)
+ *   - Auto-scanning device list with paired and connected state indicators
+ *   - One-click device connect/disconnect toggle
+ */
+
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
@@ -7,9 +16,18 @@ import "../theme"
 Item {
     id: root
 
+    /** Whether Bluetooth menu overlay is currently visible */
     required property bool isOpen
+    /** Current adapter power state */
     property bool btPower: false
+    /** Array of paired/scanned Bluetooth devices [{mac, name, connected, paired}] */
     property var btDevices: []
+    property alias devices: root.btDevices
+
+    /** Emitted when user dismisses Bluetooth drawer */
+    signal closeRequested()
+    /** Emitted when user toggles adapter power switch */
+    signal powerToggled(bool state)
 
     anchors.fill: parent
     z: 99
@@ -32,7 +50,7 @@ Item {
 
     Process {
         id: btScanner
-        command: ["python3", "/home/yogesh/.config/quickshell/scripts/network/manage_bluetooth.py"]
+        command: ["python3", Quickshell.shellDir + "/scripts/network/manage_bluetooth.py"]
         stdout: StdioCollector {
             onStreamFinished: {
                 try {
@@ -76,14 +94,14 @@ Item {
 
     function toggleConnection(mac) {
         btToggler.running = false;
-        btToggler.command = ["python3", "/home/yogesh/.config/quickshell/scripts/network/manage_bluetooth.py", "toggle_conn", mac];
+        btToggler.command = ["python3", Quickshell.shellDir + "/scripts/network/manage_bluetooth.py", "toggle_conn", mac];
         btToggler.running = true;
     }
 
     function togglePower(val) {
         root.btPower = val;
         btToggler.running = false;
-        btToggler.command = ["python3", "/home/yogesh/.config/quickshell/scripts/network/manage_bluetooth.py", val ? "on" : "off"];
+        btToggler.command = ["python3", Quickshell.shellDir + "/scripts/network/manage_bluetooth.py", val ? "on" : "off"];
         btToggler.running = true;
     }
 

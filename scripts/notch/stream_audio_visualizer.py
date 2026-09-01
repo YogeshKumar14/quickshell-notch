@@ -1,4 +1,15 @@
 #!/usr/bin/env python3
+"""
+stream_audio_visualizer.py — CAVA Raw Audio Visualizer Streamer.
+
+Spawns cava as a child process with PR_SET_PDEATHSIG lifecycle management,
+reads raw binary audio amplitudes, normalizes bars into 0-100 percentages,
+detects audio activity thresholds, and streams JSON frames to stdout.
+
+Stream Output:
+    JSON line: { "bars": [int, ...], "active": bool }
+"""
+
 import os
 import sys
 import json
@@ -7,10 +18,10 @@ import subprocess
 import shutil
 import atexit
 import signal
-
-import ctypes
-
 import re
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "core"))
+from process_utils import set_pdeathsig
 
 CONFIG_DIR = os.path.expanduser("~/.config/quickshell")
 RUNTIME_DIR = os.environ.get("XDG_RUNTIME_DIR", "/tmp")
@@ -21,14 +32,6 @@ ACTIVITY_THRESHOLD = 5
 MAX_BACKOFF = 30
 
 proc = None
-
-def set_pdeathsig():
-    try:
-        libc = ctypes.CDLL("libc.so.6")
-        PR_SET_PDEATHSIG = 1
-        libc.prctl(PR_SET_PDEATHSIG, signal.SIGTERM)
-    except Exception:
-        pass
 
 def cleanup():
     global proc
@@ -170,7 +173,18 @@ def main():
                 parts = [p for p in line.split(";") if p != ""]
                 if len(parts) >= bar_count:
                     try:
-                        vals = [int(p) for p in parts[:bar_count]]
+                        raw_vals = [int(p) for p in parts[:bar_count]]
+                        # Apply noise floor deadband (< 6% amplitude filtered to 0)
+                        cleaned_vals = [0 if v < 6 else v for v in raw_vals]
+
+                        # Apply EMA smoothing filter (alpha=0.70)
+                        if 'ema_bars' not in locals() or len(ema_bars) != bar_count:
+                            ema_bars = [float(v) for v in cleaned_vals]
+                        else:
+                            alpha = 0.70
+                            ema_bars = [alpha * c + (1.0 - alpha) * e for c, e in zip(cleaned_vals, ema_bars)]
+
+                        vals = [int(round(v)) for v in ema_bars]
                         is_act = any(v > ACTIVITY_THRESHOLD for v in vals)
 
                         if is_act:

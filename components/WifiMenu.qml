@@ -1,3 +1,13 @@
+/**
+ * WifiMenu.qml — Wi-Fi Network Selector & Connection Drawer for QuickShell Notch
+ *
+ * Renders the Wi-Fi quick-settings overlay:
+ *   - Hardware radio power toggle (nmcli networking)
+ *   - Auto-scanning network list with signal strength indicators and security locks
+ *   - WPA/WPA2 password prompt modal with reveal toggle
+ *   - One-click connection and status feedback
+ */
+
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
@@ -7,14 +17,30 @@ import "../theme"
 Item {
     id: root
 
+    /** Whether Wi-Fi menu overlay is currently visible */
     required property bool isOpen
+    /** Current hardware Wi-Fi power state */
     property bool wifiPower: false
-    property string wifiActiveSsid: ""
-    property var wifiNetworks: []
+    /** Active connected SSID string */
+    property string activeSsid: ""
+    property alias wifiActiveSsid: root.activeSsid
+    /** Array of scanned Wi-Fi network objects [{ssid, signal, security, active}] */
+    property var networks: []
+    property alias wifiNetworks: root.networks
+
+    /** Whether password input modal is currently open */
     property bool isPasswordPromptOpen: false
+    /** Target SSID requiring password authentication */
     property string promptSsid: ""
+    /** Current typed password text */
     property string passwordText: ""
+    /** Whether password text is shown in plaintext */
     property bool showPassword: false
+
+    /** Emitted when user dismisses the Wi-Fi drawer */
+    signal closeRequested()
+    /** Emitted when user toggles radio power switch */
+    signal powerToggled(bool state)
 
     anchors.fill: parent
     z: 99
@@ -39,7 +65,7 @@ Item {
 
     Process {
         id: wifiScanner
-        command: ["python3", "/home/yogesh/.config/quickshell/scripts/network/manage_wifi.py"]
+        command: ["python3", Quickshell.shellDir + "/scripts/network/manage_wifi.py"]
         stdout: StdioCollector {
             onStreamFinished: {
                 try {
@@ -77,14 +103,14 @@ Item {
 
     function connect(ssid, password) {
         wifiToggler.running = false;
-        wifiToggler.command = ["python3", "/home/yogesh/.config/quickshell/scripts/network/manage_wifi.py", "connect", ssid, password || ""];
+        wifiToggler.command = ["python3", Quickshell.shellDir + "/scripts/network/manage_wifi.py", "connect", ssid, password || ""];
         wifiToggler.running = true;
     }
 
     function togglePower(val) {
         root.wifiPower = val;
         wifiToggler.running = false;
-        wifiToggler.command = ["python3", "/home/yogesh/.config/quickshell/scripts/network/manage_wifi.py", val ? "on" : "off"];
+        wifiToggler.command = ["python3", Quickshell.shellDir + "/scripts/network/manage_wifi.py", val ? "on" : "off"];
         wifiToggler.running = true;
     }
 

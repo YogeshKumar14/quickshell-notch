@@ -1,10 +1,21 @@
+/**
+ * CustomSwitch.qml — Material 3 Expressive Toggle Switch for QuickShell Notch
+ *
+ * Provides a tactile toggle switch:
+ *   - Spring-animated sliding pill thumb with press/hover physical micro-scaling
+ *   - Smooth animated track color transitions (accent active vs dimmed border inactive)
+ */
+
 import QtQuick
 import "../theme"
 
 Item {
     id: root
 
+    /** Boolean state of the switch */
     property bool checked: false
+
+    /** Emitted when switch state is toggled by user interaction */
     signal toggled(bool newState)
 
     implicitWidth: 46

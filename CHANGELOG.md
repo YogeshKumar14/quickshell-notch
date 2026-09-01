@@ -4,6 +4,17 @@ All notable changes to QuickShell Top Notch are documented here.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.0.0] - 2026-09-01
+
+### Added
+- **NotchNook Modern 3-Column Landscape Architecture**: Re-architected expanded notch with compact 106px height, 3-column media controller, 7-day live calendar timeline, and hardware stats dashboard.
+- **Hardware-Accelerated OpacityMask Squircle Clipping**: True anti-aliased squircle corner clipping across album art, compact thumbnails, and 16:9 wallpaper preview cards eliminating SceneGraph AABB scissor corner bleed.
+- **Visualizer DSP Signal Conditioning & Spring Damping**: Exponential Moving Average (EMA) low-pass filter and noise floor deadband in Python CAVA streamer, paired with spring-damped bar heights in QML.
+- **Minimal Borderless Header Navigation**: Clean floating glyphs (`🏠`, `📥`, `⏱️`, `📈`) matching reference design with spring scale micro-interactions and smooth color transitions.
+- **Continuous Realtime Scrubber Timestamps**: Sub-second MPRIS timeline position polling with live progress scrubber and `replay_10` circular rewind button.
+- **OSD Morphing & Zero-Clipping Pipeline**: Dynamic notch morphing to $240\times 34\text{px}$ OSD pill with rotating Sun icon ($\pm 45^\circ$), clamped percentages ($0-100\%$), and automatic pre-expansion restoration.
+- **Comprehensive 144-Test Aggressive Verification Harness**: Added Module 13 stress testing rapid IPC morphing bursts, Scrubber division-by-zero bounds, and `OpacityMask` declarations.
+
 ## [1.2.0] - 2026-08-26
 
 ### Added

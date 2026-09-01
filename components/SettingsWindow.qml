@@ -1,3 +1,13 @@
+/**
+ * SettingsWindow.qml — Comprehensive GUI Configuration Center for QuickShell Notch
+ *
+ * Provides a dedicated standalone dialog for managing:
+ *   - Hyprland Window Manager Settings (Gaps, Rounding, Borders, Blur, Shadow, Opacity, Layout, Animations, Input)
+ *   - Notch Customization Options (Dimensions, Physics, Visualizer, Workspaces, Animations, Timers)
+ *   - Atomic Dual-Write persistence to ~/.config/hypr/quickshell_hypr.{lua,conf} and notch_settings.json
+ *   - Zero-latency live-apply preview with error feedback and reset-to-defaults capabilities
+ */
+
 import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls
@@ -9,11 +19,15 @@ import "../theme"
 PanelWindow {
     id: root
 
+    /** Whether the settings dialog window is open */
     property bool isOpen: false
-    property int currentTab: 0 // 0: Hyprland Options, 1: Top Notch Bar Options
+    /** Active settings category tab index (0: Hyprland Options, 1: Notch Options) */
+    property int currentTab: 0
 
+    /** Emitted when notch options are saved and applied */
     signal notchSettingsChanged()
 
+    /** Toggles window visibility and triggers options sync */
     function toggle() {
         isOpen = !isOpen;
         if (isOpen) {
@@ -124,7 +138,7 @@ PanelWindow {
 
     Process {
         id: getOptionsProc
-        command: ["python3", "/home/yogesh/.config/quickshell/scripts/hyprland/get_hypr_options.py"]
+        command: ["python3", Quickshell.shellDir + "/scripts/hyprland/get_hypr_options.py"]
         stdout: StdioCollector {
             onStreamFinished: {
                 try {
@@ -158,7 +172,7 @@ PanelWindow {
 
     Process {
         id: getNotchProc
-        command: ["python3", "/home/yogesh/.config/quickshell/scripts/notch/get_notch_settings.py"]
+        command: ["python3", Quickshell.shellDir + "/scripts/notch/get_notch_settings.py"]
         stdout: StdioCollector {
             onStreamFinished: {
                 try {
@@ -316,7 +330,7 @@ PanelWindow {
             }
         };
 
-        applyAllProc.command = ["python3", "/home/yogesh/.config/quickshell/scripts/hyprland/apply_all_settings.py", JSON.stringify(payload)];
+        applyAllProc.command = ["python3", Quickshell.shellDir + "/scripts/hyprland/apply_all_settings.py", JSON.stringify(payload)];
         applyAllProc.running = true;
     }
 
@@ -1647,7 +1661,7 @@ PanelWindow {
                         hoverEnabled: true
                         cursorShape: Qt.PointingHandCursor
                         onClicked: {
-                            resetDefaultsProc.command = ["bash", "/home/yogesh/.config/quickshell/scripts/hyprland/set_hypr_option.sh", "reset_defaults", ""];
+                            resetDefaultsProc.command = ["bash", Quickshell.shellDir + "/scripts/hyprland/set_hypr_option.sh", "reset_defaults", ""];
                             resetDefaultsProc.running = true;
                         }
                     }

@@ -1,3 +1,13 @@
+/**
+ * AppLauncher.qml — Application Grid & Fuzzy Launcher for QuickShell Notch
+ *
+ * Renders PAGE 2 of the expanded notch:
+ *   - Parses system .desktop entries with intelligent icon resolution
+ *   - Real-time search query filtering and name matching
+ *   - Dynamic grid layout with configurable columns
+ *   - Full keyboard navigation (Arrow keys + Enter) and quick application execution
+ */
+
 import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls
@@ -8,24 +18,33 @@ import "../theme"
 FocusScope {
     id: root
 
+    /** Number of grid columns for application cards */
     property int appColumns: 4
-    // Highlight & Grid Animation Customization
+    /** Highlight animation mode ("spring", "smooth", "linear", "none") */
     property string highlightAnimType: "spring"
+    /** Physics spring tension for highlight movement */
     property real highlightSpringTension: 5.5
+    /** Physics spring damping for highlight movement */
     property real highlightSpringDamping: 0.25
+    /** Grid application item entrance transition duration */
     property int gridAnimDuration: 120
+    /** Whether micro-interaction button animations are enabled */
+    property bool buttonAnims: true
 
+    /** Emitted when an application is launched */
     signal appLaunched()
+    /** Emitted when launcher close/dismiss is requested */
+    signal closeRequested()
 
-    // Keyboard selection index
+    /** Keyboard selection index */
     property int selectedIndex: 0
-
+    /** Complete list of parsed desktop applications [{name, exec, icon, comment}] */
     property var allApps: []
 
     // Fast process scanner
     Process {
         id: appScanner
-        command: ["python3", "/home/yogesh/.config/quickshell/scripts/desktop/get_apps.py"]
+        command: ["python3", Quickshell.shellDir + "/scripts/desktop/get_apps.py"]
         stdout: StdioCollector {
             onStreamFinished: {
                 try {
@@ -78,80 +97,99 @@ FocusScope {
         id: appModel
     }
 
-    ColumnLayout {
+    RowLayout {
         anchors.fill: parent
-        anchors.margins: 10
-        spacing: 10
+        spacing: 8
 
-        // Search Bar with Focus Handler
+        // Search Card Pill (Left Column, 130px)
         Rectangle {
-            Layout.fillWidth: true
-            height: 32
-            radius: Style.radiusMedium
-            color: Style.cardBg
-            border.color: searchAppInput.activeFocus ? Style.accent : Style.cardBorder
+            Layout.preferredWidth: 130
+            Layout.preferredHeight: 60
+            Layout.alignment: Qt.AlignVCenter
+            radius: 12
+            color: "#1C1C1E"
+            border.color: searchAppInput.activeFocus ? Style.accent : "#2C2C2E"
+            border.width: searchAppInput.activeFocus ? 1.5 : 1.0
 
-            Behavior on border.color { ColorAnimation { duration: 150 } }
+            Behavior on border.color { ColorAnimation { duration: 120 } }
 
-            RowLayout {
+            ColumnLayout {
                 anchors.fill: parent
-                anchors.leftMargin: 10
-                anchors.rightMargin: 10
-                spacing: 6
+                anchors.margins: 6
+                spacing: 2
 
-                M3Icon { name: "search"; color: Style.textMuted; size: 16 }
-
-                TextInput {
-                    id: searchAppInput
-                    focus: true
+                RowLayout {
                     Layout.fillWidth: true
-                    font.family: Style.fontFamily
-                    font.pixelSize: Style.fontSizeSmall
-                    color: Style.textPrimary
-                    clip: true
-                    activeFocusOnPress: true
-                    selectByMouse: true
+                    spacing: 6
 
-                    onTextChanged: root.filterApps()
-
-                    // Keyboard navigation while search bar has focus
-                    Keys.onPressed: function(event) {
-                        var cols = root.appColumns;
-                        var count = appModel.count;
-                        if (count === 0) return;
-
-                        if (event.key === Qt.Key_Down) {
-                            root.selectedIndex = Math.min(root.selectedIndex + cols, count - 1);
-                            appGrid.positionViewAtIndex(root.selectedIndex, GridView.Contain);
-                            event.accepted = true;
-                        } else if (event.key === Qt.Key_Up) {
-                            root.selectedIndex = Math.max(root.selectedIndex - cols, 0);
-                            appGrid.positionViewAtIndex(root.selectedIndex, GridView.Contain);
-                            event.accepted = true;
-                        } else if (event.key === Qt.Key_Right) {
-                            root.selectedIndex = Math.min(root.selectedIndex + 1, count - 1);
-                            appGrid.positionViewAtIndex(root.selectedIndex, GridView.Contain);
-                            event.accepted = true;
-                        } else if (event.key === Qt.Key_Left) {
-                            root.selectedIndex = Math.max(root.selectedIndex - 1, 0);
-                            appGrid.positionViewAtIndex(root.selectedIndex, GridView.Contain);
-                            event.accepted = true;
-                        } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
-                            root.launchSelected();
-                            event.accepted = true;
-                        } else if (event.key === Qt.Key_Tab) {
-                            root.selectedIndex = (root.selectedIndex + 1) % count;
-                            appGrid.positionViewAtIndex(root.selectedIndex, GridView.Contain);
-                            event.accepted = true;
-                        }
+                    M3Icon {
+                        name: "search"
+                        color: searchAppInput.activeFocus ? Style.accent : Style.textMuted
+                        size: 13
                     }
 
-                    Text {
-                        text: "Search apps..."
+                    TextInput {
+                        id: searchAppInput
+                        focus: true
+                        Layout.fillWidth: true
                         font.family: Style.fontFamily
-                        font.pixelSize: Style.fontSizeSmall
+                        font.pixelSize: 11
+                        color: Style.textPrimary
+                        clip: true
+                        activeFocusOnPress: true
+                        selectByMouse: true
+
+                        onTextChanged: root.filterApps()
+
+                        // Keyboard navigation while search bar has focus
+                        Keys.onPressed: function(event) {
+                            var count = appModel.count;
+                            if (count === 0) return;
+
+                            if (event.key === Qt.Key_Right || event.key === Qt.Key_Down) {
+                                root.selectedIndex = Math.min(root.selectedIndex + 1, count - 1);
+                                appListView.positionViewAtIndex(root.selectedIndex, ListView.Contain);
+                                event.accepted = true;
+                            } else if (event.key === Qt.Key_Left || event.key === Qt.Key_Up) {
+                                root.selectedIndex = Math.max(root.selectedIndex - 1, 0);
+                                appListView.positionViewAtIndex(root.selectedIndex, ListView.Contain);
+                                event.accepted = true;
+                            } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+                                root.launchSelected();
+                                event.accepted = true;
+                            } else if (event.key === Qt.Key_Tab) {
+                                root.selectedIndex = (root.selectedIndex + 1) % count;
+                                appListView.positionViewAtIndex(root.selectedIndex, ListView.Contain);
+                                event.accepted = true;
+                            } else if (event.key === Qt.Key_Escape) {
+                                if (searchAppInput.text.length > 0) {
+                                    searchAppInput.text = "";
+                                } else {
+                                    root.closeRequested();
+                                }
+                                event.accepted = true;
+                            }
+                        }
+
+                        Text {
+                            text: "Search apps..."
+                            font.family: Style.fontFamily
+                            font.pixelSize: 11
+                            color: Style.textMuted
+                            visible: searchAppInput.text.length === 0
+                        }
+                    }
+                }
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 4
+
+                    Text {
+                        text: appModel.count + " applications"
+                        font.family: Style.fontFamily
+                        font.pixelSize: 9
                         color: Style.textMuted
-                        visible: searchAppInput.text.length === 0
                     }
                 }
             }
@@ -163,103 +201,66 @@ FocusScope {
             }
         }
 
-        // Dynamically Centered App Grid
+        // Horizontal App Squircles List (Right Column)
         Item {
-            id: gridContainer
             Layout.fillWidth: true
             Layout.fillHeight: true
 
-            property int calculatedCellWidth: Math.floor(gridContainer.width / Math.max(1, root.appColumns))
-
-            GridView {
-                id: appGrid
+            ListView {
+                id: appListView
                 anchors.fill: parent
+                orientation: ListView.Horizontal
+                spacing: 8
                 clip: true
-                cellWidth: gridContainer.calculatedCellWidth
-                cellHeight: 90
                 currentIndex: root.selectedIndex
-                highlightFollowsCurrentItem: false
-
-                add: Transition {
-                    NumberAnimation { property: "opacity"; from: 0; to: 1; duration: root.gridAnimDuration; easing.type: Easing.OutQuad }
-                    NumberAnimation { property: "scale"; from: 0.92; to: 1.0; duration: root.gridAnimDuration; easing.type: Easing.OutQuad }
-                }
-                displaced: Transition {
-                    NumberAnimation { properties: "x,y"; duration: root.gridAnimDuration; easing.type: Easing.OutQuad }
-                }
-
-                highlight: Item {
-                    z: 10
-                    width: appGrid.cellWidth
-                    height: appGrid.cellHeight
-                    x: appGrid.currentItem ? appGrid.currentItem.x : 0
-                    y: appGrid.currentItem ? appGrid.currentItem.y : 0
-                    
-                    Behavior on x {
-                        enabled: appGrid.currentItem !== null && root.highlightAnimType !== "none"
-                        SpringAnimation {
-                            spring: root.highlightAnimType === "linear" ? 14.0 : (root.highlightAnimType === "smooth" ? 4.0 : root.highlightSpringTension)
-                            damping: root.highlightAnimType === "linear" ? 0.99 : (root.highlightAnimType === "smooth" ? 0.65 : root.highlightSpringDamping)
-                            epsilon: Style.springEpsilon
-                        }
-                    }
-                    Behavior on y {
-                        enabled: appGrid.currentItem !== null && root.highlightAnimType !== "none"
-                        SpringAnimation {
-                            spring: root.highlightAnimType === "linear" ? 14.0 : (root.highlightAnimType === "smooth" ? 4.0 : root.highlightSpringTension)
-                            damping: root.highlightAnimType === "linear" ? 0.99 : (root.highlightAnimType === "smooth" ? 0.65 : root.highlightSpringDamping)
-                            epsilon: Style.springEpsilon
-                        }
-                    }
-
-                    Rectangle {
-                        anchors.fill: parent
-                        anchors.margins: 4
-                        radius: Style.radiusMedium
-                        color: Style.overlayLight
-                        border.color: Style.accent
-                        border.width: 2
-                        scale: 1.03 // Matches the popped delegate
-                        visible: root.selectedIndex >= 0 && root.selectedIndex < appModel.count
-                    }
-                }
+                boundsBehavior: Flickable.StopAtBounds
 
                 model: appModel
 
                 delegate: Item {
-                    width: appGrid.cellWidth
-                    height: appGrid.cellHeight
+                    width: 56
+                    height: appListView.height
 
                     property bool isSelected: index === root.selectedIndex
                     property bool isHovered: appM.containsMouse
 
                     Rectangle {
-                        anchors.fill: parent
-                        anchors.margins: 4
-                        radius: Style.radiusMedium
-                        color: Style.cardBg
-                        border.color: Style.cardBorder
-                        border.width: 1
-                        scale: isSelected ? 1.03 : 1.0
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        anchors.verticalCenter: parent.verticalCenter
+                        height: 60
+                        radius: 12
+                        color: isSelected ? "#2C2C2E" : (isHovered ? "#242426" : "#1C1C1E")
+                        border.color: isSelected ? Style.accent : (isHovered ? "#5A5A5E" : Qt.rgba(255, 255, 255, 0.12))
+                        border.width: isSelected ? 2.0 : 1.0
+                        smooth: true
+                        antialiasing: true
 
-                        Behavior on scale { NumberAnimation { duration: 180; easing.type: Easing.OutQuad } }
+                        scale: (root.buttonAnims && appM.pressed) ? 0.90 : ((root.buttonAnims && (isSelected || isHovered)) ? 1.05 : 1.0)
+                        Behavior on scale {
+                            enabled: root.buttonAnims
+                            SpringAnimation { spring: root.highlightSpringTension; damping: root.highlightSpringDamping }
+                        }
+
+                        Behavior on color { ColorAnimation { duration: 120 } }
+                        Behavior on border.color { ColorAnimation { duration: 120 } }
 
                         ColumnLayout {
                             anchors.centerIn: parent
-                            spacing: 6
+                            spacing: 2
 
                             Item {
                                 Layout.alignment: Qt.AlignHCenter
-                                implicitWidth: 32
-                                implicitHeight: 32
+                                Layout.preferredWidth: 28
+                                Layout.preferredHeight: 28
 
                                 Image {
                                     id: appIcon
                                     anchors.fill: parent
                                     source: model.iconPath ? "file://" + model.iconPath : ""
                                     fillMode: Image.PreserveAspectFit
-                                    sourceSize.width: 32
-                                    sourceSize.height: 32
+                                    sourceSize.width: 56
+                                    sourceSize.height: 56
                                     smooth: true
                                     asynchronous: true
                                     visible: status === Image.Ready
@@ -270,20 +271,19 @@ FocusScope {
                                     visible: appIcon.status !== Image.Ready
                                     name: "apps"
                                     color: Style.accent
-                                    size: 24
+                                    size: 22
                                 }
                             }
 
                             Text {
                                 text: model.name
                                 font.family: Style.fontFamily
-                                font.pixelSize: Style.fontSizeSmall
-                                font.weight: Font.Bold
-                                color: Style.textPrimary
+                                font.pixelSize: 9
+                                font.weight: isSelected ? Font.Bold : Font.Normal
+                                color: isSelected ? "#FFFFFF" : Style.textSecondary
                                 elide: Text.ElideRight
-                                Layout.maximumWidth: appGrid.cellWidth - 20
-                                Layout.alignment: Qt.AlignHCenter
                                 horizontalAlignment: Text.AlignHCenter
+                                Layout.maximumWidth: 50
                             }
                         }
 

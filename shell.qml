@@ -1,3 +1,14 @@
+/**
+ * shell.qml — QuickShell Entry Point & Wayland LayerShell Surface Host
+ *
+ * Configures the top-level Wayland desktop integration:
+ *   - NotificationServer daemon capturing desktop notifications into a persistent ListModel
+ *   - PanelWindow anchored to Top with dynamic width/height driven by TopNotch.qml
+ *   - LayerShell region masking to allow input passthrough outside the notch pill
+ *   - Unix domain socket server (/tmp/quickshell-notch.sock) for external IPC commands
+ *   - Lazy loader for the standalone SettingsWindow dialog
+ */
+
 import Quickshell
 import Quickshell.Wayland
 import Quickshell.Hyprland
@@ -53,7 +64,7 @@ Scope {
         }
 
         implicitWidth: Style.notchWidthExpanded + 64
-        implicitHeight: Math.max(Style.notchHeightExpanded, notchComp.maxPageNotchHeight, notchComp.notifStackHeight)
+        implicitHeight: Math.max(340, Style.notchHeightExpanded, notchComp.maxPageNotchHeight, notchComp.notifStackHeight)
         color: "transparent"
 
         // Input passthrough: only the visible notchBox receives input, transparent area clicks through
@@ -90,10 +101,14 @@ Scope {
                 parser: SplitParser {
                     onRead: function(data) {
                         var cmd = data.trim();
-                        if (cmd === "walls") {
+                        if (cmd === "nook") {
+                            notchComp.toggleTab(0);
+                        } else if (cmd === "apps" || cmd === "tray") {
                             notchComp.toggleTab(1);
-                        } else if (cmd === "apps") {
+                        } else if (cmd === "walls") {
                             notchComp.toggleTab(2);
+                        } else if (cmd === "stats") {
+                            notchComp.toggleTab(3);
                         } else if (cmd === "toggle") {
                             notchComp.isExpanded = !notchComp.isExpanded;
                             notchComp.isNotifMenuOpen = false;

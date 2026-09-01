@@ -1,4 +1,15 @@
 #!/usr/bin/env python3
+"""
+get_apps.py — Fast XDG Desktop Application Scanner & Icon Resolver.
+
+Scans standard system and user .desktop application directories,
+resolves high-resolution app icons (SVG / PNG / XDG icon theme),
+deduplicates applications, and caches results to ~/.cache/quickshell/apps.json.
+
+CLI Output:
+    JSON array: [ { "name": str, "exec": str, "icon": str, "comment": str }, ... ]
+"""
+
 import os
 import sys
 import json

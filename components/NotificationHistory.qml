@@ -1,3 +1,13 @@
+/**
+ * NotificationHistory.qml — Notification Drawer & History Stack for QuickShell Notch
+ *
+ * Renders the drop-down notification center:
+ *   - Scrollable card stack populated from global NotificationServer ListModel
+ *   - Expandable notification cards with full message body preview
+ *   - Clear All button with smooth card dismiss animations
+ *   - Automatic notch container height adaptation
+ */
+
 import QtQuick
 import QtQuick.Layouts
 import "../theme"
@@ -5,18 +15,37 @@ import "../theme"
 Item {
     id: root
 
+    /** Whether notification history drawer is open */
     required property bool isOpen
-    required property ListModel notifModel
+    /** Reference to global notification ListModel */
+    property ListModel notifModel: null
 
+    /** Emitted when drawer close is requested */
     signal closeRequested()
 
+    /** Number of notifications in the model */
     property int notifCount: notifModel ? notifModel.count : 0
+    /** Alias for parent notch orchestrator */
+    readonly property int activeCount: notifCount
+    /** Whether clear-all fade animation is active */
     property bool isClearing: false
+    /** Currently expanded notification card index */
     property int expandedIndex: -1
+    /** Additional height consumed by expanded card body */
     property real currentExpandedExtraHeight: 0
     readonly property real expandedExtraHeight: (expandedIndex >= 0 && expandedIndex < (notifModel ? notifModel.count : 0)) ? currentExpandedExtraHeight : 0
+    /** Spring tension for card expansion */
     property real expandSpringTension: 4.5
+    /** Spring damping for card expansion */
     property real expandSpringDamping: 0.28
+
+    // Geometry parameters exposed for parent notch height calculation
+    readonly property int notifStackChrome: 60
+    readonly property int notifStackMaxHeight: 450
+    readonly property int notifStackEmptyHeight: 130
+    readonly property int notifStackHeight: notifCount > 0
+        ? Math.min(notifStackMaxHeight, notifStackChrome + (notifCount * 60) - 4 + expandedExtraHeight)
+        : notifStackEmptyHeight
 
     anchors.fill: parent
     z: 99

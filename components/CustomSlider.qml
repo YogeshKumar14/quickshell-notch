@@ -1,3 +1,12 @@
+/**
+ * CustomSlider.qml — Material 3 Expressive Pill Slider for QuickShell Notch
+ *
+ * Provides a fluid, rounded pill slider control:
+ *   - Continuous drag tracking with interactive spring micro-scaling
+ *   - Smooth animated fill bar when synchronized programmatically
+ *   - Clean two-way binding that prevents slider jitter while dragging
+ */
+
 import QtQuick
 import QtQuick.Controls.Basic
 import "../theme"
@@ -5,11 +14,16 @@ import "../theme"
 Item {
     id: root
 
+    /** Current slider position value */
     property real value: 0
+    /** Minimum slider range value */
     property real from: 0
+    /** Maximum slider range value */
     property real to: 100
+    /** Granularity increment for step snaps */
     property real stepSize: 1
 
+    /** Emitted when slider value changes via user interaction */
     signal moved(real val)
 
     implicitWidth: 200
@@ -31,11 +45,10 @@ Item {
             when: !control.pressed
         }
 
-        // Emit the legacy custom signal so SettingsWindow.qml doesn't break
         onMoved: {
             root.moved(control.value)
         }
-        
+
         onPressedChanged: {
             if (!control.pressed) {
                 root.moved(control.value)

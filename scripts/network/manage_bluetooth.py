@@ -1,11 +1,28 @@
 #!/usr/bin/env python3
+"""
+manage_bluetooth.py — Bluetoothctl Controller & Device Discovery Backend.
+
+Interfaces with bluetoothctl to:
+  - Query adapter power state and connected/paired devices
+  - Toggle adapter radio power (on/off)
+  - Connect or disconnect specific Bluetooth devices by MAC address
+
+CLI Usage:
+    python3 manage_bluetooth.py [on|off|toggle_conn <mac>]
+
+CLI Output:
+    JSON object: { "power": bool, "devices": [ { "mac": str, "name": str, "connected": bool, "paired": bool } ] }
+"""
+
+import os
 import subprocess
 import json
 import sys
 import signal
-import ctypes
-
 import re
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "core"))
+from process_utils import set_pdeathsig
 
 TIMEOUT = 5
 CONNECT_TIMEOUT = 15
@@ -13,13 +30,6 @@ MAC_REGEX = re.compile(r"^([0-9A-Fa-f]{2}[:-]){5}([0-9A-Fa-f]{2})$")
 
 def is_valid_mac(mac_str):
     return bool(MAC_REGEX.match(mac_str.strip()))
-
-def set_pdeathsig():
-    try:
-        libc = ctypes.CDLL("libc.so.6")
-        libc.prctl(1, signal.SIGTERM)
-    except Exception:
-        pass
 
 def get_status():
     try:
