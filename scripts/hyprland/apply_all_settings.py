@@ -46,11 +46,11 @@ def main():
         sys.exit(1)
 
     notch_data = payload.get("notch", {})
-    hypr_data = payload.get("hypr", {})
+    hypr_data = payload.get("hyprland") or payload.get("hypr") or {}
 
     # 0. Validate and convert ALL hypr values BEFORE writing anything,
     #    so a bad value can never corrupt the persisted configs.
-    #    Accept both nested {"hypr": {...}} and flat payloads.
+    #    Accept both nested {"hyprland": {...}} / {"hypr": {...}} and flat payloads.
     if not hypr_data:
         hypr_data = {k: payload[k] for k in KEYWORD_MAP if k in payload}
 

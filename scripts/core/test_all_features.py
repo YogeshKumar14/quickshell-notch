@@ -57,8 +57,11 @@ def record(module: str, test_name: str, passed: bool, duration: float, details: 
     })
 
 
-def run_cmd(cmd, timeout=10, cwd=str(BASE_DIR)):
+def run_cmd(cmd, timeout=10, cwd=str(BASE_DIR), env=None):
     t0 = time.perf_counter()
+    full_env = os.environ.copy()
+    if env:
+        full_env.update(env)
     try:
         proc = subprocess.run(
             cmd,
@@ -67,7 +70,8 @@ def run_cmd(cmd, timeout=10, cwd=str(BASE_DIR)):
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
-            timeout=timeout
+            timeout=timeout,
+            env=full_env
         )
         return proc.returncode, proc.stdout, proc.stderr, time.perf_counter() - t0
     except subprocess.TimeoutExpired:
@@ -287,6 +291,38 @@ def test_module_3():
         files_valid = target_lua.exists() and target_conf.exists() and target_lua.stat().st_size > 0 and target_conf.stat().st_size > 0
         dur = time.perf_counter() - t0
         record(mod, "Dual-Write Atomic File Integrity", files_valid, dur, "Dual-write files missing or empty")
+
+        # 3.5 apply_all_settings.py nested "hyprland" payload test
+        t0 = time.perf_counter()
+        code, out, err, dur_cmd = run_cmd([
+            "python3", str(SCRIPTS_DIR / "hyprland/apply_all_settings.py"),
+            json.dumps({"hyprland": {"gaps_in": 5, "gaps_out": 10}, "notch": {"compact_width": 130}})
+        ], env={"QUICKSHELL_SANDBOX": "0"})
+        hyprland_key_ok = False
+        if code == 0:
+            try:
+                res = json.loads(out.strip())
+                hyprland_key_ok = res.get("status") in ("ok", "partial") and "note" not in res
+            except Exception:
+                pass
+        dur = time.perf_counter() - t0
+        record(mod, "apply_all_settings.py nested 'hyprland' payload ingestion", hyprland_key_ok, dur, f"out: {out.strip()}, err: {err.strip()}")
+
+        # 3.6 apply_all_settings.py nested "hypr" payload test
+        t0 = time.perf_counter()
+        code, out, err, dur_cmd = run_cmd([
+            "python3", str(SCRIPTS_DIR / "hyprland/apply_all_settings.py"),
+            json.dumps({"hypr": {"gaps_in": 5, "gaps_out": 10}, "notch": {"compact_width": 130}})
+        ], env={"QUICKSHELL_SANDBOX": "0"})
+        hypr_key_ok = False
+        if code == 0:
+            try:
+                res = json.loads(out.strip())
+                hypr_key_ok = res.get("status") in ("ok", "partial") and "note" not in res
+            except Exception:
+                pass
+        dur = time.perf_counter() - t0
+        record(mod, "apply_all_settings.py nested 'hypr' payload ingestion", hypr_key_ok, dur, f"out: {out.strip()}, err: {err.strip()}")
 
 
 # ==============================================================================

@@ -245,27 +245,30 @@ PanelWindow {
     }
 
     function applySettings() {
+        var hyprObj = {
+            "gaps_in": root.gapsInVal,
+            "gaps_out": root.gapsOutVal,
+            "rounding": root.roundingVal,
+            "border_size": root.borderWidthVal,
+            "blur": root.blurEnabledVal,
+            "layout": root.layoutVal,
+            "animations": root.animationsEnabledVal,
+            "active_opacity": root.activeOpacityVal,
+            "inactive_opacity": root.inactiveOpacityVal,
+            "shadow": root.shadowEnabledVal,
+            "shadow_range": root.shadowRangeVal,
+            "dim_inactive": root.dimInactiveVal,
+            "master_ratio": root.masterRatioVal,
+            "blur_passes": root.blurPassesVal,
+            "blur_size": root.blurSizeVal,
+            "input_sensitivity": root.inputSensitivityVal,
+            "input_tap_to_click": root.inputTapToClickVal,
+            "input_natural_scroll": root.inputNaturalScrollVal
+        };
+
         var payload = {
-            "hyprland": {
-                "gaps_in": root.gapsInVal,
-                "gaps_out": root.gapsOutVal,
-                "rounding": root.roundingVal,
-                "border_size": root.borderWidthVal,
-                "blur": root.blurEnabledVal,
-                "layout": root.layoutVal,
-                "animations": root.animationsEnabledVal,
-                "active_opacity": root.activeOpacityVal,
-                "inactive_opacity": root.inactiveOpacityVal,
-                "shadow": root.shadowEnabledVal,
-                "shadow_range": root.shadowRangeVal,
-                "dim_inactive": root.dimInactiveVal,
-                "master_ratio": root.masterRatioVal,
-                "blur_passes": root.blurPassesVal,
-                "blur_size": root.blurSizeVal,
-                "input_sensitivity": root.inputSensitivityVal,
-                "input_tap_to_click": root.inputTapToClickVal,
-                "input_natural_scroll": root.inputNaturalScrollVal
-            },
+            "hyprland": hyprObj,
+            "hypr": hyprObj,
             "notch": {
                 "auto_close": root.notchAutoClose,
                 "compact_width": root.notchCompactWidth,
