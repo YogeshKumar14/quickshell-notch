@@ -109,18 +109,22 @@ Scope {
                             notchComp.toggleTab(2);
                         } else if (cmd === "stats") {
                             notchComp.toggleTab(3);
+                        } else if (cmd === "audio") {
+                            notchComp.toggleAudioMenu();
                         } else if (cmd === "toggle") {
                             notchComp.isExpanded = !notchComp.isExpanded;
                             notchComp.isNotifMenuOpen = false;
                             notchComp.isPowerMenuOpen = false;
                             notchComp.isWifiMenuOpen = false;
                             notchComp.isBluetoothMenuOpen = false;
+                            notchComp.isAudioMenuOpen = false;
                         } else if (cmd === "close") {
                             notchComp.isExpanded = false;
                             notchComp.isNotifMenuOpen = false;
                             notchComp.isPowerMenuOpen = false;
                             notchComp.isWifiMenuOpen = false;
                             notchComp.isBluetoothMenuOpen = false;
+                            notchComp.isAudioMenuOpen = false;
                         } else if (cmd.startsWith("osd:vol:")) {
                             var v = parseInt(cmd.split(":")[2]);
                             if (!isNaN(v)) notchComp.showOsd("volume", Math.max(0, Math.min(150, v)));

@@ -147,12 +147,28 @@ FocusScope {
         root.isPowerMenuOpen = false;
         root.isWifiMenuOpen = false;
         root.isBluetoothMenuOpen = false;
+        root.isAudioMenuOpen = false;
         root.focusActiveTabSearch();
+    }
+
+    /** Whether the dedicated Audio & Devices drawer is open */
+    property bool isAudioMenuOpen: false
+
+    /** Dispatches audio drawer toggle */
+    function toggleAudioMenu() {
+        root.isAudioMenuOpen = !root.isAudioMenuOpen;
+        if (root.isAudioMenuOpen) {
+            root.isWifiMenuOpen = false;
+            root.isBluetoothMenuOpen = false;
+            root.isPowerMenuOpen = false;
+            root.isNotifMenuOpen = false;
+            root.isExpanded = true;
+        }
     }
 
     /** Handles incoming notifications */
     function handleNewNotification() {
-        if (!root.isExpanded && !root.isWifiMenuOpen && !root.isBluetoothMenuOpen && !root.isPowerMenuOpen) {
+        if (!root.isExpanded && !root.isWifiMenuOpen && !root.isBluetoothMenuOpen && !root.isPowerMenuOpen && !root.isAudioMenuOpen) {
             root.notifMenuAutoOpened = true;
             root.isNotifMenuOpen = true;
         }
@@ -801,6 +817,9 @@ FocusScope {
             } else if (root.isNotifMenuOpen) {
                 root.isNotifMenuOpen = false;
                 event.accepted = true;
+            } else if (root.isAudioMenuOpen) {
+                root.isAudioMenuOpen = false;
+                event.accepted = true;
             } else if (root.isExpanded) {
                 root.isExpanded = false;
                 event.accepted = true;
@@ -919,9 +938,11 @@ FocusScope {
             ? 280
             : ((root.isPowerMenuOpen || root.isWifiMenuOpen || root.isBluetoothMenuOpen || root.isNotifMenuOpen)
                 ? 320
-                : (root.isExpanded
+                : (root.isAudioMenuOpen
                     ? Style.notchWidthExpanded
-                    : (root.isWorkspaceActive ? 240 : (root.showVisualizer ? root.dynamicVisNotchWidth : root.compactWidthVal))))
+                    : (root.isExpanded
+                        ? Style.notchWidthExpanded
+                        : (root.isWorkspaceActive ? 240 : (root.showVisualizer ? root.dynamicVisNotchWidth : root.compactWidthVal)))))
 
         height: root.isOsdActive
             ? Style.notchHeightCompact
@@ -931,7 +952,9 @@ FocusScope {
                     ? 320
                     : (root.isNotifMenuOpen
                         ? root.notifStackHeight
-                        : (root.isExpanded ? root.pageNotchHeight : Style.notchHeightCompact))))
+                        : (root.isAudioMenuOpen
+                            ? 190
+                            : (root.isExpanded ? root.pageNotchHeight : Style.notchHeightCompact)))))
 
         color: "#000000"
         border.width: 0
@@ -1053,7 +1076,7 @@ FocusScope {
             height: root.pageNotchHeight
             anchors.top: parent.top
             anchors.horizontalCenter: parent.horizontalCenter
-            opacity: (root.isExpanded && !root.isOsdActive && !root.isNotifMenuOpen && !root.isPowerMenuOpen && !root.isWifiMenuOpen && !root.isBluetoothMenuOpen) ? 1.0 : 0.0
+            opacity: (root.isExpanded && !root.isOsdActive && !root.isNotifMenuOpen && !root.isPowerMenuOpen && !root.isWifiMenuOpen && !root.isBluetoothMenuOpen && !root.isAudioMenuOpen) ? 1.0 : 0.0
             visible: opacity > 0.01
 
             Behavior on opacity {
@@ -1096,6 +1119,7 @@ FocusScope {
                     root.isPowerMenuOpen = false;
                     root.isWifiMenuOpen = false;
                     root.isBluetoothMenuOpen = false;
+                    root.isAudioMenuOpen = false;
                     root.isWifiPasswordPromptOpen = false;
                     root.isPowerConfirming = false;
                 }
@@ -1104,12 +1128,14 @@ FocusScope {
                     root.isBluetoothMenuOpen = false;
                     root.isPowerMenuOpen = false;
                     root.isNotifMenuOpen = false;
+                    root.isAudioMenuOpen = false;
                 }
                 onBluetoothToggled: {
                     root.isBluetoothMenuOpen = !root.isBluetoothMenuOpen;
                     root.isWifiMenuOpen = false;
                     root.isPowerMenuOpen = false;
                     root.isNotifMenuOpen = false;
+                    root.isAudioMenuOpen = false;
                 }
                 onNotifToggled: {
                     root.notifMenuAutoOpened = false;
@@ -1117,6 +1143,7 @@ FocusScope {
                     root.isWifiMenuOpen = false;
                     root.isBluetoothMenuOpen = false;
                     root.isPowerMenuOpen = false;
+                    root.isAudioMenuOpen = false;
                 }
                 onPowerToggled: {
                     root.isPowerMenuOpen = !root.isPowerMenuOpen;
@@ -1125,6 +1152,7 @@ FocusScope {
                     root.isWifiMenuOpen = false;
                     root.isBluetoothMenuOpen = false;
                     root.isNotifMenuOpen = false;
+                    root.isAudioMenuOpen = false;
                 }
                 onSettingsClicked: root.openFullSettings()
             }
@@ -1172,6 +1200,7 @@ FocusScope {
                         tabSpringTension: root.tabSpringTension
                         tabSpringDamping: root.tabSpringDamping
                         visualizerFrame: root.visualizerFrame
+                        onAudioMenuRequested: root.toggleAudioMenu()
                     }
 
                     // PAGE 1: Application Launcher (Tray)
@@ -1338,6 +1367,16 @@ FocusScope {
                 if (root.isNotifMenuOpen && notifHistoryComp.notifCount === 0) {
                     root.isNotifMenuOpen = false;
                 }
+            }
+        }
+
+        AudioMenu {
+            id: audioMenuComp
+            anchors.fill: parent
+            isOpen: root.isAudioMenuOpen
+            onCloseRequested: root.isAudioMenuOpen = false
+            onVolumeChanged: function(val) {
+                root.volumeLevel = val;
             }
         }
     }

@@ -55,6 +55,8 @@ Item {
     signal volumeChanged(int level)
     /** Emitted when mic level changes */
     signal micChanged(int level)
+    /** Emitted when user clicks volume/device icon to open audio drawer */
+    signal audioMenuRequested()
 
     clip: false
 
@@ -435,6 +437,7 @@ Item {
                             anchors.fill: parent
                             hoverEnabled: true
                             cursorShape: Qt.PointingHandCursor
+                            onClicked: root.audioMenuRequested()
                         }
                     }
                 }
