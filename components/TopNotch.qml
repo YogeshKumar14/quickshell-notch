@@ -315,11 +315,23 @@ FocusScope {
     }
 
     function updateHandlePosition(wsNum) {
-        var dotCenter = (wsNum - 1) * 14;
-        root.targetHandleX = dotCenter;
-        root.singleHandleX = dotCenter;
-        root.handleLeft = dotCenter - 1;
-        root.handleRight = dotCenter + 7;
+        var targetX = 2 + (wsNum - 1) * 22;
+        root.targetHandleX = targetX;
+        root.singleHandleX = targetX;
+        root.handleLeft = targetX;
+        root.handleRight = targetX + 16;
+    }
+
+    function handleWorkspaceChange(wsNum) {
+        if (!isNaN(wsNum) && wsNum > 0 && wsNum <= 10) {
+            root.activeWorkspace = wsNum;
+            root.updateHandlePosition(wsNum);
+            root.refreshOccupied();
+            if (root.workspaceOverlayVal && !root.isExpanded && !root.isOsdActive && !root.isNotifMenuOpen) {
+                root.isWorkspaceActive = true;
+                workspaceDismissTimer.restart();
+            }
+        }
     }
 
     Timer {
@@ -330,18 +342,28 @@ FocusScope {
 
     Connections {
         target: Hyprland
-        function onRawEvent(name, data) {
+
+        function onFocusedWorkspaceChanged() {
+            if (Hyprland.focusedWorkspace) {
+                root.handleWorkspaceChange(Hyprland.focusedWorkspace.id);
+            }
+        }
+
+        function onRawEvent(event) {
+            if (!event) return;
+            var name = event.name;
+            var data = event.data;
             if (name === "workspace" || name === "focusedmon" || name === "workspacev2") {
                 var wsNum = parseInt(data);
-                if (!isNaN(wsNum) && wsNum > 0 && wsNum <= 10) {
-                    root.activeWorkspace = wsNum;
-                    root.updateHandlePosition(wsNum);
-                    if (root.workspaceOverlayVal && !root.isExpanded && !root.isOsdActive && !root.isNotifMenuOpen) {
-                        root.isWorkspaceActive = true;
-                        workspaceDismissTimer.restart();
-                    }
+                if (isNaN(wsNum) && typeof data === "string" && data.indexOf(",") !== -1) {
+                    var parts = data.split(",");
+                    wsNum = parseInt(parts[0]);
+                    if (isNaN(wsNum) && parts.length > 1) wsNum = parseInt(parts[1]);
                 }
-            } else if (name === "createworkspace" || name === "destroyworkspace" || name === "movewindow" || name === "openwindow" || name === "closewindow") {
+                if (!isNaN(wsNum) && wsNum > 0 && wsNum <= 10) {
+                    root.handleWorkspaceChange(wsNum);
+                }
+            } else if (name === "createworkspace" || name === "destroyworkspace" || name === "movewindow" || name === "openwindow" || name === "closewindow" || name === "createworkspacev2" || name === "destroyworkspacev2") {
                 root.refreshOccupied();
             }
         }
@@ -363,6 +385,11 @@ FocusScope {
                 } catch (e) {}
             }
         }
+    }
+
+    Process {
+        id: wsSwitchProc
+        command: []
     }
 
     function refreshOccupied() {
@@ -789,6 +816,10 @@ FocusScope {
     Component.onCompleted: {
         refreshNotchSettings();
         updateClock();
+        if (Hyprland.focusedWorkspace) {
+            root.activeWorkspace = Hyprland.focusedWorkspace.id;
+            root.updateHandlePosition(root.activeWorkspace);
+        }
         root.refreshOccupied();
         root.refreshDeviceLevels();
         root.refreshAccent();
@@ -1055,8 +1086,13 @@ FocusScope {
                 autoCloseTimer.stop();
             }
             onWorkspaceSwitchRequested: function(wsNum) {
-                Hyprland.dispatch("workspace " + wsNum.toString());
-                workspaceDismissTimer.restart();
+                if (Hyprland.usingLua) {
+                    wsSwitchProc.command = ["hyprctl", "eval", "return hl.dispatch(hl.dsp.focus({ workspace = " + wsNum + " }))"];
+                    wsSwitchProc.running = true;
+                } else {
+                    Hyprland.dispatch("workspace " + wsNum.toString());
+                }
+                root.handleWorkspaceChange(wsNum);
             }
         }
 
