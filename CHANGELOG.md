@@ -7,7 +7,9 @@ Format follows [Keep a Changelog](https://keepachangelog.com/).
 ## [2.1.0] - 2026-09-01
 
 ### Added
-- **Audio & Sound Devices Notch Drawer**: Dedicated sub-notch quick settings overlay (`components/AudioMenu.qml` & `scripts/desktop/manage_audio.py`) featuring Master Output Volume & Microphone Level cards with instant mute toggles, optimistic interactive pill sliders, dynamic Output & Input device switching with Bluetooth badges, and background click-to-dismiss.
+- **Dedicated 2-Column Audio Device Switcher**: Clean, dedicated sub-notch quick settings overlay (`components/AudioMenu.qml` & `scripts/desktop/manage_audio.py`) featuring 1-click Output Sink (Speakers, Bluetooth Headphones, DACs) and Input Source (Microphones, Cameras) routing via PipeWire `wpctl`, smart vector icon detection, active checkmark badging, spinning rescan control, and outside click-to-dismiss.
+- **Normal Solid White Battery Capsule with Light Bright Yellow Charging Bolt**: Restored solid crisp white battery capsule outline, positive terminal cap, and fill bar (`opacity: 0.90`) across charging and uncharging states with an overlay borderless solid light bright yellow lightning bolt (`#FFE81F`).
+- **OSD & Audio Drawer Mutual Exclusion**: Eliminated drawer overlap and clipping by automatically closing the audio menu when hardware volume/brightness OSDs trigger.
 - **Microsecond/Second Scrubber Normalization & Realtime Polling**: Automatic unit detection across all media players with active 500ms `playerctl position` polling and direct click/drag seeking for 100% accurate timeline tracking.
 - **Centered Camera Privacy Indicator**: Anchored hardware privacy dot to the exact mathematical center axis of the notch header.
 - **Stabilized Visualizer Spectrum**: Integer subpixel coordinate rounding (`Math.round`) and critically damped spring easing eliminating whole-cluster vertical jitter.
