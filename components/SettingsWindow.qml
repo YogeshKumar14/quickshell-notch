@@ -1553,7 +1553,7 @@ PanelWindow {
                         width: parent.width; spacing: 8
                         RowLayout {
                             width: parent.width; spacing: 6
-                            M3Icon { name: "battery_charging_full"; color: Style.accent; size: 16 }
+                            M3Icon { name: "battery_full"; color: Style.accent; size: 16 }
                             Text { text: "POWER & OSD TIMEOUTS"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeSmall; font.weight: Font.Bold; color: Style.textMuted }
                         }
 

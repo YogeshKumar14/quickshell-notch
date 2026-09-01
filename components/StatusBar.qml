@@ -52,7 +52,6 @@ Item {
 
     /** Helper function determining battery color per iOS guidelines */
     function getBatteryColor(level, status, warningThreshold) {
-        if (status === "Charging") return Style.iosGreen;
         if (level <= 10) return Style.iosRed;
         if (level <= warningThreshold) return Style.iosYellow;
         return Style.textPrimary;
@@ -171,19 +170,20 @@ Item {
                     width: Math.max(0, Math.min(parent.width - 2.4, (parent.width - 2.4) * (root.batteryLevel / 100.0)))
                     radius: 1.5
                     color: parent.parent.parent.batColor
-                    opacity: root.batteryStatus === "Charging" ? 0.35 : 0.90
+                    opacity: root.batteryStatus === "Charging" ? 0.45 : 0.90
 
                     Behavior on width { NumberAnimation { duration: 300; easing.type: Easing.OutQuad } }
                     Behavior on color { ColorAnimation { duration: Style.animNormal; easing.type: Easing.OutQuad } }
                 }
 
-                // Centered Bolt Icon when Charging
+                // Centered Yellow Bolt Icon when Charging
                 M3Icon {
                     name: "bolt"
-                    size: 7
-                    color: Style.textPrimary
+                    size: 8
+                    color: Style.iosYellow
                     visible: root.batteryStatus === "Charging"
                     anchors.centerIn: parent
+                    z: 5
                 }
             }
 
