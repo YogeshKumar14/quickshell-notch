@@ -1,17 +1,61 @@
+/**
+ * TopNotch.qml — Primary Orchestrator & State Machine for QuickShell Notch (v2.0.0)
+ *
+ * Coordinates all top-notch systems:
+ *   - Geometry morphing (compact pill -> dynamic island expanded drawer -> morphed sub-notches)
+ *   - Spring physics animations and adaptive height sizing
+ *   - Global state machine (isExpanded, currentPage, active sub-menus)
+ *   - Seamless dripping inverted ears canvas integration
+ *   - Wallust dynamic accent extraction & Hyprland border synchronization
+ *   - Integration of sub-components:
+ *       - CompactPill (clock, workspace dots, CAVA visualizer)
+ *       - MediaController (MPRIS playback, quick sliders)
+ *       - OsdOverlay (volume & brightness on-screen display)
+ *       - StatusBar (expanded header row, battery capsule, quick actions)
+ *       - HardwareStats (system resource monitoring)
+ *       - WallpaperSelector & AppLauncher (grid drawers)
+ *       - WifiMenu, BluetoothMenu, PowerMenu, NotificationHistory (morphed sub-notches)
+ */
+
 import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls
+import Qt5Compat.GraphicalEffects
 import Quickshell
 import Quickshell.Io
 import Quickshell.Hyprland
 import Quickshell.Services.Mpris
-import Qt5Compat.GraphicalEffects
 import "../theme"
 
-Item {
+FocusScope {
     id: root
+    focus: true
 
+    onGrabsFocusChanged: {
+        if (root.grabsFocus) {
+            root.forceActiveFocus();
+        }
+    }
+    onIsExpandedChanged: {
+        if (root.isExpanded) {
+            root.forceActiveFocus();
+            if (root.currentPage === 1 || root.currentPage === 2) {
+                focusTabSearchTimer.restart();
+            }
+        }
+    }
+
+    // =========================================================================
+    // 1. STATE PROPERTIES & CONTROLLERS
+    // =========================================================================
+
+    /** True if the notch is currently in its expanded state */
     property bool isExpanded: false
+
+    /** Reference to global notification ListModel from shell.qml */
+    property ListModel notifModel: null
+
+    /** OSD State */
     property bool isOsdActive: false
     property string osdIcon: "volume_up"
     property int osdValue: 50
@@ -19,300 +63,147 @@ Item {
     property color osdColor: Style.accent
     property real osdIconRotation: 0
     property int prevBrightnessLevel: -1
-    property ListModel notifModel: null
+    property bool wasExpandedBeforeOsd: false
 
     Behavior on osdColor {
-        ColorAnimation { duration: 250; easing.type: Easing.OutCubic }
+        ColorAnimation { duration: Style.animNormal; easing.type: Easing.OutQuad }
     }
-
     Behavior on animatedOsdValue {
         SpringAnimation {
-            spring: root.expandSpringTension
-            damping: root.expandSpringDamping
-            epsilon: 0.25
+            spring: 8.0
+            damping: 0.40
+            epsilon: 0.05
         }
     }
 
+    /** Dispatches OSD popup, morphs notch, and handles brightness spin physics */
     function showOsd(type, value) {
-        if (type === "volume") {
-            root.osdIcon = value === 0 ? "volume_off" : (value < 50 ? "volume_down" : "volume_up");
-            root.osdColor = Style.accent;
-            root.volumeLevel = value;
-            root.osdValue = root.volumeLevel;
-            root.osdIconRotation = 0;
-        } else if (type === "brightness") {
-            root.osdIcon = "light_mode";
-            root.osdColor = Style.warningYellow;
-            if (root.prevBrightnessLevel >= 0) {
-                if (value > root.prevBrightnessLevel) {
-                    root.osdIconRotation += 45;
-                } else if (value < root.prevBrightnessLevel) {
-                    root.osdIconRotation -= 45;
-                }
-            }
-            root.prevBrightnessLevel = value;
-            root.brightnessLevel = value;
-            root.osdValue = root.brightnessLevel;
+        var num = Math.round(Number(value));
+        if (isNaN(num)) num = 0;
+        root.osdValue = Math.max(0, Math.min(100, num));
+
+        if (!root.isOsdActive) {
+            root.wasExpandedBeforeOsd = root.isExpanded;
         }
-        
         root.isExpanded = false;
+        root.isOsdActive = true;
+        root.isWorkspaceActive = false;
+        workspaceDismissTimer.stop();
+
+        if (type === "vol" || type === "volume") {
+            root.osdColor = Style.accent;
+            if (root.volumeMuted || root.osdValue === 0) root.osdIcon = "volume_off";
+            else if (root.osdValue < 50) root.osdIcon = "volume_down";
+            else root.osdIcon = "volume_up";
+        } else if (type === "bri" || type === "brightness") {
+            root.osdColor = Style.warningYellow;
+            root.osdIcon = root.osdValue < 50 ? "brightness_low" : "brightness_high";
+            if (root.prevBrightnessLevel >= 0) {
+                if (root.osdValue > root.prevBrightnessLevel) root.osdIconRotation += 45;
+                else if (root.osdValue < root.prevBrightnessLevel) root.osdIconRotation -= 45;
+            }
+            root.prevBrightnessLevel = root.osdValue;
+        }
+
         root.isPowerMenuOpen = false;
         root.isWifiMenuOpen = false;
         root.isBluetoothMenuOpen = false;
         root.isNotifMenuOpen = false;
-        root.isWorkspaceActive = false;
-        
-        root.isOsdActive = true;
+        root.isAudioMenuOpen = false;
+        root.isWifiPasswordPromptOpen = false;
+        root.isPowerConfirming = false;
         osdTimer.restart();
     }
 
     Timer {
         id: osdTimer
         interval: root.osdTimeoutVal
-        repeat: false
-        onTriggered: root.isOsdActive = false
+        onTriggered: {
+            root.isOsdActive = false;
+            root.osdIconRotation = 0;
+            if (root.wasExpandedBeforeOsd) {
+                root.isExpanded = true;
+                root.wasExpandedBeforeOsd = false;
+            }
+        }
     }
-    signal openFullSettings()
 
-    // Expose notchBox to shell.qml for input mask
+    /** Expose notchBox to shell.qml for input region masking */
     property alias notchBoxItem: notchBox
 
+    /** Navigation tab index: 0=Media, 1=Walls, 2=Apps, 3=Stats */
     property int currentPage: 0
     property int totalPages: 4
 
-    // Toggle a specific tab open/closed via IPC keybind
+    /** Switch active tab by index */
     function toggleTab(page) {
         if (root.isExpanded && root.currentPage === page) {
             root.isExpanded = false;
-        } else {
-            root.currentPage = page;
-            root.isExpanded = true;
-            root.isNotifMenuOpen = false;
-            root.isPowerMenuOpen = false;
-            root.isWifiMenuOpen = false;
-            root.isBluetoothMenuOpen = false;
-            focusTabSearchTimer.restart();
-        }
-    }
-
-    // Auto-open the notification stack for a fresh notification (only when the
-    // notch is compact; busy states only bump the badge)
-    function handleNewNotification() {
-        if (root.isExpanded || root.isPowerMenuOpen || root.isWifiMenuOpen || root.isBluetoothMenuOpen) {
+            root.currentPage = 0;
             return;
         }
-        root.notifMenuAutoOpened = true;
-        root.isNotifMenuOpen = true;
-        if (root.autoCloseDelay > 0 && !notchHover.hovered) {
-            autoCloseTimer.restart();
+        root.currentPage = page;
+        root.isExpanded = true;
+        root.isNotifMenuOpen = false;
+        root.isPowerMenuOpen = false;
+        root.isWifiMenuOpen = false;
+        root.isBluetoothMenuOpen = false;
+        root.isAudioMenuOpen = false;
+        root.focusActiveTabSearch();
+    }
+
+    /** Whether the dedicated Audio & Devices drawer is open */
+    property bool isAudioMenuOpen: false
+
+    /** Dispatches audio drawer toggle */
+    function toggleAudioMenu() {
+        root.isAudioMenuOpen = !root.isAudioMenuOpen;
+        if (root.isAudioMenuOpen) {
+            root.isWifiMenuOpen = false;
+            root.isBluetoothMenuOpen = false;
+            root.isPowerMenuOpen = false;
+            root.isNotifMenuOpen = false;
+            root.isExpanded = true;
         }
     }
 
-    function focusActiveTabSearch() {
-        if (root.currentPage === 1 && wallsLoader.item) {
-            wallsLoader.forceActiveFocus();
-            if (typeof wallsLoader.item.focusSearch === "function") {
-                wallsLoader.item.focusSearch();
-            }
-        } else if (root.currentPage === 2 && appsLoader.item) {
-            appsLoader.forceActiveFocus();
-            if (typeof appsLoader.item.focusSearch === "function") {
-                appsLoader.item.focusSearch();
-            }
+    /** Handles incoming notifications */
+    function handleNewNotification() {
+        if (!root.isExpanded && !root.isWifiMenuOpen && !root.isBluetoothMenuOpen && !root.isPowerMenuOpen && !root.isAudioMenuOpen) {
+            root.notifMenuAutoOpened = true;
+            root.isNotifMenuOpen = true;
         }
+    }
+
+    /** Focuses search inputs on active tab */
+    function focusActiveTabSearch() {
+        focusTabSearchTimer.restart();
     }
 
     Timer {
         id: focusTabSearchTimer
         interval: 80
-        repeat: false
-        onTriggered: root.focusActiveTabSearch()
-    }
-
-    onIsExpandedChanged: {
-        if (isExpanded) {
-            root.isOsdActive = false;
-            root.refreshOccupied();
-            workspacePollTimer.running = true;
-            root.refreshDeviceLevels();
-            devicePollTimer.running = true;
-            if (currentPage === 1 || currentPage === 2) {
-                focusTabSearchTimer.restart();
-            }
-            if (wallsLoader.item && typeof wallsLoader.item.refresh === "function") {
-                wallsLoader.item.refresh();
-            }
-            if (appsLoader.item && typeof appsLoader.item.refresh === "function") {
-                appsLoader.item.refresh();
-            }
-        } else {
-            root.isWifiMenuOpen = false;
-            root.isBluetoothMenuOpen = false;
-            root.isPowerMenuOpen = false;
-            root.isWifiPasswordPromptOpen = false;
-            root.isNotifMenuOpen = false;
-            root.notifMenuAutoOpened = false;
-            root.isPowerConfirming = false;
-            workspacePollTimer.running = root.isWorkspaceActive;
-            devicePollTimer.running = root.isOsdActive;
-        }
-    }
-
-
-
-    onIsPowerMenuOpenChanged: {
-        if (isPowerMenuOpen) {
-            root.isOsdActive = false;
-            root.forceActiveFocus();
-        } else {
-            root.isPowerConfirming = false;
-            if (isExpanded) {
-                focusTabSearchTimer.restart();
+        onTriggered: {
+            if (root.currentPage === 1 && appsTabLoader.item) {
+                appsTabLoader.item.forceActiveFocus();
+            } else if (root.currentPage === 2 && wallsTabLoader.item) {
+                wallsTabLoader.item.forceActiveFocus();
             }
         }
     }
 
-    onIsWifiMenuOpenChanged: {
-        if (isWifiMenuOpen) {
-            root.isOsdActive = false;
-            root.forceActiveFocus();
-        } else {
-            root.isWifiPasswordPromptOpen = false;
-        }
-    }
+    // =========================================================================
+    // 2. CONFIGURATION & NOTCH DIMENSION PROPERTIES
+    // =========================================================================
 
-    onIsBluetoothMenuOpenChanged: {
-        if (isBluetoothMenuOpen) {
-            root.isOsdActive = false;
-            root.forceActiveFocus();
-        }
-    }
-
-    // Power Menu State
-    property bool isPowerMenuOpen: false
-    property int powerSelectedIndex: 0
-    property bool isPowerConfirming: false
-    property int powerCountdown: 5
-    property string pendingPowerCmd: ""
-    property string pendingPowerTitle: ""
-
-    // Focus management for keyboard input
-    focus: true
-    Keys.onPressed: function(event) {
-        if (event.key === Qt.Key_Escape) {
-            if (root.isWifiMenuOpen) {
-                if (root.isWifiPasswordPromptOpen) {
-                    root.isWifiPasswordPromptOpen = false;
-                } else {
-                    root.isWifiMenuOpen = false;
-                }
-                event.accepted = true;
-            } else if (root.isBluetoothMenuOpen) {
-                root.isBluetoothMenuOpen = false;
-                event.accepted = true;
-            } else if (root.isPowerMenuOpen) {
-                if (root.isPowerConfirming) {
-                    root.cancelPowerAction();
-                } else {
-                    root.isPowerMenuOpen = false;
-                }
-                event.accepted = true;
-            } else if (root.isNotifMenuOpen) {
-                root.isNotifMenuOpen = false;
-                event.accepted = true;
-            } else if (root.isExpanded) {
-                root.isExpanded = false;
-                event.accepted = true;
-            }
-        } else if (root.isPowerMenuOpen) {
-            if (root.isPowerConfirming) {
-                if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
-                    root.executePendingPower();
-                    event.accepted = true;
-                }
-            } else {
-                if (event.key === Qt.Key_Left || event.key === Qt.Key_Up) {
-                    root.powerSelectedIndex = (root.powerSelectedIndex - 1 + 4) % 4;
-                    event.accepted = true;
-                } else if (event.key === Qt.Key_Right || event.key === Qt.Key_Down || event.key === Qt.Key_Tab) {
-                    root.powerSelectedIndex = (root.powerSelectedIndex + 1) % 4;
-                    event.accepted = true;
-                } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
-                    var opts = [
-                        { title: "Shutdown", cmd: "systemctl poweroff" },
-                        { title: "Reboot", cmd: "systemctl reboot" },
-                        { title: "Sleep", cmd: "systemctl suspend" },
-                        { title: "Logout", cmd: "hyprctl dispatch exit" }
-                    ];
-                    var sel = opts[root.powerSelectedIndex];
-                    root.triggerPowerAction(sel.title, sel.cmd);
-                    event.accepted = true;
-                }
-            }
-        }
-    }
-
-    // Delayed unload: tabs stay loaded for 30s after leaving
-    property bool wallsTabAlive: false
-    property bool appsTabAlive: false
-
-    onCurrentPageChanged: {
-        // Activate the tab we're switching TO
-        if (currentPage === 1) {
-            wallsTabAlive = true;
-            wallsUnloadTimer.stop();
-            if (wallsLoader.item && typeof wallsLoader.item.refresh === "function") {
-                wallsLoader.item.refresh();
-            }
-        } else {
-            // Start 30s countdown to unload Walls tab
-            if (wallsTabAlive) wallsUnloadTimer.restart();
-        }
-        if (currentPage === 2) {
-            appsTabAlive = true;
-            appsUnloadTimer.stop();
-            if (appsLoader.item && typeof appsLoader.item.refresh === "function") {
-                appsLoader.item.refresh();
-            }
-        } else {
-            if (appsTabAlive) appsUnloadTimer.restart();
-        }
-        if (currentPage === 3) {
-            sysScanner.running = true;
-        }
-    }
-
-    Timer {
-        id: wallsUnloadTimer
-        interval: 5000
-        repeat: false
-        onTriggered: root.wallsTabAlive = false
-    }
-
-    Timer {
-        id: appsUnloadTimer
-        interval: 5000
-        repeat: false
-        onTriggered: root.appsTabAlive = false
-    }
-
-    // Configurable Notch Parameters loaded live
     property int autoCloseDelay: 5000
     property int compactWidthVal: 130
-    property int expandedHeightVal: 420
+    property int expandedHeightVal: 106
 
-    // Per-tab expanded notch height: media (0) and stats (3) grow to fit their
-    // content exactly; walls (1) and apps (2) keep the user-configured height.
-    property int pageChromeHeight: 14 + headerRow.implicitHeight + 10 + tabDots.implicitHeight + 10 + 14
-    property int mediaPageContentHeight: mediaColumn ? mediaColumn.implicitHeight : 0
-    property int statsPageContentHeight: statsColumn ? statsColumn.implicitHeight : 0
-    property int pageNotchHeight: root.currentPage === 0 ? Math.max(root.expandedHeightVal, root.mediaPageContentHeight + root.pageChromeHeight)
-        : (root.currentPage === 3 ? Math.max(root.expandedHeightVal, root.statsPageContentHeight + root.pageChromeHeight)
-        : root.expandedHeightVal)
-    // Window-sized hint: tall enough for the tallest page so spring morphs between
-    // page heights never clip (the window is transparent; the mask passes clicks through).
-    property int maxPageNotchHeight: Math.max(root.expandedHeightVal, root.mediaPageContentHeight + root.pageChromeHeight, root.statsPageContentHeight + root.pageChromeHeight)
-    property int notchRadiusVal: 16
+    property int pageChromeHeight: 10 + 32 + 6 + 10
+    property int pageNotchHeight: root.expandedHeightVal
+    property int maxPageNotchHeight: Math.max(root.expandedHeightVal, 320)
+    property int notchRadiusVal: 22
     property bool drippingEarsVal: true
     property int clockFontSizeVal: 14
     property string clockFormatVal: "h:mm A"
@@ -325,12 +216,13 @@ Item {
     property bool buttonAnimsVal: true
     property int buttonSpeedVal: 180
     property int appColumnsVal: 4
+
     property string highlightAnimTypeVal: "spring"
     property real highlightSpringTensionVal: 5.5
     property real highlightSpringDampingVal: 0.25
     property int gridAnimDurationVal: 120
 
-    // Visualizer Parameters & Counterparts
+    // Visualizer Parameters
     property bool visualizerEnabledVal: true
     property string visualizerStyleVal: "bars"
     property int visualizerHeightVal: 16
@@ -340,261 +232,171 @@ Item {
     property real visualizerPulsarScaleVal: 1.2
     property int visualizerPauseDelayVal: 1000
 
-    // Dynamic Notch Width scaling according to song title
-    property real textWidth: trackTitleText.implicitWidth
-    property real dynamicVisNotchWidth: Math.min(360, Math.max(230, 150 + textWidth))
+    property real textWidth: compactPillComp ? compactPillComp.trackTitleWidth : 0
+    property real dynamicVisNotchWidth: root.showVisualizer
+        ? Math.max(root.compactWidthVal, Math.min(420, 16 + 18 + 12 + 64 + 12 + root.textWidth + 18))
+        : root.compactWidthVal
 
-    // Audio Visualizer IPC State
-    property var visualizerBars: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
-    property var visualizerFrame: [0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0]
+    property var visualizerBars: []
+    property var visualizerFrame: []
     property bool isAudioActive: false
     property bool isVisualizerActive: false
+    readonly property bool showVisualizer: root.visualizerEnabledVal && root.isVisualizerActive && !root.isExpanded && !root.isOsdActive && !root.isNotifMenuOpen
 
-    // Throttle frame propagation: runs when any visualizer consumer is potentially visible
     Timer {
         id: visFrameTimer
         interval: 66
         repeat: true
-        running: (root.isVisualizerActive || (root.isExpanded && root.currentPage === 0)) && visualizerStreamProc.running
-        onTriggered: root.visualizerFrame = root.visualizerBars
+        running: (root.showVisualizer || (root.isExpanded && root.currentPage === 0)) && root.visualizerBars.length > 0
+        onTriggered: {
+            if (root.visualizerBars.length > 0) root.visualizerFrame = root.visualizerBars;
+        }
     }
-
-    // Evaluated Visualizer Display State
-    property bool showVisualizer: root.visualizerEnabledVal && root.isVisualizerActive && !root.isWorkspaceActive && !root.isOsdActive
 
     function triggerVisualizerPopup() {
-        if (!root.visualizerEnabledVal || root.isExpanded || root.isWorkspaceActive) return;
-        visualizerPauseTimer.stop();
+        if (!root.visualizerEnabledVal) return;
+        visPauseTimer.stop();
         root.isVisualizerActive = true;
         if (root.visualizerTimeoutVal > 0) {
-            visualizerDismissTimer.restart();
-        }
-    }
-
-    function triggerVisualizerDismissal() {
-        visualizerDismissTimer.stop();
-        if (root.visualizerPauseDelayVal > 0) {
-            visualizerPauseTimer.restart();
-        } else {
-            root.isVisualizerActive = false;
-        }
-    }
-
-    onIsPlayingChanged: {
-        if (root.isPlaying) {
-            triggerVisualizerPopup();
-        } else {
-            triggerVisualizerDismissal();
-        }
-    }
-
-    onTrackTitleChanged: {
-        if (root.isPlaying) {
-            triggerVisualizerPopup();
+            visTimeoutTimer.restart();
         }
     }
 
     Timer {
-        id: visualizerDismissTimer
-        interval: root.visualizerTimeoutVal > 0 ? root.visualizerTimeoutVal : 1000
-        repeat: false
-        onTriggered: {
-            if (root.visualizerTimeoutVal > 0) {
-                root.isVisualizerActive = false;
-            }
-        }
+        id: visTimeoutTimer
+        interval: root.visualizerTimeoutVal
+        onTriggered: root.isVisualizerActive = false
     }
 
     Timer {
-        id: visualizerPauseTimer
-        interval: root.visualizerPauseDelayVal > 0 ? root.visualizerPauseDelayVal : 100
-        repeat: false
-        onTriggered: {
-            root.isVisualizerActive = false;
-        }
+        id: visPauseTimer
+        interval: root.visualizerPauseDelayVal
+        onTriggered: root.isVisualizerActive = false
     }
 
-    Process {
-        id: visualizerStreamProc
-        command: ["python3", "/home/yogesh/.config/quickshell/scripts/notch/stream_audio_visualizer.py"]
-        running: root.visualizerEnabledVal && (root.isPlaying || (root.isExpanded && root.currentPage === 0))
-        stdout: SplitParser {
-            onRead: function(data) {
-                try {
-                    var parsed = JSON.parse(data.trim());
-                    if (parsed.bars !== undefined) {
-                        root.visualizerBars = parsed.bars;
-                    }
-                    if (parsed.active !== undefined) {
-                        var wasActive = root.isAudioActive;
-                        root.isAudioActive = parsed.active;
+    // Ear size geometry
+    property real earSize: Math.max(12, Math.min(32, root.notchRadiusVal * 1.5))
+    readonly property real effectiveEarSize: Math.max(0, Math.min(root.earSize, notchBox.height - notchBox.bottomLeftRadius))
 
-                        // Non-MPRIS system audio stream trigger logic.
-                        // Guard: while the MPRIS pause-dismissal timer is pending,
-                        // system audio must not resurrect the visualizer.
-                        if (!root.isPlaying) {
-                            if (parsed.active && !wasActive && !visualizerPauseTimer.running) {
-                                triggerVisualizerPopup();
-                            } else if (!parsed.active) {
-                                triggerVisualizerDismissal();
-                            }
-                        }
-                    }
-                } catch (e) {
-                    console.log("Error parsing visualizer IPC payload:", e);
-                }
-            }
-        }
-    }
+    // =========================================================================
+    // 3. HARDWARE LEVELS & HYPRLAND WORKSPACES
+    // =========================================================================
 
-    // Restart the visualizer stream when the bar count changes so the new
-    // count takes effect live (config is regenerated on every cava spawn).
-    Timer {
-        id: visualizerRestartTimer
-        interval: 10
-        repeat: false
-        onTriggered: {
-            if (visualizerStreamProc.running) {
-                visualizerStreamProc.running = false;
-                visualizerStreamProc.running = true;
-            }
-        }
-    }
+    property int volumeLevel: 50
+    property bool volumeMuted: false
+    property int micLevel: 50
+    property bool micMuted: false
+    property int brightnessLevel: 50
+    property int batteryLevel: 100
+    property string batteryStatus: "Discharging"
 
-    // Workspace native QML state (occupiedWorkspaces refreshed on overlay entry + polled)
+    // Hyprland Active & Occupied Workspaces
     property int activeWorkspace: 1
     property var occupiedWorkspaces: [1]
-
-    function refreshOccupied() {
-        try {
-            var list = [];
-            var wsList = Hyprland.workspaces.values;
-            for (var i = 0; i < wsList.length; i++) {
-                var ws = wsList[i];
-                if (ws && ws.toplevels && ws.toplevels.values.length > 0) {
-                    list.push(ws.id);
-                }
-            }
-            root.occupiedWorkspaces = list;
-        } catch (e) {
-            console.warn("refreshOccupied failed:", e);
-        }
-    }
-
-    // Poll occupancy only while the workspace overlay or the expanded notch
-    // is visible; refresh once on entry so data is never stale.
-    Timer {
-        id: workspacePollTimer
-        interval: 1000
-        repeat: true
-        running: false
-        onTriggered: root.refreshOccupied()
-    }
     property bool isWorkspaceActive: false
-    onIsWorkspaceActiveChanged: {
-        if (root.isWorkspaceActive) {
-            root.isOsdActive = false;
-            root.refreshOccupied();
-            workspacePollTimer.running = true;
-        } else if (!root.isExpanded) {
-            workspacePollTimer.running = false;
-        }
+
+    // Workspace Dot Stretch Handle Physics
+    property real targetHandleX: 0
+    property real handleLeft: 0
+    property real handleRight: 0
+    property real singleHandleX: 0
+
+    Behavior on targetHandleX {
+        SpringAnimation { spring: 5.5; damping: 0.22; epsilon: 0.1 }
+    }
+    Behavior on singleHandleX {
+        SpringAnimation { spring: 5.5; damping: 0.22; epsilon: 0.1 }
+    }
+    Behavior on handleLeft {
+        SpringAnimation { spring: 4.8; damping: 0.24; epsilon: 0.1 }
+    }
+    Behavior on handleRight {
+        SpringAnimation { spring: 6.2; damping: 0.20; epsilon: 0.1 }
     }
 
-    // Reactive workspace overlay via focused workspace changes
-    Connections {
-        target: Hyprland
-
-        function onFocusedWorkspaceChanged() {
-            if (Hyprland.focusedWorkspace) {
-                var newActive = Hyprland.focusedWorkspace.id;
-                if (root.workspaceOverlayVal && !root.isExpanded && newActive !== root.activeWorkspace) {
-                    root.isWorkspaceActive = true;
-                    workspaceDismissTimer.restart();
-                }
-                root.activeWorkspace = newActive;
-            }
-        }
+    function updateHandlePosition(wsNum) {
+        var dotCenter = (wsNum - 1) * 14;
+        root.targetHandleX = dotCenter;
+        root.singleHandleX = dotCenter;
+        root.handleLeft = dotCenter - 1;
+        root.handleRight = dotCenter + 7;
     }
 
     Timer {
         id: workspaceDismissTimer
         interval: root.workspaceTimeoutVal
-        repeat: false
         onTriggered: root.isWorkspaceActive = false
     }
 
-    // 100% Pixel-Perfect Centering Math for Workspace Handle (Center = 10 + index * 22)
-    property int wsIdx: Math.max(0, Math.min(9, root.activeWorkspace - 1))
-    property real targetLeft: 2 + wsIdx * 22
-    property real targetRight: 18 + wsIdx * 22
-
-    // Dual-Edge Springs for Stretch mode
-    property real handleLeft: targetLeft
-    property real handleRight: targetRight
-
-    Behavior on handleLeft {
-        SpringAnimation { spring: 5.5; damping: 0.38 }
-    }
-
-    Behavior on handleRight {
-        SpringAnimation { spring: 8.0; damping: 0.22 }
-    }
-
-    // Single-Position Handle for Smooth, Linear, and Bounce modes
-    property real singleHandleX: targetLeft
-
-    Behavior on singleHandleX {
-        enabled: root.wsAnimType !== "stretch"
-        SpringAnimation {
-            spring: root.wsAnimType === "bounce" ? 8.5 : 5.5
-            damping: root.wsAnimType === "bounce" ? 0.18 : 0.30
-            epsilon: 0.25
+    Connections {
+        target: Hyprland
+        function onRawEvent(name, data) {
+            if (name === "workspace" || name === "focusedmon" || name === "workspacev2") {
+                var wsNum = parseInt(data);
+                if (!isNaN(wsNum) && wsNum > 0 && wsNum <= 10) {
+                    root.activeWorkspace = wsNum;
+                    root.updateHandlePosition(wsNum);
+                    if (root.workspaceOverlayVal && !root.isExpanded && !root.isOsdActive && !root.isNotifMenuOpen) {
+                        root.isWorkspaceActive = true;
+                        workspaceDismissTimer.restart();
+                    }
+                }
+            } else if (name === "createworkspace" || name === "destroyworkspace" || name === "movewindow" || name === "openwindow" || name === "closewindow") {
+                root.refreshOccupied();
+            }
         }
     }
-
-    // Notifications Properties
-    property int notifCount: 0
-
-    // Notification stack geometry: grows dynamically with content (including
-    // expanded notifications), capped so it doesn't exceed the expanded notch height.
-    property int notifStackChrome: 56
-    property int notifStackMaxHeight: 420
-    property int notifStackEmptyHeight: 120
-    property int notifStackHeight: {
-        if (!root.notifModel || root.notifModel.count === 0) return root.notifStackEmptyHeight;
-        var count = root.notifModel.count;
-        var base = root.notifStackChrome + Math.min(count, 5) * 60;
-        var extra = notifHistoryOverlay.expandedExtraHeight;
-        return Math.min(base + extra, root.notifStackMaxHeight);
-    }
-
-    // Dynamic Ear Size scaling in sync with spring expansion (12px Compact -> 24px Expanded)
-    property real earSize: root.isExpanded ? 24 : 12
-
-    Behavior on earSize {
-        SpringAnimation {
-            spring: root.expandSpringTension
-            damping: root.expandSpringDamping
-            epsilon: 0.25
-        }
-    }
-
-    // Notch Expansion Animation Profile
-    property real expandSpringTension: 4.5
-    property real expandSpringDamping: 0.28
-
-    // Tab Switch Animation Profile
-    property real tabSpringTension: 5.5
-    property real tabSpringDamping: 0.22
 
     Process {
-        id: loadNotchSettingsProc
-        command: ["python3", "/home/yogesh/.config/quickshell/scripts/notch/get_notch_settings.py"]
+        id: occupiedWorkspacesProc
+        command: ["hyprctl", "workspaces", "-j"]
         stdout: StdioCollector {
             onStreamFinished: {
                 try {
-                    var data = JSON.parse(this.text.trim());
+                    var data = JSON.parse(this.text);
+                    var occ = [];
+                    for (var i = 0; i < data.length; i++) {
+                        var id = data[i].id;
+                        if (id > 0 && id <= 10) occ.push(id);
+                    }
+                    root.occupiedWorkspaces = occ;
+                } catch (e) {}
+            }
+        }
+    }
+
+    function refreshOccupied() {
+        if (!occupiedWorkspacesProc.running) occupiedWorkspacesProc.running = true;
+    }
+
+    // =========================================================================
+    // 4. NOTIFICATION & REAPER DATA
+    // =========================================================================
+
+    property int notifCount: notifHistoryComp ? notifHistoryComp.activeCount : 0
+    property int notifStackChrome: notifHistoryComp ? notifHistoryComp.notifStackChrome : 100
+    property int notifStackMaxHeight: notifHistoryComp ? notifHistoryComp.notifStackMaxHeight : 450
+    property int notifStackEmptyHeight: notifHistoryComp ? notifHistoryComp.notifStackEmptyHeight : 140
+    property int notifStackHeight: notifHistoryComp ? notifHistoryComp.notifStackHeight : 140
+
+    // Spring Constants
+    property real expandSpringTension: 5.0
+    property real expandSpringDamping: 0.40
+    property real tabSpringTension: 5.5
+    property real tabSpringDamping: 0.22
+
+    // =========================================================================
+    // 5. SETTINGS LOADING & CLOCK PROCESSES
+    // =========================================================================
+
+    Process {
+        id: loadNotchSettingsProc
+        command: ["python3", Quickshell.shellDir + "/scripts/notch/get_notch_settings.py"]
+        running: true
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    var data = JSON.parse(this.text);
                     if (data.auto_close !== undefined) root.autoCloseDelay = data.auto_close;
                     if (data.compact_width !== undefined) root.compactWidthVal = data.compact_width;
                     if (data.expanded_height !== undefined) root.expandedHeightVal = data.expanded_height;
@@ -639,35 +441,9 @@ Item {
         loadNotchSettingsProc.running = true;
     }
 
-    Component.onCompleted: {
-        refreshNotchSettings();
-        updateClock();
-        root.refreshOccupied();
-        root.refreshDeviceLevels();
-        wifiStatusProc.running = true;
-        btStatusProc.running = true;
-    }
-
-    // Restart the visualizer stream when the bar count changes so the new
-    // count takes effect live.
-    onVisualizerBarCountValChanged: {
-        if (root.visualizerEnabledVal) {
-            visualizerStreamProc.running = false;
-            visualizerRestartTimer.restart();
-        }
-    }
-
-    // Fixed root dimensions (624px width allows 32px padding for inverted ears)
-    // Height tracks the configurable expanded height so it never clips
-    implicitWidth: Style.notchWidthExpanded + 64
-    implicitHeight: Math.max(Style.notchHeightExpanded, root.maxPageNotchHeight, root.notifStackHeight)
-
-    // Clock string (pure JS — zero process spawns)
-    property string timeStr: "00:00"
-
+    property string timeStr: ""
     function updateClock() {
-        var now = new Date();
-        root.timeStr = Qt.formatDateTime(now, root.clockFormatVal);
+        root.timeStr = Qt.formatDateTime(new Date(), root.clockFormatVal);
     }
 
     Timer {
@@ -677,21 +453,220 @@ Item {
         onTriggered: root.updateClock()
     }
 
-
-    // Configurable Auto-Close Timer when mouse exits expanded notch area
     Timer {
         id: autoCloseTimer
         interval: root.autoCloseDelay
+        running: false
         repeat: false
         onTriggered: {
-            if (root.autoCloseDelay > 0 && !notchHover.hovered) {
+            if (root.isExpanded && !root.isWifiMenuOpen && !root.isBluetoothMenuOpen && !root.isPowerMenuOpen && !root.isNotifMenuOpen && !root.isWifiPasswordPromptOpen) {
                 root.isExpanded = false;
-                root.isNotifMenuOpen = false;
+                root.currentPage = 0;
             }
         }
     }
 
-    // Debounced Wallpaper Execution Queue
+    // =========================================================================
+    // 6. AUDIO VISUALIZER & HARDWARE STATE MONITORS
+    // =========================================================================
+
+    Process {
+        id: visualizerProc
+        command: ["python3", Quickshell.shellDir + "/scripts/notch/stream_audio_visualizer.py"]
+        running: root.visualizerEnabledVal
+        stdout: SplitParser {
+            onRead: function(data) {
+                try {
+                    var obj = JSON.parse(data.trim());
+                    if (obj.bars) {
+                        root.visualizerBars = obj.bars;
+                        var isAct = obj.active === true;
+                        if (isAct) {
+                            root.isAudioActive = true;
+                            root.triggerVisualizerPopup();
+                        } else if (root.isAudioActive) {
+                            root.isAudioActive = false;
+                            visPauseTimer.restart();
+                        }
+                    }
+                } catch (e) {}
+            }
+        }
+    }
+
+    property int sysStatsIntervalVal: 2000
+    property int cpuUsage: 0
+    property var cpuHistory: [22, 28, 30, 26, 35, 29, 33]
+    property int ramUsage: 0
+    property var ramHistory: [46, 48, 47, 49, 48, 50, 49]
+    property int diskUsage: 0
+    property real netRxSpeed: 0
+    property real netTxSpeed: 0
+    property var netHistory: [12, 18, 8, 25, 14, 30, 20]
+
+    Process {
+        id: sysScanner
+        command: ["python3", Quickshell.shellDir + "/scripts/desktop/get_system_info.py"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    var data = JSON.parse(this.text);
+                    root.cpuUsage = data.cpu || 0;
+                    root.ramUsage = data.ram || 0;
+                    root.diskUsage = data.disk || 0;
+                    root.netRxSpeed = data.net_rx || 0;
+                    root.netTxSpeed = data.net_tx || 0;
+
+                    var cpuArr = root.cpuHistory.slice();
+                    cpuArr.push(root.cpuUsage);
+                    if (cpuArr.length > 20) cpuArr.shift();
+                    root.cpuHistory = cpuArr;
+
+                    var ramArr = root.ramHistory.slice();
+                    ramArr.push(root.ramUsage);
+                    if (ramArr.length > 20) ramArr.shift();
+                    root.ramHistory = ramArr;
+
+                    var netArr = root.netHistory.slice();
+                    var netNorm = Math.min(100, Math.round((root.netRxSpeed + root.netTxSpeed) / (1024 * 1024) * 10));
+                    netArr.push(netNorm);
+                    if (netArr.length > 20) netArr.shift();
+                    root.netHistory = netArr;
+                } catch (e) {}
+            }
+        }
+    }
+
+    Timer {
+        interval: root.sysStatsIntervalVal
+        repeat: true
+        running: root.isExpanded && root.currentPage === 3
+        onTriggered: if (!sysScanner.running) sysScanner.running = true
+    }
+
+    // =========================================================================
+    // 7. SUB-MENU DRAWER STATES & CONTROLS
+    // =========================================================================
+
+    property bool isWifiMenuOpen: false
+    property bool isBluetoothMenuOpen: false
+    property bool isNotifMenuOpen: false
+    property bool notifMenuAutoOpened: false
+    readonly property bool grabsFocus: root.isExpanded || root.isNotifMenuOpen || root.isPowerMenuOpen || root.isWifiMenuOpen || root.isBluetoothMenuOpen
+
+    property bool wifiPower: true
+    property string wifiActiveSsid: ""
+    property var wifiNetworks: []
+    property bool btPower: false
+    property var btDevices: []
+
+    property bool isWifiPasswordPromptOpen: false
+    property string wifiPromptSsid: ""
+    property string wifiPasswordText: ""
+    property bool showWifiPassword: false
+
+    Process {
+        id: wifiStatusProc
+        command: ["python3", Quickshell.shellDir + "/scripts/network/manage_wifi.py", "status"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    var data = JSON.parse(this.text);
+                    root.wifiPower = data && data.power !== undefined ? data.power : false;
+                    root.wifiActiveSsid = (data && data.active) || "";
+                    if (data && data.networks) root.wifiNetworks = data.networks;
+                } catch (e) {}
+            }
+        }
+    }
+
+    Process {
+        id: btStatusProc
+        command: ["python3", Quickshell.shellDir + "/scripts/network/manage_bluetooth.py"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    var data = JSON.parse(this.text);
+                    root.btPower = data && data.power !== undefined ? data.power : false;
+                    root.btDevices = (data && data.devices) || [];
+                } catch (e) {}
+            }
+        }
+    }
+
+    Process {
+        id: deviceLevelsProc
+        command: ["python3", Quickshell.shellDir + "/scripts/desktop/get_device_levels.py"]
+        stdout: StdioCollector {
+            onStreamFinished: {
+                try {
+                    var data = JSON.parse(this.text);
+                    if (data.volume !== null && data.volume !== undefined) root.volumeLevel = data.volume;
+                    if (data.volume_muted !== undefined) root.volumeMuted = data.volume_muted;
+                    if (data.mic !== null && data.mic !== undefined) root.micLevel = data.mic;
+                    if (data.mic_muted !== undefined) root.micMuted = data.mic_muted;
+                    if (data.brightness !== null && data.brightness !== undefined) root.brightnessLevel = data.brightness;
+                    if (data.battery !== null && data.battery !== undefined) root.batteryLevel = data.battery;
+                    if (data.battery_status) root.batteryStatus = data.battery_status;
+                } catch (e) {}
+            }
+        }
+    }
+
+    Timer {
+        id: devicePollTimer
+        interval: 2000
+        repeat: true
+        running: true
+        onTriggered: root.refreshDeviceLevels()
+    }
+
+    function refreshDeviceLevels() {
+        if (!deviceLevelsProc.running) deviceLevelsProc.running = true;
+    }
+
+    // Power Menu State
+    property bool isPowerMenuOpen: false
+    property int powerSelectedIndex: 0
+    property bool isPowerConfirming: false
+    property int powerCountdown: 5
+    property string pendingPowerCmd: ""
+    property string pendingPowerTitle: ""
+
+    // Lazy Tab Lifecycle Management
+    property bool wallsTabAlive: false
+    property bool appsTabAlive: false
+
+    onCurrentPageChanged: {
+        if (root.currentPage === 1) {
+            appsUnloadTimer.stop();
+            root.appsTabAlive = true;
+        } else if (root.currentPage === 2) {
+            wallsUnloadTimer.stop();
+            root.wallsTabAlive = true;
+        } else if (root.currentPage === 3) {
+            sysScanner.running = true;
+        }
+        if (root.currentPage !== 1 && root.appsTabAlive) appsUnloadTimer.restart();
+        if (root.currentPage !== 2 && root.wallsTabAlive) wallsUnloadTimer.restart();
+    }
+
+    Timer {
+        id: wallsUnloadTimer
+        interval: 5000
+        onTriggered: root.wallsTabAlive = false
+    }
+
+    Timer {
+        id: appsUnloadTimer
+        interval: 5000
+        onTriggered: root.appsTabAlive = false
+    }
+
+    // =========================================================================
+    // 8. WALLUST COLOR INTEGRATION & WALLPAPER APPLICATION
+    // =========================================================================
+
     property string pendingWallpaperPath: ""
 
     Process {
@@ -721,24 +696,25 @@ Item {
             if (root.pendingWallpaperPath !== "" && !applyWallpaperProc.running) {
                 var targetPath = root.pendingWallpaperPath;
                 root.pendingWallpaperPath = "";
-                applyWallpaperProc.command = ["bash", "/home/yogesh/.config/quickshell/scripts/desktop/apply_wallpaper.sh", targetPath];
+                applyWallpaperProc.command = ["bash", Quickshell.shellDir + "/scripts/desktop/apply_wallpaper.sh", targetPath];
                 applyWallpaperProc.running = true;
             }
         }
     }
 
     function handleWallpaperSelected(path) {
-        root.pendingWallpaperPath = path;
-        root.isExpanded = false; // Trigger 500ms contraction animation first
         if (!applyWallpaperProc.running) {
-            delayedWallpaperTimer.restart();
+            applyWallpaperProc.command = ["bash", Quickshell.shellDir + "/scripts/desktop/apply_wallpaper.sh", path];
+            applyWallpaperProc.running = true;
+        } else {
+            root.pendingWallpaperPath = path;
         }
     }
 
     // Dynamic Wallust Accent fetcher
     Process {
         id: wallustAccentProc
-        command: ["bash", "/home/yogesh/.config/quickshell/scripts/desktop/get_wallust_colors.sh"]
+        command: ["bash", Quickshell.shellDir + "/scripts/desktop/get_wallust_colors.sh"]
         running: true
         stdout: StdioCollector {
             onStreamFinished: {
@@ -750,7 +726,7 @@ Item {
                     borderColorSyncProc.running = false;
                     borderColorSyncProc.command = [
                         "bash",
-                        "/home/yogesh/.config/quickshell/scripts/hyprland/set_hypr_option.sh",
+                        Quickshell.shellDir + "/scripts/hyprland/set_hypr_option.sh",
                         "active_border",
                         aarrggbb
                     ];
@@ -781,7 +757,6 @@ Item {
     property string trackTitle: activePlayer && activePlayer.trackTitle ? activePlayer.trackTitle : "No Media Playing"
     property string trackArtist: activePlayer && activePlayer.trackArtist ? activePlayer.trackArtist : "Top Notch"
     property bool isPlaying: activePlayer ? (activePlayer.playbackState === MprisPlaybackState.Playing) : false
-
     property real trackPosition: activePlayer && activePlayer.position ? activePlayer.position : 0
 
     onActivePlayerChanged: {
@@ -792,297 +767,195 @@ Item {
         }
     }
 
+    // Continuously update track position while media is playing
     Timer {
-        id: posTimer
+        id: trackPosTimer
         interval: 500
-        running: root.isPlaying && root.activePlayer !== null && root.isExpanded
+        running: root.isPlaying && root.isExpanded && root.currentPage === 0
         repeat: true
         onTriggered: {
-            if (root.activePlayer) {
+            if (root.activePlayer && root.activePlayer.position !== undefined) {
                 root.trackPosition = root.activePlayer.position;
             }
         }
     }
 
-    property int cpuUsage: 0
-    property int ramUsage: 0
-    property int diskUsage: 0
-    property int sysStatsIntervalVal: 2000
+    // =========================================================================
+    // 9. LIFECYCLE & SIGNALS & KEYBOARD HANDLER
+    // =========================================================================
 
-    property var cpuHistory: []
-    property var ramHistory: []
+    signal openFullSettings()
 
-    property int netRxSpeed: 0
-    property int netTxSpeed: 0
-    property var netHistory: []
+    Component.onCompleted: {
+        refreshNotchSettings();
+        updateClock();
+        root.refreshOccupied();
+        root.refreshDeviceLevels();
+        root.refreshAccent();
+        wifiStatusProc.running = true;
+        btStatusProc.running = true;
+    }
 
-    Process {
-        id: sysScanner
-        command: ["python3", "/home/yogesh/.config/quickshell/scripts/desktop/get_system_info.py"]
-        stdout: StdioCollector {
-            onStreamFinished: {
-                try {
-                    var data = JSON.parse(this.text);
-                    root.cpuUsage = data.cpu;
-                    root.ramUsage = data.ram;
-                    root.diskUsage = data.disk;
-                    if (data.net_rx !== undefined) root.netRxSpeed = data.net_rx;
-                    if (data.net_tx !== undefined) root.netTxSpeed = data.net_tx;
-
-                    // Accumulate CPU History
-                    var cpuArr = [];
-                    for (var i = 0; i < root.cpuHistory.length; i++) {
-                        cpuArr.push(root.cpuHistory[i]);
-                    }
-                    cpuArr.push(data.cpu);
-                    if (cpuArr.length > 20) cpuArr.shift();
-                    root.cpuHistory = cpuArr;
-
-                    // Accumulate RAM History
-                    var ramArr = [];
-                    for (var j = 0; j < root.ramHistory.length; j++) {
-                        ramArr.push(root.ramHistory[j]);
-                    }
-                    ramArr.push(data.ram);
-                    if (ramArr.length > 20) ramArr.shift();
-                    root.ramHistory = ramArr;
-                    
-                    // Accumulate Net History (using max of RX/TX normalized up to 10MB/s roughly for graph scaling)
-                    var netArr = [];
-                    for (var k = 0; k < root.netHistory.length; k++) {
-                        netArr.push(root.netHistory[k]);
-                    }
-                    // Normalize to a percentage of 10MB/s max for graphing
-                    var maxNet = Math.max(root.netRxSpeed, root.netTxSpeed);
-                    var netPct = Math.min(100, Math.floor((maxNet / (10 * 1024 * 1024)) * 100));
-                    netArr.push(netPct);
-                    if (netArr.length > 20) netArr.shift();
-                    root.netHistory = netArr;
-
-                } catch(e) {}
+    Keys.onPressed: function(event) {
+        if (event.key === Qt.Key_Escape) {
+            if (root.isWifiMenuOpen) {
+                if (root.isWifiPasswordPromptOpen) {
+                    root.isWifiPasswordPromptOpen = false;
+                } else {
+                    root.isWifiMenuOpen = false;
+                }
+                event.accepted = true;
+            } else if (root.isBluetoothMenuOpen) {
+                root.isBluetoothMenuOpen = false;
+                event.accepted = true;
+            } else if (root.isPowerMenuOpen) {
+                if (root.isPowerConfirming) {
+                    root.isPowerConfirming = false;
+                } else {
+                    root.isPowerMenuOpen = false;
+                }
+                event.accepted = true;
+            } else if (root.isNotifMenuOpen) {
+                root.isNotifMenuOpen = false;
+                event.accepted = true;
+            } else if (root.isAudioMenuOpen) {
+                root.isAudioMenuOpen = false;
+                event.accepted = true;
+            } else if (root.isExpanded) {
+                root.isExpanded = false;
+                event.accepted = true;
+            }
+        } else if (root.isPowerMenuOpen) {
+            if (root.isPowerConfirming) {
+                if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+                    powerMenuComp.execute();
+                    event.accepted = true;
+                }
+            } else {
+                if (event.key === Qt.Key_Left) {
+                    root.powerSelectedIndex = (root.powerSelectedIndex - 1 + 5) % 5;
+                    event.accepted = true;
+                } else if (event.key === Qt.Key_Right) {
+                    root.powerSelectedIndex = (root.powerSelectedIndex + 1) % 5;
+                    event.accepted = true;
+                } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+                    var actions = [
+                        { title: "Lock", cmd: "hyprlock || swaylock -f" },
+                        { title: "Logout", cmd: "hyprctl dispatch exit" },
+                        { title: "Suspend", cmd: "systemctl suspend" },
+                        { title: "Reboot", cmd: "systemctl reboot" },
+                        { title: "Shutdown", cmd: "systemctl poweroff" }
+                    ];
+                    var chosen = actions[root.powerSelectedIndex];
+                    powerMenuComp.trigger(chosen.title, chosen.cmd);
+                    event.accepted = true;
+                }
             }
         }
     }
 
-    Timer {
-        id: sysTimer
-        interval: root.sysStatsIntervalVal
-        running: root.isExpanded && root.currentPage === 3
-        repeat: true
-        onTriggered: sysScanner.running = true
-    }
+    // =========================================================================
+    // 10. VISUAL PRESENTATION & GEOMETRY (DRIPPING INVERTED EARS)
+    // =========================================================================
 
-    property bool isWifiMenuOpen: false
-    property bool isBluetoothMenuOpen: false
-    property bool isNotifMenuOpen: false
-    property bool notifMenuAutoOpened: false
-    property bool grabsFocus: root.isExpanded || root.isPowerMenuOpen || root.isWifiMenuOpen || root.isBluetoothMenuOpen || (root.isNotifMenuOpen && !root.notifMenuAutoOpened)
-
-    property bool wifiPower: false
-    property string wifiActiveSsid: ""
-    property var wifiNetworks: []
-
-    property bool btPower: false
-    property var btDevices: []
-
-    property bool isWifiPasswordPromptOpen: false
-    property string wifiPromptSsid: ""
-    property string wifiPasswordText: ""
-    property bool showWifiPassword: false
-
-    // Lightweight startup-only WiFi power check (no network scan)
-    Process {
-        id: wifiStatusProc
-        command: ["python3", "/home/yogesh/.config/quickshell/scripts/network/manage_wifi.py", "status"]
-        stdout: StdioCollector {
-            onStreamFinished: {
-                try {
-                    var data = JSON.parse(this.text);
-                    root.wifiPower = data.power;
-                    if (data.active) root.wifiActiveSsid = data.active;
-                } catch(e) {}
-            }
-        }
-    }
-
-    // Lightweight startup-only BT power check
-    Process {
-        id: btStatusProc
-        command: ["python3", "/home/yogesh/.config/quickshell/scripts/network/manage_bluetooth.py"]
-        stdout: StdioCollector {
-            onStreamFinished: {
-                try {
-                    var data = JSON.parse(this.text);
-                    root.btPower = data.power;
-                } catch(e) {}
-            }
-        }
-    }
-
-
-
-    property int volumeLevel: 50
-    property int micLevel: 50
-    property bool volumeMuted: false
-    property bool micMuted: false
-    property int brightnessLevel: 50
-    property int batteryLevel: 100
-    property string batteryStatus: "Unknown"
-
-    function getBatteryIcon(level, status, warningThreshold) {
-        if (status === "Charging") {
-            if (level >= 95) return "battery_charging_full";
-            if (level >= 85) return "battery_charging_90";
-            if (level >= 75) return "battery_charging_80";
-            if (level >= 55) return "battery_charging_60";
-            if (level >= 40) return "battery_charging_50";
-            if (level >= 25) return "battery_charging_30";
-            return "battery_charging_20";
-        }
-        if (level <= 10) return "battery_alert";
-        if (level >= 95) return "battery_full";
-        if (level >= 85) return "battery_6_bar";
-        if (level >= 70) return "battery_5_bar";
-        if (level >= 55) return "battery_4_bar";
-        if (level >= 40) return "battery_3_bar";
-        if (level >= 25) return "battery_2_bar";
-        if (level >= 10) return "battery_1_bar";
-        return "battery_0_bar";
-    }
-
-    function getBatteryColor(level, status, warningThreshold) {
-        if (status === "Charging") return Style.success;
-        if (level <= 10) return Style.danger;
-        if (level <= warningThreshold) return Style.iosYellow;
-        return Style.textPrimary;
-    }
-
-    // Single-process device poll: volume, mic, brightness and battery levels
-    // in one spawn (replaces 4 per-poll processes)
-    Process {
-        id: deviceLevelsProc
-        command: ["python3", "/home/yogesh/.config/quickshell/scripts/desktop/get_device_levels.py"]
-        stdout: StdioCollector {
-            onStreamFinished: {
-                try {
-                    var data = JSON.parse(this.text.trim());
-                    if (data.volume !== null && data.volume !== undefined) root.volumeLevel = data.volume;
-                    if (data.volume_muted !== undefined) root.volumeMuted = data.volume_muted;
-                    if (data.mic !== null && data.mic !== undefined) root.micLevel = data.mic;
-                    if (data.mic_muted !== undefined) root.micMuted = data.mic_muted;
-                    if (data.brightness !== null && data.brightness !== undefined) root.brightnessLevel = data.brightness;
-                    if (data.battery !== null && data.battery !== undefined) root.batteryLevel = data.battery;
-                    if (data.battery_status !== undefined) root.batteryStatus = data.battery_status;
-                } catch (e) {}
-            }
-        }
-    }
-
-    Process {
-        id: setVolProc
-        stdout: StdioCollector {}
-    }
-
-    Process {
-        id: setMicProc
-        stdout: StdioCollector {}
-    }
-
-    // Poll device levels only while the notch is expanded or an OSD is up;
-    // refresh once on entry and re-poll after every set operation.
-    Timer {
-        id: devicePollTimer
-        interval: 5000
-        repeat: true
-        running: false
-        onTriggered: root.refreshDeviceLevels()
-    }
-
-    function refreshDeviceLevels() {
-        deviceLevelsProc.running = true;
-    }
-
-    onIsOsdActiveChanged: {
-        if (root.isOsdActive) {
-            root.refreshDeviceLevels();
-            devicePollTimer.running = true;
-        } else if (!root.isExpanded) {
-            devicePollTimer.running = false;
-        }
-    }
-
-    // Click-outside dismissal no longer needed: PanelWindow mask passes through
-    // transparent area clicks directly to the compositor.
-
-    // --- DRIPPING NOTCH CANVAS INVERTED TOP EARS (z: 10 Front Layering + Spring Morph-Scaling) ---
-    // Ears rendered at fixed max size (24x24), scaled via transform to avoid per-frame repaints
     Canvas {
-        id: leftEarCanvas
+        id: earCanvasLeft
         z: 10
-        width: 24
-        height: 24
+        width: Math.max(1, Math.round(root.effectiveEarSize))
+        height: Math.max(1, Math.round(root.effectiveEarSize))
+        anchors.top: notchBox.top
         anchors.right: notchBox.left
-        anchors.top: notchBox.top
-        visible: root.drippingEarsVal
-
-        property real earScale: root.earSize / 24.0
-        transform: Scale { origin.x: 24; origin.y: 0; xScale: leftEarCanvas.earScale; yScale: leftEarCanvas.earScale }
+        visible: root.drippingEarsVal && root.effectiveEarSize > 0
 
         onPaint: {
             var ctx = getContext("2d");
-            var s = 24;
-            ctx.clearRect(0, 0, s, s);
+            ctx.clearRect(0, 0, width, height);
             ctx.fillStyle = "#000000";
             ctx.beginPath();
-            ctx.arc(0, s, s, -Math.PI / 2, 0, false);
-            ctx.lineTo(s, 0);
+            ctx.moveTo(0, 0);
+            ctx.lineTo(width, 0);
+            ctx.lineTo(width, height);
+            ctx.arcTo(width, 0, 0, 0, width);
             ctx.closePath();
             ctx.fill();
         }
 
+        onWidthChanged: requestPaint()
+        onHeightChanged: requestPaint()
         onVisibleChanged: if (visible) requestPaint()
         Component.onCompleted: requestPaint()
+
+        Connections {
+            target: root
+            function onEarSizeChanged() { earCanvasLeft.requestPaint(); }
+            function onDrippingEarsValChanged() { earCanvasLeft.requestPaint(); }
+        }
     }
 
     Canvas {
-        id: rightEarCanvas
+        id: earCanvasRight
         z: 10
-        width: 24
-        height: 24
-        anchors.left: notchBox.right
+        width: Math.max(1, Math.round(root.effectiveEarSize))
+        height: Math.max(1, Math.round(root.effectiveEarSize))
         anchors.top: notchBox.top
-        visible: root.drippingEarsVal
-
-        property real earScale: root.earSize / 24.0
-        transform: Scale { origin.x: 0; origin.y: 0; xScale: rightEarCanvas.earScale; yScale: rightEarCanvas.earScale }
+        anchors.left: notchBox.right
+        visible: root.drippingEarsVal && root.effectiveEarSize > 0
 
         onPaint: {
             var ctx = getContext("2d");
-            var s = 24;
-            ctx.clearRect(0, 0, s, s);
+            ctx.clearRect(0, 0, width, height);
             ctx.fillStyle = "#000000";
             ctx.beginPath();
-            ctx.moveTo(s, 0);
+            ctx.moveTo(width, 0);
             ctx.lineTo(0, 0);
-            ctx.lineTo(0, s);
-            ctx.arcTo(0, 0, s, 0, s);
+            ctx.lineTo(0, height);
+            ctx.arcTo(0, 0, width, 0, width);
             ctx.closePath();
             ctx.fill();
         }
 
+        onWidthChanged: requestPaint()
+        onHeightChanged: requestPaint()
         onVisibleChanged: if (visible) requestPaint()
         Component.onCompleted: requestPaint()
+
+        Connections {
+            target: root
+            function onEarSizeChanged() { earCanvasRight.requestPaint(); }
+            function onDrippingEarsValChanged() { earCanvasRight.requestPaint(); }
+        }
     }
 
-    // --- INNER NOTCH RECTANGLE (Pure Solid Black Morphing Pill, Dynamic Width according to Song Name) ---
+    // =========================================================================
+    // 11. PRIMARY NOTCH BOX (SOLID BLACK MORPHING CONTAINER)
+    // =========================================================================
+
     Rectangle {
         id: notchBox
-
         anchors.top: parent.top
         anchors.horizontalCenter: parent.horizontalCenter
 
-        width: root.isOsdActive ? 280 : ((root.isPowerMenuOpen || root.isWifiMenuOpen || root.isBluetoothMenuOpen || root.isNotifMenuOpen) ? 320 : (root.isExpanded ? Style.notchWidthExpanded : (root.isWorkspaceActive ? 240 : (root.showVisualizer ? root.dynamicVisNotchWidth : root.compactWidthVal))))
-        height: root.isOsdActive ? Style.notchHeightCompact : (root.isPowerMenuOpen ? 260 : ((root.isWifiMenuOpen || root.isBluetoothMenuOpen) ? 320 : (root.isNotifMenuOpen ? root.notifStackHeight : (root.isExpanded ? root.pageNotchHeight : Style.notchHeightCompact))))
+        width: root.isOsdActive
+            ? 280
+            : ((root.isPowerMenuOpen || root.isWifiMenuOpen || root.isBluetoothMenuOpen || root.isNotifMenuOpen)
+                ? 320
+                : (root.isAudioMenuOpen
+                    ? Style.notchWidthExpanded
+                    : (root.isExpanded
+                        ? Style.notchWidthExpanded
+                        : (root.isWorkspaceActive ? 240 : (root.showVisualizer ? root.dynamicVisNotchWidth : root.compactWidthVal)))))
+
+        height: root.isOsdActive
+            ? Style.notchHeightCompact
+            : (root.isPowerMenuOpen
+                ? 260
+                : ((root.isWifiMenuOpen || root.isBluetoothMenuOpen)
+                    ? 320
+                    : (root.isNotifMenuOpen
+                        ? root.notifStackHeight
+                        : (root.isAudioMenuOpen
+                            ? 175
+                            : (root.isExpanded ? root.pageNotchHeight : Style.notchHeightCompact)))))
 
         color: "#000000"
         border.width: 0
@@ -1101,1450 +974,327 @@ Item {
             NumberAnimation { duration: Style.animNormal; easing.type: Easing.OutQuad }
         }
 
-        // Expansion Morphing Animation: Spring Physics
         Behavior on width {
-            enabled: notchBox.width > 0
             SpringAnimation {
                 spring: root.expandSpringTension
                 damping: root.expandSpringDamping
-                epsilon: 0.25
+                epsilon: 0.20
+                mass: 1.0
             }
         }
-
         Behavior on height {
-            enabled: notchBox.height > 0
             SpringAnimation {
                 spring: root.expandSpringTension
                 damping: root.expandSpringDamping
-                epsilon: 0.25
+                epsilon: 0.20
+                mass: 1.0
             }
         }
 
-        // HoverHandler tracks cursor over notchBox
-        HoverHandler {
-            id: notchHover
-            onHoveredChanged: {
-                if (hovered) {
-                    autoCloseTimer.stop();
-                } else if ((root.isExpanded || root.isNotifMenuOpen) && root.autoCloseDelay > 0) {
-                    autoCloseTimer.restart();
-                }
-            }
-        }
-
-        // Compact Notch Click Area (Clicking opens expanded notch at any time)
+        // Global MouseArea handling expand, collapse & auto-close
         MouseArea {
+            id: notchMouseArea
             anchors.fill: parent
-            enabled: !root.isExpanded
-            cursorShape: Qt.PointingHandCursor
-            onClicked: {
-                if (root.showVisualizer) {
-                    root.currentPage = 0; // Directly open Media Tab
+            hoverEnabled: true
+            cursorShape: (!root.isExpanded && !root.isNotifMenuOpen && !root.isPowerMenuOpen && !root.isWifiMenuOpen && !root.isBluetoothMenuOpen && !root.isAudioMenuOpen) ? Qt.PointingHandCursor : Qt.ArrowCursor
+            onEntered: autoCloseTimer.stop()
+            onExited: {
+                if (root.isExpanded) autoCloseTimer.restart();
+            }
+            onClicked: function(mouse) {
+                if (!root.isExpanded && !root.isNotifMenuOpen && !root.isPowerMenuOpen && !root.isWifiMenuOpen && !root.isBluetoothMenuOpen && !root.isAudioMenuOpen) {
+                    if (root.showVisualizer) root.currentPage = 0;
+                    root.isExpanded = true;
+                    root.isOsdActive = false;
+                    root.isWorkspaceActive = false;
+                    autoCloseTimer.stop();
+                } else {
+                    if (root.isPowerMenuOpen) root.isPowerMenuOpen = false;
+                    else if (root.isWifiMenuOpen) root.isWifiMenuOpen = false;
+                    else if (root.isBluetoothMenuOpen) root.isBluetoothMenuOpen = false;
+                    else if (root.isNotifMenuOpen) root.isNotifMenuOpen = false;
+                    else if (root.isAudioMenuOpen) root.isAudioMenuOpen = false;
+                    else if (root.isExpanded) root.isExpanded = false;
                 }
+            }
+        }
+
+        // --- SUB-COMPONENT 1: COMPACT PILL ---
+        CompactPill {
+            id: compactPillComp
+            anchors.fill: parent
+            opacity: (root.isExpanded || root.isNotifMenuOpen || root.isPowerMenuOpen || root.isWifiMenuOpen || root.isBluetoothMenuOpen || root.isAudioMenuOpen) ? 0.0 : 1.0
+            visible: opacity > 0.01
+
+            timeStr: root.timeStr
+            clockFontSize: root.clockFontSizeVal
+            notifCount: root.notifCount
+
+            activeWorkspace: root.activeWorkspace
+            occupiedWorkspaces: root.occupiedWorkspaces
+            wsAnimType: root.wsAnimType
+            isWorkspaceActive: root.isWorkspaceActive
+            handleLeft: root.handleLeft
+            handleRight: root.handleRight
+            singleHandleX: root.singleHandleX
+
+            showVisualizer: root.showVisualizer
+            visualizerStyle: root.visualizerStyleVal
+            visualizerBarCount: root.visualizerBarCountVal
+            visualizerHeight: root.visualizerHeightVal
+            visualizerWaveWidth: root.visualizerWaveWidthVal
+            visualizerPulsarScale: root.visualizerPulsarScaleVal
+            visualizerFrame: root.visualizerFrame
+            trackTitle: root.trackTitle
+            trackArtUrl: (root.activePlayer && root.activePlayer.trackArtUrl) ? root.activePlayer.trackArtUrl : ""
+            isOsdActive: root.isOsdActive
+
+            onExpandRequested: {
                 root.isExpanded = true;
-                root.isNotifMenuOpen = false;
                 root.isWorkspaceActive = false;
                 autoCloseTimer.stop();
             }
-        }
-
-        // --- COMPACT CONTENT VIEWPORT (Clock vs Workspaces Overlay vs Music Visualizer) ---
-        Item {
-            anchors.fill: parent
-            opacity: (root.isExpanded || root.isNotifMenuOpen) ? 0.0 : 1.0
-            visible: opacity > 0.01
-
-            Behavior on opacity {
-                NumberAnimation { duration: 160; easing.type: Easing.OutQuad }
-            }
-
-            // 1. COMPACT CLOCK DISPLAY
-            Item {
-                anchors.fill: parent
-                opacity: (!root.isWorkspaceActive && !root.showVisualizer && !root.isOsdActive) ? 1.0 : 0.0
-                visible: opacity > 0.01
-
-                Behavior on opacity {
-                    NumberAnimation { duration: 180; easing.type: Easing.OutQuad }
-                }
-
-                RowLayout {
-                    anchors.centerIn: parent
-                    spacing: 6
-
-                    Text {
-                        text: root.timeStr
-                        font.family: Style.fontFamily
-                        font.pixelSize: root.clockFontSizeVal
-                        font.weight: Font.Bold
-                        font.letterSpacing: 0.8
-                        style: Text.Raised
-                        styleColor: "#000000"
-                        color: Style.textPrimary
-                    }
-
-                    Rectangle {
-                        width: 14; height: 14; radius: 7
-                        color: Style.accent
-                        visible: root.notifCount > 0
-
-                        Text {
-                            anchors.centerIn: parent
-                            text: root.notifCount > 9 ? "9+" : root.notifCount.toString()
-                            font.family: Style.fontFamily
-                            font.pixelSize: 8
-                            font.weight: Font.Bold
-                            color: "#000000"
-                        }
-                    }
-                }
-            }
-
-            // 2. REALTIME WORKSPACE OVERLAY (Clicking anywhere on workspace notch opens expanded view!)
-            Item {
-                anchors.fill: parent
-                opacity: root.isWorkspaceActive ? 1.0 : 0.0
-                visible: opacity > 0.01
-
-                Behavior on opacity {
-                    NumberAnimation { duration: 180; easing.type: Easing.OutQuad }
-                }
-
-                // Background click area for Workspace Overlay to expand notch
-                MouseArea {
-                    anchors.fill: parent
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: {
-                        root.isExpanded = true;
-                        root.isWorkspaceActive = false;
-                        autoCloseTimer.stop();
-                    }
-                }
-
-                Item {
-                    anchors.centerIn: parent
-                    width: 218
-                    height: 14
-
-                    Row {
-                        anchors.centerIn: parent
-                        spacing: 16
-
-                        Repeater {
-                            model: 10
-
-                            Item {
-                                width: 6; height: 6
-
-                                property int wsNum: index + 1
-                                property bool isOccupied: root.occupiedWorkspaces.indexOf(wsNum) !== -1
-
-                                Rectangle {
-                                    anchors.centerIn: parent
-                                    width: parent.width; height: parent.height; radius: 3
-                                    color: isOccupied ? '#ffffff' : Style.controlBorder
-
-                                    Behavior on color { ColorAnimation { duration: 150; easing.type: Easing.OutQuad } }
-                                }
-
-                                MouseArea {
-                                    anchors.fill: parent
-                                    anchors.margins: 0
-                                    cursorShape: Qt.PointingHandCursor
-                                    onClicked: {
-                                        if (wsNum === root.activeWorkspace) {
-                                            root.isExpanded = true;
-                                            root.isWorkspaceActive = false;
-                                            autoCloseTimer.stop();
-                                        } else {
-                                            Hyprland.dispatch("workspace " + wsNum.toString());
-                                            workspaceDismissTimer.restart();
-                                        }
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    Rectangle {
-                        x: root.wsAnimType === "stretch" ? Math.min(root.handleLeft, root.handleRight) : root.singleHandleX
-                        width: root.wsAnimType === "stretch" ? Math.max(16, Math.abs(root.handleRight - root.handleLeft)) : 16
-                        height: 7
-                        radius: 4
-                        color: Style.accent
-                        anchors.verticalCenter: parent.verticalCenter
-                    }
-                }
-            }
-
-            // 3. REALTIME CAVA MUSIC VISUALIZER OVERLAY (Dynamic Horizontal Spacing across Notch Width)
-            Item {
-                anchors.fill: parent
-                opacity: root.showVisualizer ? 1.0 : 0.0
-                visible: opacity > 0.01
-
-                Behavior on opacity {
-                    NumberAnimation { duration: 180; easing.type: Easing.OutQuad }
-                }
-
-                RowLayout {
-                    anchors.fill: parent
-                    anchors.leftMargin: 18
-                    anchors.rightMargin: 18
-                    height: Style.notchHeightCompact
-                    spacing: 12
-
-                    M3Icon {
-                        name: "music_note"
-                        size: 16
-                        color: Style.accent
-                        Layout.alignment: Qt.AlignVCenter
-
-                        SequentialAnimation on opacity {
-                            running: root.showVisualizer
-                            loops: Animation.Infinite
-                            NumberAnimation { to: 0.4; duration: 600 }
-                            NumberAnimation { to: 1.0; duration: 600 }
-                        }
-                    }
-
-                    Item { Layout.fillWidth: true } // Dynamic Left Spacer
-
-                    // Style 1: BARS (100% Centerline Vertical Alignment!)
-                    Item {
-                        id: barContainer
-                        implicitWidth: 64
-                        implicitHeight: Style.notchHeightCompact
-                        Layout.alignment: Qt.AlignVCenter
-                        visible: root.visualizerStyleVal === "bars"
-
-                        property int barCount: Math.max(8, root.visualizerBarCountVal)
-                        property real barSpacing: Math.max(1, 4 - Math.floor((barCount - 8) / 4))
-                        property real barW: Math.max(2, Math.floor((64 - (barCount - 1) * barSpacing) / barCount))
-
-                        Repeater {
-                            model: barContainer.barCount
-
-                            Rectangle {
-                                width: barContainer.barW
-                                x: index * (barContainer.barW + barContainer.barSpacing)
-                                anchors.verticalCenter: parent.verticalCenter
-
-                                property real val: (root.visualizerFrame && index < root.visualizerFrame.length) ? root.visualizerFrame[index] : 0
-                                height: Math.max(2, Math.min(root.visualizerHeightVal, (val / 100.0) * root.visualizerHeightVal))
-                                radius: 1
-                                color: Style.accent
-                            }
-                        }
-                    }
-
-                    // Style 2: WAVE (2D Canvas Frequency Sine Soundwave with Configurable Thickness)
-                    Canvas {
-                        id: waveCanvas
-                        implicitWidth: 100
-                        implicitHeight: Style.notchHeightCompact
-                        Layout.alignment: Qt.AlignVCenter
-                        visible: root.visualizerStyleVal === "wave"
-
-                        onPaint: {
-                            var ctx = getContext("2d");
-                            ctx.clearRect(0, 0, width, height);
-                            ctx.strokeStyle = Style.accent;
-                            ctx.lineWidth = root.visualizerWaveWidthVal;
-                            ctx.beginPath();
-
-                            var count = root.visualizerFrame ? root.visualizerFrame.length : 10;
-                            var step = width / Math.max(1, count - 1);
-                            for (var i = 0; i < count; i++) {
-                                var x = i * step;
-                                var val = root.visualizerFrame[i] || 0;
-                                var amp = (val / 100.0) * (root.visualizerHeightVal / 2);
-                                var y = (height / 2) + (i % 2 === 0 ? -amp : amp);
-                                if (i === 0) ctx.moveTo(x, y);
-                                else ctx.lineTo(x, y);
-                            }
-                            ctx.stroke();
-                        }
-
-                        Connections {
-                            target: root
-                            function onVisualizerFrameChanged() {
-                                if (root.showVisualizer && root.visualizerStyleVal === "wave") {
-                                    waveCanvas.requestPaint();
-                                }
-                            }
-                        }
-                    }
-
-                    // Style 3: HIGH-END PULSAR (Dynamic Core Pill + Concentric Aura Rings)
-                    Item {
-                        implicitWidth: 90
-                        implicitHeight: Style.notchHeightCompact
-                        Layout.alignment: Qt.AlignVCenter
-                        visible: root.visualizerStyleVal === "pulsar"
-
-                        function calcAvgAmp() {
-                            if (!root.visualizerFrame || root.visualizerFrame.length === 0) return 0;
-                            var sum = 0;
-                            for (var i = 0; i < root.visualizerFrame.length; i++) sum += root.visualizerFrame[i];
-                            return Math.min(1.0, ((sum / root.visualizerFrame.length) / 100.0) * root.visualizerPulsarScaleVal);
-                        }
-
-                        // Outer Concentric Glow Ring 2
-                        Rectangle {
-                            anchors.centerIn: parent
-                            width: Math.max(20, 78 * parent.calcAvgAmp())
-                            height: Math.max(6, (root.visualizerHeightVal + 4) * parent.calcAvgAmp())
-                            radius: height / 2
-                            color: "transparent"
-                            border.color: Style.accent
-                            border.width: 1
-                            opacity: 0.35 * parent.calcAvgAmp()
-                        }
-
-                        // Outer Concentric Glow Ring 1
-                        Rectangle {
-                            anchors.centerIn: parent
-                            width: Math.max(16, 60 * parent.calcAvgAmp())
-                            height: Math.max(5, (root.visualizerHeightVal + 2) * parent.calcAvgAmp())
-                            radius: height / 2
-                            color: "transparent"
-                            border.color: Style.accent
-                            border.width: 1.5
-                            opacity: 0.6 * parent.calcAvgAmp()
-                        }
-
-                        // Inner Solid Glowing Core Pill
-                        Rectangle {
-                            anchors.centerIn: parent
-                            width: Math.max(14, 46 * parent.calcAvgAmp())
-                            height: Math.max(4, root.visualizerHeightVal * parent.calcAvgAmp())
-                            radius: height / 2
-                            color: Style.accent
-                        }
-                    }
-
-                    Item { Layout.fillWidth: true } // Dynamic Right Spacer
-
-                    Text {
-                        id: trackTitleText
-                        text: root.trackTitle
-                        font.family: Style.fontFamily
-                        font.pixelSize: Style.fontSizeSmall
-                        font.weight: Font.Bold
-                        color: Style.textPrimary
-                        elide: Text.ElideRight
-                        verticalAlignment: Text.AlignVCenter
-                        Layout.maximumWidth: 160
-                        Layout.alignment: Qt.AlignVCenter
-                    }
-                }
-            }
-            // 4. OSD OVERLAY (Volume & Brightness)
-            Item {
-                anchors.fill: parent
-                opacity: root.isOsdActive ? 1.0 : 0.0
-                scale: root.isOsdActive ? 1.0 : 0.92
-                visible: opacity > 0.01
-
-                Behavior on opacity {
-                    NumberAnimation { duration: 180; easing.type: Easing.OutQuad }
-                }
-                Behavior on scale {
-                    NumberAnimation { duration: Style.animSlow; easing.type: Easing.OutQuad }
-                }
-
-                RowLayout {
-                    anchors.left: parent.left
-                    anchors.right: parent.right
-                    anchors.verticalCenter: parent.verticalCenter
-                    anchors.leftMargin: 20
-                    anchors.rightMargin: 20
-                    spacing: 12
-
-                    M3Icon {
-                        name: root.osdIcon
-                        size: 20
-                        color: root.osdColor
-                        Layout.alignment: Qt.AlignVCenter
-                        rotation: root.osdIconRotation
-
-                        Behavior on rotation {
-                            SpringAnimation {
-                                spring: Style.springExpandTension
-                                damping: Style.springExpandDamping
-                                epsilon: 0.25
-                            }
-                        }
-                    }
-
-                    Rectangle {
-                        Layout.fillWidth: true
-                        height: 6
-                        radius: 3
-                        color: Style.cardBgHover
-                        Layout.alignment: Qt.AlignVCenter
-
-                        Rectangle {
-                            height: parent.height
-                            width: parent.width * (root.animatedOsdValue / 100.0)
-                            radius: 3
-                            color: root.osdColor
-                        }
-                    }
-
-                    Text {
-                        text: Math.round(root.animatedOsdValue) + "%"
-                        font.family: Style.fontFamily
-                        font.pixelSize: 12
-                        font.weight: Font.Bold
-                        color: Style.textPrimary
-                        Layout.alignment: Qt.AlignVCenter
-                        Layout.minimumWidth: 32
-                    }
-                }
+            onWorkspaceSwitchRequested: function(wsNum) {
+                Hyprland.dispatch("workspace " + wsNum.toString());
+                workspaceDismissTimer.restart();
             }
         }
 
-        // --- EXPANDED CONTENT ---
+        // --- SUB-COMPONENT 2: OSD OVERLAY ---
+        OsdOverlay {
+            id: osdOverlayComp
+            isOsdActive: root.isOsdActive
+            osdIcon: root.osdIcon
+            osdValue: root.osdValue
+            animatedOsdValue: root.animatedOsdValue
+            osdColor: root.osdColor
+            osdIconRotation: root.osdIconRotation
+        }
+
+        // --- EXPANDED VIEWPORT CONTENT ---
         Item {
             id: expandedContainer
             width: Style.notchWidthExpanded
             height: root.pageNotchHeight
             anchors.top: parent.top
             anchors.horizontalCenter: parent.horizontalCenter
-
-            Behavior on height {
-                SpringAnimation {
-                    spring: root.expandSpringTension
-                    damping: root.expandSpringDamping
-                    epsilon: 0.25
-                }
-            }
-
-            opacity: (root.isExpanded && !root.isPowerMenuOpen && !root.isWifiMenuOpen && !root.isBluetoothMenuOpen && !root.isNotifMenuOpen) ? 1.0 : 0.0
+            opacity: (root.isExpanded && !root.isOsdActive && !root.isNotifMenuOpen && !root.isPowerMenuOpen && !root.isWifiMenuOpen && !root.isBluetoothMenuOpen && !root.isAudioMenuOpen) ? 1.0 : 0.0
             visible: opacity > 0.01
 
             Behavior on opacity {
-                NumberAnimation { duration: 200; easing.type: Easing.OutQuad }
+                NumberAnimation { duration: 160; easing.type: Easing.OutQuad }
             }
 
-            ColumnLayout {
-                anchors.fill: parent
-                anchors.margins: 14
-                spacing: 10
+            // --- SUB-COMPONENT 3: STATUS BAR (HEADER ROW) ---
+            StatusBar {
+                id: statusBarComp
+                anchors.top: parent.top
+                anchors.topMargin: 4
+                anchors.left: parent.left
+                anchors.leftMargin: 12
+                anchors.right: parent.right
+                anchors.rightMargin: 12
+                height: 20
 
-                // Expanded Header: Text Tabs ("Media", "Walls", "Apps", "Stats") + Gear Icon + Close
-                RowLayout {
-                    id: headerRow
-                    Layout.fillWidth: true
-                    spacing: 8
+                currentPage: root.currentPage
+                tabSpringTension: root.tabSpringTension
+                tabSpringDamping: root.tabSpringDamping
+                buttonSpeed: root.buttonSpeedVal
+                buttonAnims: root.buttonAnimsVal
 
-                    // Material 3 Expressive Segmented Button Container
-                    Rectangle {
-                        implicitHeight: 32
-                        implicitWidth: segRow.implicitWidth
-                        radius: 16
-                        color: Style.cardBg
-                        border.color: Style.cardBorder
-                        border.width: 1
+                batteryLevel: root.batteryLevel
+                batteryStatus: root.batteryStatus
+                batteryWarningThreshold: root.batteryWarningThresholdVal
 
-                        // Sliding Hover Pill
-                        Rectangle {
-                            id: hoverPill
-                            height: 32
-                            radius: 16
-                            color: Style.cardBgHover
-                            z: 0
+                wifiPower: root.wifiPower
+                isWifiMenuOpen: root.isWifiMenuOpen
+                btPower: root.btPower
+                isBluetoothMenuOpen: root.isBluetoothMenuOpen
 
-                            property var hoveredItem: segRow.hoveredIndex >= 0 ? segRepeater.itemAt(segRow.hoveredIndex) : null
-                            x: hoveredItem ? hoveredItem.x : slidingPill.x
-                            width: hoveredItem ? hoveredItem.width : slidingPill.width
-                            opacity: segRow.hoveredIndex >= 0 && segRow.hoveredIndex !== root.currentPage ? 1 : 0
+                notifCount: root.notifCount
+                isNotifMenuOpen: root.isNotifMenuOpen
+                isPowerMenuOpen: root.isPowerMenuOpen
 
-                            Behavior on x { enabled: hoverPill.width > 0; SpringAnimation { spring: root.tabSpringTension; damping: root.tabSpringDamping } }
-                            Behavior on width { enabled: hoverPill.width > 0; SpringAnimation { spring: root.tabSpringTension; damping: root.tabSpringDamping } }
-                            Behavior on opacity { NumberAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
-                        }
-
-                        // Sliding Highlight Pill
-                        Rectangle {
-                            id: slidingPill
-                            height: 32
-                            radius: 16
-                            color: Style.accent
-                            z: 0
-
-                            property var currentItem: (segRepeater.count > 0) ? segRepeater.itemAt(root.currentPage) : null
-                            x: currentItem ? currentItem.x : 0
-                            width: currentItem ? currentItem.width : 0
-
-                            Behavior on x { enabled: slidingPill.width > 0; SpringAnimation { spring: root.tabSpringTension; damping: root.tabSpringDamping } }
-                            Behavior on width { enabled: slidingPill.width > 0; SpringAnimation { spring: root.tabSpringTension; damping: root.tabSpringDamping } }
-                        }
-
-                        RowLayout {
-                            id: segRow
-                            anchors.fill: parent
-                            spacing: 0
-                            z: 1 // Keep tabs above the sliding pill
-
-                            property int hoveredIndex: -1
-
-                            Repeater {
-                                id: segRepeater
-                                model: ["Media", "Walls", "Apps", "Stats"]
-                                
-                                Rectangle {
-                                    property bool isHovered: segMouse.containsMouse
-                                    Layout.preferredWidth: segInner.width + 24
-                                    Layout.fillHeight: true
-                                    radius: 16
-                                    color: "transparent"
-
-                                    Row {
-                                        id: segInner
-                                        anchors.centerIn: parent
-                                        spacing: 0
-
-                                        Text {
-                                            text: modelData
-                                            font.family: Style.fontFamily
-                                            font.pixelSize: Style.fontSizeSmall
-                                            font.weight: Font.Bold
-                                            color: root.currentPage === index ? "#000" : Style.textPrimary
-                                            Behavior on color { ColorAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
-                                        }
-                                    }
-
-                                    MouseArea {
-                                        id: segMouse
-                                        anchors.fill: parent
-                                        hoverEnabled: true
-                                        cursorShape: Qt.PointingHandCursor
-                                        onClicked: {
-                                            root.currentPage = index;
-                                            root.isNotifMenuOpen = false;
-                                            root.isPowerMenuOpen = false;
-                                            root.isWifiMenuOpen = false;
-                                            root.isBluetoothMenuOpen = false;
-                                            root.isWifiPasswordPromptOpen = false;
-                                            root.isPowerConfirming = false;
-                                        }
-                                        onEntered: segRow.hoveredIndex = index
-                                        onExited: if (segRow.hoveredIndex === index) segRow.hoveredIndex = -1
-                                    }
-
-                                    // Dynamic M3 Divider
-                                    Rectangle {
-                                        anchors.right: parent.right
-                                        anchors.verticalCenter: parent.verticalCenter
-                                        width: 1
-                                        height: 16
-                                        color: Style.cardBorder
-                                        visible: index < 3 && root.currentPage !== index && root.currentPage !== index + 1
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    Item { Layout.fillWidth: true }
-
-                    // Modern M3 Expressive Dynamic Battery Capsule
-                    RowLayout {
-                        spacing: 6
-                        Layout.rightMargin: 4
-                        Layout.alignment: Qt.AlignVCenter
-
-                        readonly property color batColor: root.getBatteryColor(root.batteryLevel, root.batteryStatus, root.batteryWarningThresholdVal)
-
-                        // Rounded Battery Capsule
-                        Item {
-                            implicitWidth: 23
-                            implicitHeight: 12
-                            Layout.alignment: Qt.AlignVCenter
-
-                            // Outer Pill Body
-                            Rectangle {
-                                id: batBody
-                                width: 19
-                                height: 10.5
-                                radius: 3.5
-                                anchors.left: parent.left
-                                anchors.verticalCenter: parent.verticalCenter
-                                color: "transparent"
-                                border.color: parent.parent.batColor
-                                border.width: 1.2
-
-                                Behavior on border.color { ColorAnimation { duration: Style.animNormal; easing.type: Easing.OutQuad } }
-
-                                // Fluid Inner Fill Bar
-                                Rectangle {
-                                    id: batFill
-                                    x: 1.5
-                                    y: 1.5
-                                    height: parent.height - 3
-                                    width: Math.max(0, Math.min(parent.width - 3, (parent.width - 3) * (root.batteryLevel / 100.0)))
-                                    radius: 1.8
-                                    color: parent.parent.parent.batColor
-                                    opacity: root.batteryStatus === "Charging" ? 0.35 : 0.90
-
-                                    Behavior on width { NumberAnimation { duration: 300; easing.type: Easing.OutQuad } }
-                                    Behavior on color { ColorAnimation { duration: Style.animNormal; easing.type: Easing.OutQuad } }
-                                }
-
-                                // Centered Bolt Icon when Charging
-                                M3Icon {
-                                    name: "bolt"
-                                    size: 8
-                                    color: Style.textPrimary
-                                    visible: root.batteryStatus === "Charging"
-                                    anchors.centerIn: parent
-                                }
-                            }
-
-                            // Positive Terminal Cap
-                            Rectangle {
-                                anchors.left: batBody.right
-                                anchors.leftMargin: 1
-                                anchors.verticalCenter: batBody.verticalCenter
-                                width: 1.5
-                                height: 4
-                                radius: 0.8
-                                color: parent.parent.batColor
-
-                                Behavior on color { ColorAnimation { duration: Style.animNormal; easing.type: Easing.OutQuad } }
-                            }
-                        }
-
-                        // Crisp White Percentage Text
-                        Text {
-                            text: root.batteryLevel + "%"
-                            font.family: Style.fontFamilyMono
-                            font.pixelSize: Style.fontSizeSmall
-                            font.weight: Font.Bold
-                            color: Style.textPrimary
-                            Layout.alignment: Qt.AlignVCenter
-                        }
-                    }
-
-                    // WiFi Status Button with Micro-Animations
-                    Rectangle {
-                        width: 28; height: 28; radius: 14
-                        color: root.isWifiMenuOpen ? Style.accent : (wifiM.containsMouse ? Style.cardBgHover : Style.cardBg)
-                        border.color: Style.cardBorder
-
-                        scale: (root.buttonAnimsVal && wifiM.pressed) ? 0.95 : ((root.buttonAnimsVal && wifiM.containsMouse) ? 1.08 : 1.0)
-                        Behavior on scale { enabled: root.buttonAnimsVal; NumberAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
-                        Behavior on color { ColorAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
-
-                        M3Icon {
-                            anchors.centerIn: parent
-                            name: root.wifiPower ? "wifi" : "wifi_off"
-                            size: 16
-                            color: root.isWifiMenuOpen ? Style.textOnAccent : (root.wifiPower ? Style.accent : Style.textSecondary)
-                            Behavior on color { ColorAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
-                        }
-
-                        MouseArea {
-                            id: wifiM
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: {
-                                root.isWifiMenuOpen = !root.isWifiMenuOpen;
-                                root.isBluetoothMenuOpen = false;
-                                root.isPowerMenuOpen = false;
-                                root.isNotifMenuOpen = false;
-                            }
-                        }
-                    }
-
-                    // Bluetooth Status Button with Micro-Animations
-                    Rectangle {
-                        width: 28; height: 28; radius: 14
-                        color: root.isBluetoothMenuOpen ? Style.accent : (btM.containsMouse ? Style.cardBgHover : Style.cardBg)
-                        border.color: Style.cardBorder
-
-                        scale: (root.buttonAnimsVal && btM.pressed) ? 0.95 : ((root.buttonAnimsVal && btM.containsMouse) ? 1.08 : 1.0)
-                        Behavior on scale { enabled: root.buttonAnimsVal; NumberAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
-                        Behavior on color { ColorAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
-
-                        M3Icon {
-                            anchors.centerIn: parent
-                            name: root.btPower ? "bluetooth" : "bluetooth_disabled"
-                            size: 16
-                            color: root.isBluetoothMenuOpen ? Style.textOnAccent : (root.btPower ? Style.accent : Style.textSecondary)
-                            Behavior on color { ColorAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
-                        }
-
-                        MouseArea {
-                            id: btM
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: {
-                                root.isBluetoothMenuOpen = !root.isBluetoothMenuOpen;
-                                root.isWifiMenuOpen = false;
-                                root.isPowerMenuOpen = false;
-                                root.isNotifMenuOpen = false;
-                            }
-                        }
-                    }
-
-                    // Notification Bell Icon button with Micro-Animations
-                    Rectangle {
-                        width: 28; height: 28; radius: 14
-                        color: notifM.containsMouse ? Style.cardBgHover : Style.cardBg
-                        border.color: Style.cardBorder
-
-                        scale: (root.buttonAnimsVal && notifM.pressed) ? 0.95 : ((root.buttonAnimsVal && notifM.containsMouse) ? 1.08 : 1.0)
-                        Behavior on scale { enabled: root.buttonAnimsVal; NumberAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
-                        Behavior on color { ColorAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
-
-                        M3Icon {
-                            anchors.centerIn: parent
-                            name: "notifications"
-                            size: 16
-                            color: root.isNotifMenuOpen ? Style.textOnAccent : (root.notifCount > 0 ? Style.accent : Style.textSecondary)
-                            Behavior on color { ColorAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
-                        }
-
-                        // Notification count badge with spring entrance pop
-                        Rectangle {
-                            visible: root.notifCount > 0
-                            scale: root.notifCount > 0 ? 1.0 : 0.0
-                            Behavior on scale { SpringAnimation { spring: 6.0; damping: 0.4 } }
-                            width: 14; height: 14; radius: 7
-                            color: Style.accent
-                            anchors.top: parent.top
-                            anchors.right: parent.right
-                            anchors.topMargin: -2
-                            anchors.rightMargin: -2
-
-                            Text {
-                                anchors.centerIn: parent
-                                text: root.notifCount > 9 ? "9+" : root.notifCount.toString()
-                                font.family: Style.fontFamily
-                                font.pixelSize: 8
-                                font.weight: Font.Bold
-                                color: Style.textOnAccent
-                            }
-                        }
-
-                        MouseArea {
-                            id: notifM
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: {
-                                root.notifMenuAutoOpened = false;
-                                root.isNotifMenuOpen = !root.isNotifMenuOpen;
-                                root.isWifiMenuOpen = false;
-                                root.isBluetoothMenuOpen = false;
-                                root.isPowerMenuOpen = false;
-                            }
-                        }
-                    }
-
-                    // Power Button with Micro-Animations
-                    Rectangle {
-                        width: 28; height: 28; radius: 14
-                        color: root.isPowerMenuOpen ? Style.danger : (powerM.containsMouse ? Style.cardBgHover : Style.cardBg)
-                        border.color: Style.cardBorder
-
-                        scale: (root.buttonAnimsVal && powerM.pressed) ? 0.95 : ((root.buttonAnimsVal && powerM.containsMouse) ? 1.08 : 1.0)
-                        Behavior on scale { enabled: root.buttonAnimsVal; NumberAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
-                        Behavior on color { ColorAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
-
-                        M3Icon {
-                            anchors.centerIn: parent
-                            name: "power_settings_new"
-                            size: 16
-                            color: root.isPowerMenuOpen ? Style.textPrimary : (powerM.containsMouse ? Style.danger : Style.textSecondary)
-                            Behavior on color { ColorAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
-                        }
-
-                        MouseArea {
-                            id: powerM
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: {
-                                root.isPowerMenuOpen = !root.isPowerMenuOpen;
-                                root.isPowerConfirming = false;
-                                root.powerSelectedIndex = 0;
-                                root.isWifiMenuOpen = false;
-                                root.isBluetoothMenuOpen = false;
-                                root.isNotifMenuOpen = false;
-                            }
-                        }
-                    }
-
-                    // Gear Icon button with Micro-Animations
-                    Rectangle {
-                        width: 28; height: 28; radius: 14
-                        color: gearM.containsMouse ? Style.cardBgHover : Style.cardBg
-                        border.color: Style.cardBorder
-
-                        scale: (root.buttonAnimsVal && gearM.pressed) ? 0.95 : ((root.buttonAnimsVal && gearM.containsMouse) ? 1.08 : 1.0)
-                        Behavior on scale { enabled: root.buttonAnimsVal; NumberAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
-                        Behavior on color { ColorAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
-
-                        M3Icon {
-                            anchors.centerIn: parent
-                            name: "settings"
-                            size: 16
-                            color: gearM.containsMouse ? Style.accent : Style.textSecondary
-                            Behavior on color { ColorAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
-                        }
-
-                        MouseArea {
-                            id: gearM
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: {
-                                root.isExpanded = false;
-                                root.openFullSettings();
-                            }
-                        }
-                    }
-
+                onTabSelected: function(idx) {
+                    root.currentPage = idx;
+                    root.isNotifMenuOpen = false;
+                    root.isPowerMenuOpen = false;
+                    root.isWifiMenuOpen = false;
+                    root.isBluetoothMenuOpen = false;
+                    root.isAudioMenuOpen = false;
+                    root.isWifiPasswordPromptOpen = false;
+                    root.isPowerConfirming = false;
                 }
+                onWifiToggled: {
+                    root.isWifiMenuOpen = !root.isWifiMenuOpen;
+                    root.isBluetoothMenuOpen = false;
+                    root.isPowerMenuOpen = false;
+                    root.isNotifMenuOpen = false;
+                    root.isAudioMenuOpen = false;
+                }
+                onBluetoothToggled: {
+                    root.isBluetoothMenuOpen = !root.isBluetoothMenuOpen;
+                    root.isWifiMenuOpen = false;
+                    root.isPowerMenuOpen = false;
+                    root.isNotifMenuOpen = false;
+                    root.isAudioMenuOpen = false;
+                }
+                onNotifToggled: {
+                    root.notifMenuAutoOpened = false;
+                    root.isNotifMenuOpen = !root.isNotifMenuOpen;
+                    root.isWifiMenuOpen = false;
+                    root.isBluetoothMenuOpen = false;
+                    root.isPowerMenuOpen = false;
+                    root.isAudioMenuOpen = false;
+                }
+                onPowerToggled: {
+                    root.isPowerMenuOpen = !root.isPowerMenuOpen;
+                    root.isPowerConfirming = false;
+                    root.powerSelectedIndex = 0;
+                    root.isWifiMenuOpen = false;
+                    root.isBluetoothMenuOpen = false;
+                    root.isNotifMenuOpen = false;
+                    root.isAudioMenuOpen = false;
+                }
+                onSettingsClicked: root.openFullSettings()
+            }
 
-                // Tab Switch Viewport with SpringAnimation Profile
-                Item {
-                    id: pageViewport
-                    Layout.fillWidth: true
-                    Layout.fillHeight: true
-                    clip: true
-                    focus: true
+            // --- MAIN PAGE CAROUSEL VIEWPORT ---
+            Item {
+                id: pageViewport
+                anchors.top: parent.top
+                anchors.topMargin: 28
+                anchors.left: parent.left
+                anchors.leftMargin: 12
+                anchors.right: parent.right
+                anchors.rightMargin: 12
+                anchors.bottom: parent.bottom
+                anchors.bottomMargin: 6
+                clip: true
 
-                    property real targetX: -root.currentPage * pageViewport.width
-                    property real currentX: targetX
+                Row {
+                    id: pageRow
+                    height: parent.height
+                    x: -root.currentPage * (pageViewport.width > 0 ? pageViewport.width : 560)
 
-                    Behavior on currentX {
+                    Behavior on x {
                         SpringAnimation {
                             spring: root.tabSpringTension
                             damping: root.tabSpringDamping
-                            epsilon: 0.25
+                            epsilon: Style.springEpsilon
                         }
                     }
 
-                    Row {
-                        focus: true
-                        x: pageViewport.currentX
-                        width: pageViewport.width * root.totalPages
-                        height: pageViewport.height
+                    // PAGE 0: Media Controller (Nook Dashboard)
+                    MediaController {
+                        id: mediaControllerComp
+                        width: pageViewport.width > 0 ? pageViewport.width : 560
+                        height: pageViewport.height > 0 ? pageViewport.height : 72
+                        activePlayer: root.activePlayer
+                        isPlaying: root.isPlaying
+                        trackTitle: root.trackTitle
+                        trackArtist: root.trackArtist
+                        trackPosition: root.trackPosition
+                        volumeLevel: root.volumeLevel
+                        micLevel: root.micLevel
+                        buttonAnims: root.buttonAnimsVal
+                        buttonSpeed: root.buttonSpeedVal
+                        tabSpringTension: root.tabSpringTension
+                        tabSpringDamping: root.tabSpringDamping
+                        visualizerFrame: root.visualizerFrame
+                        onAudioMenuRequested: root.toggleAudioMenu()
+                    }
 
-                        // PAGE 0: Media + Quick Controls Combined
-                        ScrollView {
-                            width: pageViewport.width
-                            height: pageViewport.height
-                            clip: true
-                            ScrollBar.vertical.policy: ScrollBar.AlwaysOff
-                            ScrollBar.horizontal.policy: ScrollBar.AlwaysOff
+                    // PAGE 1: Application Launcher (Tray)
+                    Item {
+                        width: pageViewport.width > 0 ? pageViewport.width : 560
+                        height: pageViewport.height > 0 ? pageViewport.height : 72
+                        clip: true
 
-                            ColumnLayout {
-                                id: mediaColumn
-                                width: pageViewport.width
-                                spacing: 14
-
-                                // MPRIS Track Card (Dynamic Island Card Style)
-                                Rectangle {
-                                    id: mprisCard
-                                    Layout.fillWidth: true
-                                    implicitHeight: mprisContent.implicitHeight + 28
-                                    radius: Style.radiusMedium // Matches the volume and mic cards
-
-                                    color: Style.cardBg
-                                    border.color: Style.cardBorder
-
-                                    MouseArea {
-                                        id: mediaHoverArea
-                                        anchors.fill: parent
-                                        hoverEnabled: true
-                                    }
-
-                                    ColumnLayout {
-                                        id: mprisContent
-                                        anchors.fill: parent
-                                        anchors.margins: 14
-
-                                        RowLayout {
-                                            Layout.fillWidth: true
-                                            Layout.alignment: Qt.AlignVCenter
-                                            spacing: 16
-
-                                        // Left: Circular Album Art (Spinning Vinyl) + Visualizer (lazy-loaded when media tab active)
-                                        Loader {
-                                            Layout.alignment: Qt.AlignVCenter
-                                            Layout.preferredWidth: 80
-                                            Layout.preferredHeight: 80
-                                            Layout.minimumHeight: 80
-                                            active: root.currentPage === 0
-                                            sourceComponent: Item {
-                                                width: 80; height: 80
-
-                                                property real avgAmp: (root.visualizerFrame && root.visualizerFrame.length > 0)
-                                                    ? root.visualizerFrame.reduce(function(sum, v) { return sum + v; }, 0) / root.visualizerFrame.length / 100.0
-                                                    : 0
-                                                
-                                                // Circular Visualizer
-                                                Repeater {
-                                                    model: 24
-                                                    Item {
-                                                        width: 4
-                                                        height: 40
-                                                        x: 38
-                                                        y: 0
-                                                        
-                                                        transformOrigin: Item.Bottom
-                                                        rotation: (360 / 24) * index
-                                                        
-                                                        Rectangle {
-                                                            property real val: (root.visualizerFrame && root.visualizerFrame.length > 0) ? root.visualizerFrame[index % root.visualizerFrame.length] : 0
-                                                            width: 4
-                                                            height: Math.max(4, (val / 100.0) * root.visualizerHeightVal)
-                                                            radius: 2
-                                                            color: Style.accent
-                                                            anchors.bottom: parent.bottom
-                                                            anchors.bottomMargin: 36
-                                                        }
-                                                    }
-                                                }
-
-                                                Rectangle {
-                                                    width: 62; height: 62; radius: 31
-                                                    anchors.centerIn: parent
-                                                    color: Style.cardBgHover
-                                                    border.color: Style.cardBorder
-                                                    clip: true
-                                                    scale: 1.0 + (avgAmp * 0.06)
-                                                    Behavior on scale { NumberAnimation { duration: 120; easing.type: Easing.OutQuad } }
-                                                    
-                                                    Item {
-                                                        anchors.fill: parent
-                                                        visible: dynamicAlbumArt.source.toString() !== ""
-
-                                                        RotationAnimation on rotation {
-                                                            from: 0
-                                                            to: 360
-                                                            duration: 10000
-                                                            loops: Animation.Infinite
-                                                            running: true
-                                                            paused: !root.isPlaying
-                                                        }
-
-                                                        Image {
-                                                            id: dynamicAlbumArt
-                                                            anchors.fill: parent
-                                                            source: (root.activePlayer && root.activePlayer.trackArtUrl) ? root.activePlayer.trackArtUrl : ""
-                                                            fillMode: Image.PreserveAspectCrop
-                                                            visible: false
-                                                            asynchronous: true
-                                                            sourceSize.width: 128
-                                                            sourceSize.height: 128
-                                                        }
-
-                                                        OpacityMask {
-                                                            anchors.fill: parent
-                                                            source: dynamicAlbumArt
-                                                            maskSource: Rectangle {
-                                                                width: 62; height: 62; radius: 31
-                                                            }
-                                                        }
-                                                    }
-
-                                                    Rectangle {
-                                                        width: 14; height: 14; radius: 7
-                                                        anchors.centerIn: parent
-                                                        color: Style.background
-                                                        visible: dynamicAlbumArt.source.toString() !== ""
-                                                    }
-
-                                                    M3Icon {
-                                                        anchors.centerIn: parent
-                                                        name: "music_note"
-                                                        size: 24
-                                                        color: Style.accent
-                                                        visible: !(root.activePlayer && root.activePlayer.trackArtUrl && root.activePlayer.trackArtUrl !== "")
-                                                    }
-                                                }
-                                            }
-                                        }
-
-                                        // Center: Track Info
-                                        ColumnLayout {
-                                            Layout.fillWidth: true
-                                            spacing: 2
-
-                                            Text {
-                                                text: root.trackTitle
-                                                font.family: Style.fontFamily
-                                                font.pixelSize: Style.fontSizeLarge
-                                                font.weight: Font.Bold
-                                                font.letterSpacing: 0.5
-                                                color: Style.textPrimary
-                                                elide: Text.ElideRight
-                                                Layout.fillWidth: true
-                                            }
-
-                                            Text {
-                                                text: root.trackArtist
-                                                font.family: Style.fontFamily
-                                                font.pixelSize: Style.fontSizeNormal
-                                                color: Style.textSecondary
-                                                elide: Text.ElideRight
-                                                Layout.fillWidth: true
-                                            }
-                                        }
-
-                                        // Right: Playback Controls (Always Visible)
-                                        Item {
-                                            Layout.alignment: Qt.AlignVCenter
-                                            Layout.preferredWidth: 140
-                                            Layout.preferredHeight: 60
-                                            Layout.minimumHeight: 60
-
-                                            RowLayout {
-                                                anchors.fill: parent
-                                                spacing: 12
-
-                                                Item { Layout.fillWidth: true } // Push controls to right
-                                                
-                                                // Media Prev Button
-                                                Rectangle {
-                                                    Layout.alignment: Qt.AlignVCenter
-                                                    width: 32; height: 32; radius: 16; color: Style.cardBgHover
-                                                    scale: (root.buttonAnimsVal && prevM.pressed) ? 0.90 : ((root.buttonAnimsVal && prevM.containsMouse) ? 1.15 : 1.0)
-                                                    Behavior on scale { enabled: root.buttonAnimsVal; SpringAnimation { spring: root.tabSpringTension; damping: root.tabSpringDamping } }
-                                                    Behavior on color { ColorAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
-
-                                                    M3Icon { anchors.centerIn: parent; name: "skip_previous"; color: Style.textPrimary; size: 24 }
-                                                    MouseArea { id: prevM; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: if (root.activePlayer) root.activePlayer.previous() }
-                                                }
-
-                                                // Media Play/Pause Button
-                                                Rectangle {
-                                                    Layout.alignment: Qt.AlignVCenter
-                                                    width: 40; height: 40; radius: 20; color: Style.accent
-                                                    scale: (root.buttonAnimsVal && playM.pressed) ? 0.90 : ((root.buttonAnimsVal && playM.containsMouse) ? 1.15 : 1.0)
-                                                    Behavior on scale { enabled: root.buttonAnimsVal; SpringAnimation { spring: root.tabSpringTension; damping: root.tabSpringDamping } }
-                                                    Behavior on color { ColorAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
-
-                                                    M3Icon { anchors.centerIn: parent; name: root.isPlaying ? "pause" : "play_arrow"; color: Style.textOnAccent; size: 28 }
-                                                    MouseArea { id: playM; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: if (root.activePlayer) root.activePlayer.togglePlaying() }
-                                                }
-
-                                                // Media Next Button
-                                                Rectangle {
-                                                    Layout.alignment: Qt.AlignVCenter
-                                                    width: 32; height: 32; radius: 16; color: Style.cardBgHover
-                                                    scale: (root.buttonAnimsVal && nextM.pressed) ? 0.90 : ((root.buttonAnimsVal && nextM.containsMouse) ? 1.15 : 1.0)
-                                                    Behavior on scale { enabled: root.buttonAnimsVal; SpringAnimation { spring: root.tabSpringTension; damping: root.tabSpringDamping } }
-                                                    Behavior on color { ColorAnimation { duration: root.buttonSpeedVal; easing.type: Easing.OutQuad } }
-
-                                                    M3Icon { anchors.centerIn: parent; name: "skip_next"; color: Style.textPrimary; size: 24 }
-                                                    MouseArea { id: nextM; anchors.fill: parent; hoverEnabled: true; cursorShape: Qt.PointingHandCursor; onClicked: if (root.activePlayer) root.activePlayer.next() }
-                                                }
-                                            }
-                                        }
-                                    }
+                        Loader {
+                            id: appsTabLoader
+                            anchors.fill: parent
+                            active: root.appsTabAlive
+                            sourceComponent: AppLauncher {
+                                appColumns: root.appColumnsVal
+                                highlightAnimType: root.highlightAnimTypeVal
+                                highlightSpringTension: root.highlightSpringTensionVal
+                                highlightSpringDamping: root.highlightSpringDampingVal
+                                gridAnimDuration: root.gridAnimDurationVal
+                                onAppLaunched: {
+                                    root.isExpanded = false;
+                                    root.currentPage = 0;
                                 }
-                                }
-
-                                // Master Volume Card with CustomSlider
-                                Rectangle {
-                                    Layout.fillWidth: true
-                                    implicitHeight: 76
-                                    radius: Style.radiusMedium
-                                    color: Style.cardBg
-                                    border.color: Style.cardBorder
-
-                                    ColumnLayout {
-                                        anchors.fill: parent
-                                        anchors.margins: 14
-                                        spacing: 6
-
-                                        RowLayout {
-                                            Layout.fillWidth: true
-                                            spacing: 8
-                                            M3Icon { name: "volume_up"; color: Style.textPrimary; size: 18 }
-                                            Text { text: "Master Volume"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeNormal; color: Style.textPrimary }
-                                            Item { Layout.fillWidth: true }
-                                            Text { text: root.volumeLevel + "%"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeSmall; font.weight: Font.Bold; color: Style.accent }
-                                        }
-
-                                        CustomSlider {
-                                            Layout.fillWidth: true
-                                            from: 0; to: 100
-                                            value: root.volumeLevel
-                                            onMoved: function(val) {
-                                                root.volumeLevel = Math.round(val);
-                                                volumeThrottleTimer.restart();
-                                            }
-                                            Timer {
-                                                id: volumeThrottleTimer
-                                                interval: 50
-                                                onTriggered: {
-                                                    setVolProc.command = ["wpctl", "set-volume", "@DEFAULT_AUDIO_SINK@", root.volumeLevel + "%"];
-                                                    setVolProc.running = true;
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-
-
-                                // Microphone Card with CustomSlider
-                                Rectangle {
-                                    Layout.fillWidth: true
-                                    implicitHeight: 76
-                                    radius: Style.radiusMedium
-                                    color: Style.cardBg
-                                    border.color: Style.cardBorder
-
-                                    ColumnLayout {
-                                        anchors.fill: parent
-                                        anchors.margins: 14
-                                        spacing: 6
-
-                                        RowLayout {
-                                            Layout.fillWidth: true
-                                            spacing: 8
-                                            M3Icon { name: "mic"; color: Style.textPrimary; size: 18 }
-                                            Text { text: "Microphone Input"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeNormal; color: Style.textPrimary }
-                                            Item { Layout.fillWidth: true }
-                                            Text { text: root.micLevel + "%"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeSmall; font.weight: Font.Bold; color: Style.accent }
-                                        }
-
-                                        CustomSlider {
-                                            Layout.fillWidth: true
-                                            from: 0; to: 100
-                                            value: root.micLevel
-                                            onMoved: function(val) {
-                                                root.micLevel = Math.round(val);
-                                                micThrottleTimer.restart();
-                                            }
-                                            Timer {
-                                                id: micThrottleTimer
-                                                interval: 50
-                                                onTriggered: {
-                                                    setMicProc.command = ["wpctl", "set-volume", "@DEFAULT_AUDIO_SOURCE@", root.micLevel + "%"];
-                                                    setMicProc.running = true;
-                                                }
-                                            }
-                                        }
-                                    }
-                                }
-                            }
-                        }
-
-                        // PAGE 1: Wallpaper Selector (Loader: 30s delayed unload)
-                        Item {
-                            width: pageViewport.width
-                            height: pageViewport.height
-                            clip: true
-                            focus: true
-                            Loader {
-                                id: wallsLoader
-                                anchors.fill: parent
-                                active: root.wallsTabAlive
-                                focus: true
-                                sourceComponent: WallpaperSelector {
-                                    isOpen: true
-                                    wallpaperDir: root.wallpaperDirVal
-                                    highlightAnimType: root.highlightAnimTypeVal
-                                    highlightSpringTension: root.highlightSpringTensionVal
-                                    highlightSpringDamping: root.highlightSpringDampingVal
-                                    gridAnimDuration: root.gridAnimDurationVal
-                                    onWallpaperSelected: function(path) {
-                                        root.handleWallpaperSelected(path);
-                                    }
-                                }
-                            }
-                        }
-
-                        // PAGE 2: App Launcher (Loader: 30s delayed unload)
-                        Item {
-                            width: pageViewport.width
-                            height: pageViewport.height
-                            clip: true
-                            focus: true
-                            Loader {
-                                id: appsLoader
-                                anchors.fill: parent
-                                active: root.appsTabAlive
-                                focus: true
-                                sourceComponent: AppLauncher {
-                                    appColumns: root.appColumnsVal
-                                    highlightAnimType: root.highlightAnimTypeVal
-                                    highlightSpringTension: root.highlightSpringTensionVal
-                                    highlightSpringDamping: root.highlightSpringDampingVal
-                                    gridAnimDuration: root.gridAnimDurationVal
-                                    onAppLaunched: {
-                                        root.isExpanded = false;
-                                    }
-                                }
-                            }
-                        }
-
-                        // PAGE 3: Hardware Stats Dashboard
-                        Item {
-                            width: pageViewport.width
-                            height: pageViewport.height
-                            clip: true
-
-                            ColumnLayout {
-                                id: statsColumn
-                                anchors.fill: parent
-                                spacing: 12
-
-                                RowLayout {
-                                    Layout.fillWidth: true
-                                    spacing: 12
-
-                                    // CPU Usage Card
-                                    Rectangle {
-                                        Layout.fillWidth: true
-                                        implicitHeight: 134
-                                        radius: Style.radiusMedium
-                                        color: Style.cardBg
-                                        border.color: Style.cardBorder
-
-                                        ColumnLayout {
-                                            anchors.fill: parent
-                                            anchors.margins: 12
-                                            spacing: 4
-
-                                            RowLayout {
-                                                spacing: 6
-                                                M3Icon { name: "memory"; color: Style.textPrimary; size: 16 }
-                                                Text { text: "CPU Usage"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeNormal; font.weight: Font.Bold; color: Style.textPrimary }
-                                                Item { Layout.fillWidth: true }
-                                                Text { text: root.cpuUsage + "%"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeNormal; font.weight: Font.Bold; color: Style.accent }
-                                            }
-
-                                            SparklineCanvas {
-                                                Layout.fillWidth: true
-                                                hist: root.cpuHistory
-                                                currentVal: root.cpuUsage
-                                                thresholdColors: true
-                                            }
-                                        }
-                                    }
-
-                                    // RAM Usage Card
-                                    Rectangle {
-                                        Layout.fillWidth: true
-                                        implicitHeight: 134
-                                        radius: Style.radiusMedium
-                                        color: Style.cardBg
-                                        border.color: Style.cardBorder
-
-                                        ColumnLayout {
-                                            anchors.fill: parent
-                                            anchors.margins: 12
-                                            spacing: 4
-
-                                            RowLayout {
-                                                spacing: 6
-                                                M3Icon { name: "memory"; color: Style.textPrimary; size: 16 }
-                                                Text { text: "RAM Memory"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeNormal; font.weight: Font.Bold; color: Style.textPrimary }
-                                                Item { Layout.fillWidth: true }
-                                                Text { text: root.ramUsage + "%"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeNormal; font.weight: Font.Bold; color: Style.accent }
-                                            }
-
-                                            SparklineCanvas {
-                                                Layout.fillWidth: true
-                                                hist: root.ramHistory
-                                                currentVal: root.ramUsage
-                                                thresholdColors: true
-                                            }
-                                        }
-                                    }
-                                } // End Row 1
-
-                                RowLayout {
-                                    Layout.fillWidth: true
-                                    spacing: 12
-
-                                    // Network Usage Card
-                                    Rectangle {
-                                        Layout.fillWidth: true
-                                        implicitHeight: 134
-                                        radius: Style.radiusMedium
-                                        color: Style.cardBg
-                                        border.color: Style.cardBorder
-
-                                        ColumnLayout {
-                                            anchors.fill: parent
-                                            anchors.margins: 12
-                                            spacing: 4
-
-                                            RowLayout {
-                                                spacing: 6
-                                                M3Icon { name: "wifi"; color: Style.textPrimary; size: 16 }
-                                                Text { text: "Network"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeNormal; font.weight: Font.Bold; color: Style.textPrimary }
-                                                Item { Layout.fillWidth: true }
-                                                Text { 
-                                                    function formatBytes(bytes) {
-                                                        if (bytes < 1024) return bytes + "B/s";
-                                                        if (bytes < 1024*1024) return (bytes/1024).toFixed(0) + "K/s";
-                                                        return (bytes/(1024*1024)).toFixed(1) + "M/s";
-                                                    }
-                                                    text: "⇣" + formatBytes(root.netRxSpeed) + " ⇡" + formatBytes(root.netTxSpeed)
-                                                    font.family: Style.fontFamily
-                                                    font.pixelSize: 10
-                                                    font.weight: Font.Bold
-                                                    color: Style.accent
-                                                }
-                                            }
-
-                                            SparklineCanvas {
-                                                Layout.fillWidth: true
-                                                hist: root.netHistory
-                                            }
-                                        }
-                                    }
-
-                                    // Disk Storage Radial Gauge
-                                    Rectangle {
-                                        Layout.fillWidth: true
-                                        implicitHeight: 134
-                                        radius: Style.radiusMedium
-                                        color: Style.cardBg
-                                        border.color: Style.cardBorder
-
-                                        ColumnLayout {
-                                            anchors.fill: parent
-                                            anchors.margins: 12
-                                            spacing: 4
-
-                                            RowLayout {
-                                                spacing: 6
-                                                M3Icon { name: "hard_drive"; color: Style.textPrimary; size: 16 }
-                                                Text { text: "Disk (Root)"; font.family: Style.fontFamily; font.pixelSize: Style.fontSizeNormal; font.weight: Font.Bold; color: Style.textPrimary }
-                                                Item { Layout.fillWidth: true }
-                                            }
-
-                                            Item {
-                                                Layout.fillWidth: true
-                                                implicitHeight: 64
-
-                                                Canvas {
-                                                    id: diskRadial
-                                                    anchors.fill: parent
-                                                    property real val: root.diskUsage
-                                                    onValChanged: if (visible && root.isExpanded && root.currentPage === 3) requestPaint()
-                                                    onVisibleChanged: if (visible && root.isExpanded && root.currentPage === 3) requestPaint()
-
-                                                    onPaint: {
-                                                        var ctx = getContext("2d");
-                                                        ctx.clearRect(0, 0, width, height);
-                                                        var cx = width / 2;
-                                                        var cy = height / 2;
-                                                        var r = Math.min(width, height) / 2 - 6;
-
-                                                        // Background track
-                                                        ctx.beginPath();
-                                                        ctx.arc(cx, cy, r, 0, 2 * Math.PI);
-                                                        ctx.lineWidth = 10;
-                                                        ctx.strokeStyle = Style.cardBgHover;
-                                                        ctx.stroke();
-
-                                                        // Accent progress
-                                                        ctx.beginPath();
-                                                        var endAngle = (root.diskUsage / 100.0) * 2 * Math.PI;
-                                                        ctx.arc(cx, cy, r, -Math.PI/2, -Math.PI/2 + endAngle);
-                                                        ctx.strokeStyle = Style.accent;
-                                                        ctx.lineCap = "round";
-                                                        ctx.stroke();
-                                                    }
-                                                }
-
-                                                Text {
-                                                    text: root.diskUsage + "%"
-                                                    anchors.centerIn: parent
-                                                    font.family: Style.fontFamily
-                                                    font.pixelSize: 14
-                                                    font.weight: Font.Bold
-                                                    color: Style.textPrimary
-                                                }
-                                            }
-                                        }
-                                    }
+                                onCloseRequested: {
+                                    root.isExpanded = false;
+                                    root.currentPage = 0;
                                 }
                             }
                         }
                     }
-                }
 
-                // iOS-STYLE SLIDING PILL TAB INDICATOR
-                Item {
-                    id: tabDots
-                    Layout.alignment: Qt.AlignHCenter
-                    implicitWidth: 104
-                    implicitHeight: 14
+                    // PAGE 2: Wallpaper Selector (Walls)
+                    Item {
+                        width: pageViewport.width > 0 ? pageViewport.width : 560
+                        height: pageViewport.height > 0 ? pageViewport.height : 72
+                        clip: true
 
-                    // Fixed Grey Background Dots
-                    Row {
-                        id: tabDotRow
-                        anchors.centerIn: parent
-                        spacing: 12
-
-                        Repeater {
-                            model: root.totalPages
-                            Rectangle {
-                                width: 7; height: 7; radius: 4
-                                color: Style.controlBorder
+                        Loader {
+                            id: wallsTabLoader
+                            anchors.fill: parent
+                            active: root.wallsTabAlive
+                            sourceComponent: WallpaperSelector {
+                                isOpen: root.isExpanded && root.currentPage === 2
+                                wallpaperDir: root.wallpaperDirVal
+                                highlightAnimType: root.highlightAnimTypeVal
+                                highlightSpringTension: root.highlightSpringTensionVal
+                                highlightSpringDamping: root.highlightSpringDampingVal
+                                gridAnimDuration: root.gridAnimDurationVal
+                                onWallpaperSelected: function(path) {
+                                    root.handleWallpaperSelected(path);
+                                }
+                                onCloseRequested: {
+                                    root.isExpanded = false;
+                                    root.currentPage = 0;
+                                }
                             }
                         }
                     }
 
-                    // Single Active Accent Pill Handle Sliding Smoothly & Centered Over Dots
-                    Rectangle {
-                        width: 18; height: 7; radius: 4
-                        color: Style.accent
-                        anchors.verticalCenter: parent.verticalCenter
-                        x: 14.5 + (root.currentPage * 19)
-
-                        Behavior on x {
-                            SpringAnimation { spring: root.tabSpringTension; damping: root.tabSpringDamping }
-                        }
+                    // PAGE 3: Hardware Stats Dashboard (Stats)
+                    HardwareStats {
+                        id: hardwareStatsComp
+                        width: pageViewport.width > 0 ? pageViewport.width : 560
+                        height: pageViewport.height > 0 ? pageViewport.height : 72
+                        cpuUsage: root.cpuUsage
+                        cpuHistory: root.cpuHistory
+                        ramUsage: root.ramUsage
+                        ramHistory: root.ramHistory
+                        netRxSpeed: root.netRxSpeed
+                        netTxSpeed: root.netTxSpeed
+                        netHistory: root.netHistory
+                        diskUsage: root.diskUsage
+                        isActiveTab: root.isExpanded && root.currentPage === 3
                     }
                 }
             }
         }
 
-        // Background Click Area inside notchBox: collapses notch when clicking empty space
-        MouseArea {
-            anchors.fill: parent
-            z: -1
-            enabled: root.isExpanded || root.isPowerMenuOpen || root.isWifiMenuOpen || root.isBluetoothMenuOpen || root.isNotifMenuOpen
-            onClicked: {
-                if (root.isPowerMenuOpen) root.isPowerMenuOpen = false;
-                else if (root.isWifiMenuOpen) root.isWifiMenuOpen = false;
-                else if (root.isBluetoothMenuOpen) root.isBluetoothMenuOpen = false;
-                else if (root.isNotifMenuOpen) root.isNotifMenuOpen = false;
-                else if (root.isExpanded) root.isExpanded = false;
-            }
-        }
+        // =====================================================================
+        // 12. SUB-MENU DRAWER OVERLAYS (MORPhed SUB-NOTCHES)
+        // =====================================================================
 
-        // Integrated Power Menu View Overlay inside notchBox (Morphed State)
         PowerMenu {
-            id: powerMenuOverlay
+            id: powerMenuComp
+            anchors.fill: parent
             isOpen: root.isPowerMenuOpen
-            isConfirming: root.isPowerConfirming
             selectedIndex: root.powerSelectedIndex
-            pendingTitle: root.pendingPowerTitle
+            isConfirming: root.isPowerConfirming
             countdown: root.powerCountdown
+            pendingTitle: root.pendingPowerTitle
             pendingCmd: root.pendingPowerCmd
-            onIsConfirmingChanged: root.isPowerConfirming = powerMenuOverlay.isConfirming
-            onSelectedIndexChanged: root.powerSelectedIndex = powerMenuOverlay.selectedIndex
+            onIsConfirmingChanged: root.isPowerConfirming = powerMenuComp.isConfirming
+            onSelectedIndexChanged: root.powerSelectedIndex = powerMenuComp.selectedIndex
             onTriggered: function(title, cmd) {
                 root.pendingPowerTitle = title;
                 root.pendingPowerCmd = cmd;
@@ -2557,15 +1307,15 @@ Item {
                 root.isPowerMenuOpen = false;
                 root.isExpanded = false;
             }
+            onCloseRequested: {
+                root.isPowerMenuOpen = false;
+                root.isPowerConfirming = false;
+            }
         }
 
-        function cancelPowerAction() { powerMenuOverlay.cancel(); }
-        function executePendingPower() { powerMenuOverlay.execute(); }
-        function triggerPowerAction(title, cmd) { powerMenuOverlay.trigger(title, cmd); }
-
-        // Integrated WiFi Menu View Overlay inside notchBox (Morphed State)
         WifiMenu {
-            id: wifiMenuOverlay
+            id: wifiMenuComp
+            anchors.fill: parent
             isOpen: root.isWifiMenuOpen
             wifiPower: root.wifiPower
             wifiActiveSsid: root.wifiActiveSsid
@@ -2574,40 +1324,59 @@ Item {
             promptSsid: root.wifiPromptSsid
             passwordText: root.wifiPasswordText
             showPassword: root.showWifiPassword
-            onWifiPowerChanged: root.wifiPower = wifiMenuOverlay.wifiPower
-            onWifiActiveSsidChanged: root.wifiActiveSsid = wifiMenuOverlay.wifiActiveSsid
-            onWifiNetworksChanged: root.wifiNetworks = wifiMenuOverlay.wifiNetworks
-            onIsPasswordPromptOpenChanged: root.isWifiPasswordPromptOpen = wifiMenuOverlay.isPasswordPromptOpen
-            onPromptSsidChanged: root.wifiPromptSsid = wifiMenuOverlay.promptSsid
-            onPasswordTextChanged: root.wifiPasswordText = wifiMenuOverlay.passwordText
-            onShowPasswordChanged: root.showWifiPassword = wifiMenuOverlay.showPassword
+            onWifiPowerChanged: root.wifiPower = wifiMenuComp.wifiPower
+            onWifiActiveSsidChanged: root.wifiActiveSsid = wifiMenuComp.wifiActiveSsid
+            onWifiNetworksChanged: root.wifiNetworks = wifiMenuComp.wifiNetworks
+            onIsPasswordPromptOpenChanged: root.isWifiPasswordPromptOpen = wifiMenuComp.isPasswordPromptOpen
+            onPromptSsidChanged: root.wifiPromptSsid = wifiMenuComp.promptSsid
+            onPasswordTextChanged: root.wifiPasswordText = wifiMenuComp.passwordText
+            onShowPasswordChanged: root.showWifiPassword = wifiMenuComp.showPassword
+            onCloseRequested: root.isWifiMenuOpen = false
+            onPowerToggled: function(val) {
+                root.wifiPower = val;
+                wifiStatusProc.running = true;
+            }
         }
 
-        // Integrated Bluetooth Menu View Overlay inside notchBox (Morphed State)
         BluetoothMenu {
-            id: bluetoothMenuOverlay
+            id: btMenuComp
+            anchors.fill: parent
             isOpen: root.isBluetoothMenuOpen
             btPower: root.btPower
             btDevices: root.btDevices
-            onBtPowerChanged: root.btPower = bluetoothMenuOverlay.btPower
-            onBtDevicesChanged: root.btDevices = bluetoothMenuOverlay.btDevices
+            onBtPowerChanged: root.btPower = btMenuComp.btPower
+            onBtDevicesChanged: root.btDevices = btMenuComp.btDevices
+            onCloseRequested: root.isBluetoothMenuOpen = false
+            onPowerToggled: function(val) {
+                root.btPower = val;
+                btStatusProc.running = true;
+            }
         }
 
-        // Integrated Notification History View Overlay inside notchBox (Morphed State)
         NotificationHistory {
-            id: notifHistoryOverlay
+            id: notifHistoryComp
+            anchors.fill: parent
             isOpen: root.isNotifMenuOpen
             notifModel: root.notifModel
             expandSpringTension: root.expandSpringTension
             expandSpringDamping: root.expandSpringDamping
-            onCloseRequested: root.isNotifMenuOpen = false
+            onCloseRequested: {
+                root.isNotifMenuOpen = false;
+                root.notifMenuAutoOpened = false;
+            }
             onNotifCountChanged: {
-                root.notifCount = notifHistoryOverlay.notifCount;
-                // Stack springs back to compact once it empties out
-                if (root.isNotifMenuOpen && notifHistoryOverlay.notifCount === 0) {
+                root.notifCount = notifHistoryComp.notifCount;
+                if (root.isNotifMenuOpen && notifHistoryComp.notifCount === 0) {
                     root.isNotifMenuOpen = false;
                 }
             }
+        }
+
+        AudioMenu {
+            id: audioMenuComp
+            anchors.fill: parent
+            isOpen: root.isAudioMenuOpen && !root.isOsdActive
+            onCloseRequested: root.isAudioMenuOpen = false
         }
     }
 }

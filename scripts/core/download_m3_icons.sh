@@ -1,4 +1,15 @@
 #!/bin/bash
+# download_m3_icons.sh — Utility script to download Material Symbols Rounded SVG icons.
+#
+# Usage:
+#   bash scripts/core/download_m3_icons.sh
+
+set -euo pipefail
+
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+ICONS_DIR="$(cd "${SCRIPT_DIR}/../../assets/icons" && pwd)"
+mkdir -p "${ICONS_DIR}"
+
 ICONS=(
   "play_arrow"
   "pause"
@@ -43,11 +54,12 @@ ICONS=(
 )
 
 for icon in "${ICONS[@]}"; do
-  wget -q -O "/home/yogesh/.config/quickshell/assets/icons/${icon}.svg" "https://raw.githubusercontent.com/google/material-design-icons/master/symbols/web/${icon}/materialsymbolsrounded/${icon}_48px.svg"
-  if [ -s "/home/yogesh/.config/quickshell/assets/icons/${icon}.svg" ]; then
+  target_file="${ICONS_DIR}/${icon}.svg"
+  wget -q -O "${target_file}" "https://raw.githubusercontent.com/google/material-design-icons/master/symbols/web/${icon}/materialsymbolsrounded/${icon}_48px.svg"
+  if [ -s "${target_file}" ]; then
     echo "Downloaded ${icon}.svg"
   else
     echo "Failed ${icon}.svg"
-    rm "/home/yogesh/.config/quickshell/assets/icons/${icon}.svg"
+    rm -f "${target_file}"
   fi
 done

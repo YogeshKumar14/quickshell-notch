@@ -1,4 +1,15 @@
 #!/usr/bin/env python3
+"""
+get_notch_settings.py — Settings Manager & Schema Migrator for QuickShell Notch.
+
+Maintains default settings schema, loads user preferences from
+~/.config/quickshell/notch_settings.json, performs automatic schema migration
+for newly introduced keys, and prunes deprecated keys.
+
+CLI Output:
+    JSON object containing all active notch configuration options.
+"""
+
 import os
 import sys
 import json
@@ -20,8 +31,8 @@ DEFAULTS = {
     "dripping_ears": True,
     "wall_duration": 0.5,
     "wall_type": "outer",
-    "expanded_height": 420,
-    "bottom_radius": 16,
+    "expanded_height": 106,
+    "bottom_radius": 22,
     "app_columns": 4,
     "workspace_overlay": True,
     "workspace_timeout": 2500,
@@ -63,37 +74,34 @@ def coerce_value(key, val):
         return default
     return val
 
-def main():
+def load_settings(config_file: str = CONFIG_FILE) -> dict:
+    """Load settings from config_file, applying defaults and schema migration."""
     data = dict(DEFAULTS)
-    if os.path.isfile(CONFIG_FILE):
+    if os.path.isfile(config_file):
         try:
-            with open(CONFIG_FILE, "r", encoding="utf-8") as fp:
+            with open(config_file, "r", encoding="utf-8") as fp:
                 loaded = json.load(fp)
             if isinstance(loaded, dict):
-                # One-time migration: clock_12h folded into clock_format so the
-                # custom format field is the single source of truth.
+                # One-time migration: clock_12h folded into clock_format
                 if "clock_12h" in loaded:
                     loaded["clock_format"] = "h:mm A" if loaded["clock_12h"] else "HH:mm"
-                data.update(loaded)
-                # Drop keys no longer known (dead settings round-tripped before)
-                for k in [k for k in data if k not in DEFAULTS]:
-                    del data[k]
-                print(json.dumps(data))
-                if data != loaded:
-                    os.makedirs(CONFIG_DIR, exist_ok=True)
-                    atomic_write(CONFIG_FILE, json.dumps(data, indent=2))
-                return
-        except Exception as e:
-            backup = CONFIG_FILE + ".corrupt." + time.strftime("%Y%m%d%H%M%S")
-            try:
-                os.rename(CONFIG_FILE, backup)
-                print(f"WARNING: unreadable settings file backed up to {backup}", file=sys.stderr)
-            except Exception:
-                print(f"WARNING: unreadable settings file could not be backed up: {e}", file=sys.stderr)
+                for k, v in loaded.items():
+                    if k in DEFAULTS:
+                        coerced = coerce_value(k, v)
+                        data[k] = coerced if coerced is not None else DEFAULTS[k]
+                return data
+        except Exception:
+            pass
+    return data
 
-    os.makedirs(CONFIG_DIR, exist_ok=True)
-    atomic_write(CONFIG_FILE, json.dumps(DEFAULTS, indent=2))
-    print(json.dumps(DEFAULTS))
+
+def main():
+    data = load_settings(CONFIG_FILE)
+    if not os.path.isfile(CONFIG_FILE):
+        os.makedirs(CONFIG_DIR, exist_ok=True)
+        atomic_write(CONFIG_FILE, json.dumps(DEFAULTS, indent=2))
+    print(json.dumps(data))
+
 
 if __name__ == "__main__":
     main()

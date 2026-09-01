@@ -1,3 +1,15 @@
+/**
+ * PowerMenu.qml — System Power Actions & Confirmation Overlay for QuickShell Notch
+ *
+ * Renders system session controls:
+ *   - Lock Session (hyprlock / swaylock)
+ *   - Logout / Exit Hyprland
+ *   - Suspend / Sleep
+ *   - Reboot System
+ *   - Shutdown Power
+ *   - 5-second animated countdown confirmation dialog
+ */
+
 import QtQuick
 import QtQuick.Layouts
 import Quickshell
@@ -7,16 +19,27 @@ import "../theme"
 Item {
     id: root
 
+    /** Whether power menu overlay is currently visible */
     required property bool isOpen
+    /** Whether confirmation countdown screen is active */
     property bool isConfirming: false
+    /** Currently focused power action index (0..4) */
     property int selectedIndex: 0
+    /** Human-readable title of pending action (e.g. "Shutdown") */
     property string pendingTitle: ""
+    /** Seconds remaining in auto-confirmation countdown */
     property int countdown: 5
+    /** Shell command to execute upon confirmation */
     property string pendingCmd: ""
 
+    /** Emitted when an action is initiated */
     signal triggered(string title, string cmd)
+    /** Emitted when confirmation is cancelled */
     signal cancelled()
+    /** Emitted when power command is executed */
     signal executed()
+    /** Emitted when user dismisses power menu */
+    signal closeRequested()
 
     anchors.fill: parent
     z: 99

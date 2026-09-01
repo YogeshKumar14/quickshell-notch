@@ -1,6 +1,22 @@
 #!/usr/bin/env python3
+"""
+get_hypr_options.py — Fast Batch Reader for Active Hyprland Options.
+
+Executes a single batch `hyprctl --batch getoption ...` query for all
+managed Hyprland configuration keys, parses JSON/text outputs tolerantly,
+and normalizes values into standard representation for SettingsWindow.qml.
+
+CLI Output:
+    JSON object containing all active Hyprland options.
+"""
+
+import os
+import sys
 import subprocess
 import json
+
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+from hypr_keymap import ALL_HYPR_OPTIONS
 
 
 def extract_color(grad, default):
@@ -14,28 +30,7 @@ def extract_color(grad, default):
     return parts[0] if parts else default
 
 def main():
-    options = [
-        "general:gaps_in",
-        "general:gaps_out",
-        "decoration:rounding",
-        "general:border_size",
-        "decoration:blur:enabled",
-        "decoration:blur:size",
-        "decoration:blur:passes",
-        "general:col.active_border",
-        "general:col.inactive_border",
-        "general:layout",
-        "animations:enabled",
-        "decoration:active_opacity",
-        "decoration:inactive_opacity",
-        "decoration:shadow:enabled",
-        "decoration:shadow:range",
-        "decoration:dim_inactive",
-        "master:mfact",
-        "input:sensitivity",
-        "input:touchpad:tap_to_click",
-        "input:touchpad:natural_scroll"
-    ]
+    options = ALL_HYPR_OPTIONS
 
     res = {}
     

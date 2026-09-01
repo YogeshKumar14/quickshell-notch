@@ -1,4 +1,21 @@
 #!/usr/bin/env python3
+"""
+get_system_info.py — Lightweight Linux System Resource Monitor.
+
+Reads Linux kernel statistics directly from /proc filesystem without spawning
+external binary utilities:
+  - CPU usage percentage (via /proc/stat delta calculation across invocations)
+  - RAM memory utilization (via /proc/meminfo)
+  - Disk storage utilization on root mount (via os.statvfs)
+  - Network I/O throughput rate (via /proc/net/dev deltas)
+
+CLI Output:
+    JSON object: {
+        "cpu": int, "ram": int, "disk": int,
+        "net_rx": float, "net_tx": float
+    }
+"""
+
 import time
 import json
 import os

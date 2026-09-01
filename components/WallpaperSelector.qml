@@ -1,6 +1,17 @@
+/**
+ * WallpaperSelector.qml — Wallpaper Carousel & Thumbnail Selector for QuickShell Notch
+ *
+ * Renders PAGE 1 of the expanded notch:
+ *   - Asynchronously scans wallpaper directories via Python backend
+ *   - High-performance cached thumbnail grid with active selection highlight
+ *   - Real-time search filtering by image name
+ *   - Keyboard navigation (Arrow keys + Enter) and full focus management
+ */
+
 import QtQuick
 import QtQuick.Layouts
 import QtQuick.Controls
+import Qt5Compat.GraphicalEffects
 import Quickshell
 import Quickshell.Io
 import Quickshell.Widgets
@@ -9,22 +20,30 @@ import "../theme"
 FocusScope {
     id: root
 
+    /** Whether wallpaper selector tab is active */
     property bool isOpen: true
-
-    // Keyboard selection index (from parent TopNotch)
+    /** Keyboard focused thumbnail index */
     property int selectedIndex: 0
-
-    // Wallpaper source folder; empty = default folders (Pictures/Wallpapers, WallpaperMinimal)
+    /** Custom wallpaper source directory; empty uses defaults */
     property string wallpaperDir: ""
 
-    // Highlight & Grid Animation Customization
+    /** Highlight animation mode ("spring", "smooth", "linear", "none") */
     property string highlightAnimType: "spring"
+    /** Physics spring tension for highlight movement */
     property real highlightSpringTension: 5.5
+    /** Physics spring damping for highlight movement */
     property real highlightSpringDamping: 0.25
+    /** Grid thumbnail entrance transition duration */
     property int gridAnimDuration: 120
+    /** Whether micro-interaction button animations are enabled */
+    property bool buttonAnims: true
 
+    /** Emitted when user selects a wallpaper thumbnail */
     signal wallpaperSelected(string path)
+    /** Emitted when wallpaper drawer close/dismiss is requested */
+    signal closeRequested()
 
+    /** Complete list of scanned wallpaper objects [{path, name, thumb}] */
     property var allWallpapers: []
 
     property bool pendingRescan: false
@@ -32,8 +51,8 @@ FocusScope {
     Process {
         id: scannerProc
         command: root.wallpaperDir !== ""
-            ? ["python3", "/home/yogesh/.config/quickshell/scripts/desktop/scan_wallpapers.py", root.wallpaperDir]
-            : ["python3", "/home/yogesh/.config/quickshell/scripts/desktop/scan_wallpapers.py"]
+            ? ["python3", Quickshell.shellDir + "/scripts/desktop/scan_wallpapers.py", root.wallpaperDir]
+            : ["python3", Quickshell.shellDir + "/scripts/desktop/scan_wallpapers.py"]
         stdout: StdioCollector {
             onStreamFinished: {
                 if (root.pendingRescan) {
@@ -127,80 +146,99 @@ FocusScope {
         id: wallModel
     }
 
-    ColumnLayout {
+    RowLayout {
         anchors.fill: parent
-        anchors.margins: 10
-        spacing: 10
+        spacing: 8
 
-        // Search Bar with Focus Handler
+        // Search Card Pill (Left Column, 130px)
         Rectangle {
-            Layout.fillWidth: true
-            height: 32
-            radius: Style.radiusMedium
-            color: Style.cardBg
-            border.color: searchInput.activeFocus ? Style.accent : Style.cardBorder
+            Layout.preferredWidth: 130
+            Layout.preferredHeight: 60
+            Layout.alignment: Qt.AlignVCenter
+            radius: 12
+            color: "#1C1C1E"
+            border.color: searchInput.activeFocus ? Style.accent : "#2C2C2E"
+            border.width: searchInput.activeFocus ? 1.5 : 1.0
 
-            Behavior on border.color { ColorAnimation { duration: 150 } }
+            Behavior on border.color { ColorAnimation { duration: 120 } }
 
-            RowLayout {
+            ColumnLayout {
                 anchors.fill: parent
-                anchors.leftMargin: 10
-                anchors.rightMargin: 10
-                spacing: 6
+                anchors.margins: 6
+                spacing: 2
 
-                M3Icon { name: "search"; color: Style.textMuted; size: 16 }
-
-                TextInput {
-                    id: searchInput
-                    focus: true
+                RowLayout {
                     Layout.fillWidth: true
-                    font.family: Style.fontFamily
-                    font.pixelSize: Style.fontSizeSmall
-                    color: Style.textPrimary
-                    clip: true
-                    activeFocusOnPress: true
-                    selectByMouse: true
+                    spacing: 6
 
-                    onTextChanged: root.filterWallpapers()
-
-                    // Keyboard navigation while search bar has focus
-                    Keys.onPressed: function(event) {
-                        var cols = root.gridColumns();
-                        var count = wallModel.count;
-                        if (count === 0) return;
-
-                        if (event.key === Qt.Key_Down) {
-                            root.selectedIndex = Math.min(root.selectedIndex + cols, count - 1);
-                            gridView.positionViewAtIndex(root.selectedIndex, GridView.Contain);
-                            event.accepted = true;
-                        } else if (event.key === Qt.Key_Up) {
-                            root.selectedIndex = Math.max(root.selectedIndex - cols, 0);
-                            gridView.positionViewAtIndex(root.selectedIndex, GridView.Contain);
-                            event.accepted = true;
-                        } else if (event.key === Qt.Key_Right) {
-                            root.selectedIndex = Math.min(root.selectedIndex + 1, count - 1);
-                            gridView.positionViewAtIndex(root.selectedIndex, GridView.Contain);
-                            event.accepted = true;
-                        } else if (event.key === Qt.Key_Left) {
-                            root.selectedIndex = Math.max(root.selectedIndex - 1, 0);
-                            gridView.positionViewAtIndex(root.selectedIndex, GridView.Contain);
-                            event.accepted = true;
-                        } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
-                            root.applySelected();
-                            event.accepted = true;
-                        } else if (event.key === Qt.Key_Tab) {
-                            root.selectedIndex = (root.selectedIndex + 1) % count;
-                            gridView.positionViewAtIndex(root.selectedIndex, GridView.Contain);
-                            event.accepted = true;
-                        }
+                    M3Icon {
+                        name: "search"
+                        color: searchInput.activeFocus ? Style.accent : Style.textMuted
+                        size: 13
                     }
 
-                    Text {
-                        text: "Search wallpapers..."
+                    TextInput {
+                        id: searchInput
+                        focus: true
+                        Layout.fillWidth: true
                         font.family: Style.fontFamily
-                        font.pixelSize: Style.fontSizeSmall
+                        font.pixelSize: 11
+                        color: Style.textPrimary
+                        clip: true
+                        activeFocusOnPress: true
+                        selectByMouse: true
+
+                        onTextChanged: root.filterWallpapers()
+
+                        // Keyboard navigation while search bar has focus
+                        Keys.onPressed: function(event) {
+                            var count = wallModel.count;
+                            if (count === 0) return;
+
+                            if (event.key === Qt.Key_Right || event.key === Qt.Key_Down) {
+                                root.selectedIndex = Math.min(root.selectedIndex + 1, count - 1);
+                                wallListView.positionViewAtIndex(root.selectedIndex, ListView.Contain);
+                                event.accepted = true;
+                            } else if (event.key === Qt.Key_Left || event.key === Qt.Key_Up) {
+                                root.selectedIndex = Math.max(root.selectedIndex - 1, 0);
+                                wallListView.positionViewAtIndex(root.selectedIndex, ListView.Contain);
+                                event.accepted = true;
+                            } else if (event.key === Qt.Key_Return || event.key === Qt.Key_Enter) {
+                                root.applySelected();
+                                event.accepted = true;
+                            } else if (event.key === Qt.Key_Tab) {
+                                root.selectedIndex = (root.selectedIndex + 1) % count;
+                                wallListView.positionViewAtIndex(root.selectedIndex, ListView.Contain);
+                                event.accepted = true;
+                            } else if (event.key === Qt.Key_Escape) {
+                                if (searchInput.text.length > 0) {
+                                    searchInput.text = "";
+                                } else {
+                                    root.closeRequested();
+                                }
+                                event.accepted = true;
+                            }
+                        }
+
+                        Text {
+                            text: "Search walls..."
+                            font.family: Style.fontFamily
+                            font.pixelSize: 11
+                            color: Style.textMuted
+                            visible: searchInput.text.length === 0
+                        }
+                    }
+                }
+
+                RowLayout {
+                    Layout.fillWidth: true
+                    spacing: 4
+
+                    Text {
+                        text: (wallModel.count - 1) + " wallpapers"
+                        font.family: Style.fontFamily
+                        font.pixelSize: 9
                         color: Style.textMuted
-                        visible: searchInput.text.length === 0
                     }
                 }
             }
@@ -212,121 +250,167 @@ FocusScope {
             }
         }
 
-        // Symmetrically Centered Wallpaper Grid
+        // Horizontal Wallpaper Carousel (Right Column)
         Item {
-            id: gridContainer
             Layout.fillWidth: true
             Layout.fillHeight: true
 
-            property int targetCellWidth: 160
-            property int columns: Math.max(1, Math.floor(gridContainer.width / targetCellWidth))
-            property int calculatedCellWidth: Math.floor(gridContainer.width / columns)
-
-            GridView {
-                id: gridView
+            ListView {
+                id: wallListView
                 anchors.fill: parent
+                orientation: ListView.Horizontal
+                spacing: 8
                 clip: true
-                cellWidth: gridContainer.calculatedCellWidth
-                cellHeight: 110
                 currentIndex: root.selectedIndex
-                highlightFollowsCurrentItem: false
-
-                add: Transition {
-                    NumberAnimation { property: "opacity"; from: 0; to: 1; duration: root.gridAnimDuration; easing.type: Easing.OutQuad }
-                    NumberAnimation { property: "scale"; from: 0.92; to: 1.0; duration: root.gridAnimDuration; easing.type: Easing.OutQuad }
-                }
-                displaced: Transition {
-                    NumberAnimation { properties: "x,y"; duration: root.gridAnimDuration; easing.type: Easing.OutQuad }
-                }
-
-                highlight: Item {
-                    z: 10
-                    width: gridView.cellWidth
-                    height: gridView.cellHeight
-                    x: gridView.currentItem ? gridView.currentItem.x : 0
-                    y: gridView.currentItem ? gridView.currentItem.y : 0
-                    
-                    Behavior on x {
-                        enabled: gridView.currentItem !== null && root.highlightAnimType !== "none"
-                        SpringAnimation {
-                            spring: root.highlightAnimType === "linear" ? 14.0 : (root.highlightAnimType === "smooth" ? 4.0 : root.highlightSpringTension)
-                            damping: root.highlightAnimType === "linear" ? 0.99 : (root.highlightAnimType === "smooth" ? 0.65 : root.highlightSpringDamping)
-                            epsilon: Style.springEpsilon
-                        }
-                    }
-                    Behavior on y {
-                        enabled: gridView.currentItem !== null && root.highlightAnimType !== "none"
-                        SpringAnimation {
-                            spring: root.highlightAnimType === "linear" ? 14.0 : (root.highlightAnimType === "smooth" ? 4.0 : root.highlightSpringTension)
-                            damping: root.highlightAnimType === "linear" ? 0.99 : (root.highlightAnimType === "smooth" ? 0.65 : root.highlightSpringDamping)
-                            epsilon: Style.springEpsilon
-                        }
-                    }
-
-                    Rectangle {
-                        anchors.centerIn: parent
-                        width: parent.width - 12
-                        height: parent.height - 10
-                        radius: Style.radiusMedium
-                        color: Style.overlayLight
-                        border.color: Style.accent
-                        border.width: 2
-                        scale: 1.04 // Matches the popped delegate
-                        visible: root.selectedIndex >= 0 && root.selectedIndex < wallModel.count
-                    }
-                }
+                boundsBehavior: Flickable.StopAtBounds
 
                 model: wallModel
 
                 delegate: Item {
-                    width: gridView.cellWidth
-                    height: gridView.cellHeight
+                    width: 104
+                    height: wallListView.height
 
                     property bool isSelected: index === root.selectedIndex
                     property bool isHovered: cardMouse.containsMouse
 
-                    Rectangle {
+                    Item {
                         id: wallCard
-                        anchors.centerIn: parent
-                        width: parent.width - 12
-                        height: parent.height - 10
-                        radius: Style.radiusMedium
-                        color: Style.cardBg
-                        border.color: Style.cardBorder
-                        border.width: 1
-                        scale: isSelected ? 1.04 : 1.0
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        anchors.verticalCenter: parent.verticalCenter
+                        height: 60
 
-                        Behavior on scale { NumberAnimation { duration: 180; easing.type: Easing.OutQuad } }
+                        scale: (root.buttonAnims && cardMouse.pressed) ? 0.90 : ((root.buttonAnims && (isSelected || isHovered)) ? 1.05 : 1.0)
+                        Behavior on scale { enabled: root.buttonAnims; SpringAnimation { spring: root.highlightSpringTension; damping: root.highlightSpringDamping } }
 
-                        ClippingRectangle {
+                        // 1. Source Image (hidden offscreen)
+                        Image {
+                            id: wallImg
                             anchors.fill: parent
-                            anchors.margins: 2
-                            radius: Style.radiusMedium - 2
-                            color: "transparent"
+                            source: model.path !== "random" ? "file://" + (model.thumb || model.path) : ""
+                            fillMode: Image.PreserveAspectCrop
+                            asynchronous: true
+                            smooth: true
+                            mipmap: true
+                            visible: false
+                            sourceSize.width: 208
+                            sourceSize.height: 120
+                        }
 
-                            Image {
+                        // 2. Vector Mask Shape (Antialiased Squircle)
+                        Rectangle {
+                            id: wallMask
+                            anchors.fill: parent
+                            radius: 12
+                            color: "#000000"
+                            visible: false
+                            smooth: true
+                            antialiasing: true
+                        }
+
+                        // 3. Card Base Background
+                        Rectangle {
+                            anchors.fill: parent
+                            radius: 12
+                            color: isSelected ? "#2C2C2E" : (isHovered ? "#242426" : "#1C1C1E")
+                            smooth: true
+                            antialiasing: true
+                        }
+
+                        // 4. Alpha-Masked Wallpaper Image
+                        OpacityMask {
+                            anchors.fill: parent
+                            source: wallImg
+                            maskSource: wallMask
+                            visible: model.path !== "random" && wallImg.status === Image.Ready
+                        }
+
+                        // 5. Random Wallpaper Delegate Style
+                        Rectangle {
+                            anchors.fill: parent
+                            radius: 12
+                            color: "#242426"
+                            visible: model.path === "random"
+                            smooth: true
+                            antialiasing: true
+
+                            ColumnLayout {
+                                anchors.centerIn: parent
+                                spacing: 2
+
+                                M3Icon {
+                                    Layout.alignment: Qt.AlignHCenter
+                                    name: "wallpaper"
+                                    color: Style.accent
+                                    size: 24
+                                }
+
+                                Text {
+                                    text: "Random"
+                                    font.family: Style.fontFamily
+                                    font.pixelSize: 9
+                                    font.weight: Font.Bold
+                                    color: "#FFFFFF"
+                                }
+                            }
+                        }
+
+                        // 6. Subtle bottom gradient vignette & name label
+                        Item {
+                            anchors.left: parent.left
+                            anchors.right: parent.right
+                            anchors.bottom: parent.bottom
+                            height: 22
+                            visible: model.path !== "random"
+
+                            Rectangle {
+                                id: vignetteShape
                                 anchors.fill: parent
-                                source: model.path !== "random" ? "file://" + (model.thumb || model.path) : ""
-                                fillMode: Image.PreserveAspectCrop
-                                asynchronous: true
-                                smooth: true
-                                visible: model.path !== "random"
-                                sourceSize.width: 160
-                                sourceSize.height: 110
+                                gradient: Gradient {
+                                    GradientStop { position: 0.0; color: "transparent" }
+                                    GradientStop { position: 1.0; color: "#D9000000" }
+                                }
+                                visible: false
                             }
 
                             Rectangle {
+                                id: bottomMask
                                 anchors.fill: parent
-                                color: Style.cardBg
-                                visible: model.path === "random"
-
-                                M3Icon {
-                                    anchors.centerIn: parent
-                                    name: "shuffle"
-                                    color: Style.accent
-                                    size: 32
-                                }
+                                radius: 12
+                                visible: false
                             }
+
+                            OpacityMask {
+                                anchors.fill: parent
+                                source: vignetteShape
+                                maskSource: bottomMask
+                            }
+
+                            Text {
+                                anchors.left: parent.left
+                                anchors.right: parent.right
+                                anchors.bottom: parent.bottom
+                                anchors.margins: 5
+                                text: model.name
+                                font.family: Style.fontFamily
+                                font.pixelSize: 8
+                                font.weight: Font.Bold
+                                color: "#FFFFFF"
+                                elide: Text.ElideRight
+                            }
+                        }
+
+                        // 7. Magic Highlight & Active Border Overlay
+                        Rectangle {
+                            anchors.fill: parent
+                            radius: 12
+                            color: "transparent"
+                            border.color: isSelected ? Style.accent : (isHovered ? "#5A5A5E" : Qt.rgba(255, 255, 255, 0.12))
+                            border.width: isSelected ? 2.0 : 1.0
+                            smooth: true
+                            antialiasing: true
+
+                            Behavior on border.color { ColorAnimation { duration: 120 } }
                         }
 
                         MouseArea {

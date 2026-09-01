@@ -1,21 +1,32 @@
 #!/usr/bin/env python3
+"""
+manage_wifi.py — NetworkManager nmcli Wi-Fi Backend & Connection Controller.
+
+Interfaces with nmcli to:
+  - Query hardware Wi-Fi radio state, active SSID, and scanned networks
+  - Toggle Wi-Fi hardware radio (on/off)
+  - Connect to open or WPA-secured networks with password authentication
+
+CLI Usage:
+    python3 manage_wifi.py [status|on|off|connect <ssid> [password]]
+
+CLI Output:
+    JSON object: { "power": bool, "active": str, "networks": [ { "ssid": str, "signal": int, "security": str, "active": bool } ] }
+"""
+
+import os
 import subprocess
 import json
 import sys
 import signal
-import ctypes
 import re
+
+sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "core"))
+from process_utils import set_pdeathsig
 
 TIMEOUT = 5
 SCAN_TIMEOUT = 15
 CONNECT_TIMEOUT = 30
-
-def set_pdeathsig():
-    try:
-        libc = ctypes.CDLL("libc.so.6")
-        libc.prctl(1, signal.SIGTERM)
-    except Exception:
-        pass
 
 def get_status():
     # The radio state must NEVER be reported as off because of a slow

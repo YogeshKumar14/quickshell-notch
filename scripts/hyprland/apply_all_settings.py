@@ -1,48 +1,34 @@
 #!/usr/bin/env python3
+"""
+apply_all_settings.py — Atomic Batch Settings Persistence & Live-Apply Pipeline.
+
+Accepts a JSON payload containing notch and hyprland settings from SettingsWindow.qml:
+  1. Validates and coerces all options against KEYWORD_MAP
+  2. Merges notch settings atomically into ~/.config/quickshell/notch_settings.json
+  3. Executes dual-write into ~/.config/hypr/quickshell_hypr.lua AND quickshell_hypr.conf
+  4. Live-applies settings without reload via apply_hypr_option helper
+  5. Skips Hyprland side-effects when QUICKSHELL_SANDBOX=1 is set
+
+CLI Usage:
+    python3 apply_all_settings.py '<json_payload>'
+"""
+
 import os
 import sys
 import json
-import subprocess
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "core"))
 from atomic_write import atomic_write
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__))))
-from persist_hypr_state import generate_lua, generate_conf, load_state, save_state, ensure_includes, validate_layout
-from apply_hypr_option import apply as apply_hyprctl_keyword, normalize_color
+from persist_hypr_state import generate_lua, generate_conf, load_state, save_state, ensure_includes
+from apply_hypr_option import apply as apply_hyprctl_keyword
+from hypr_keymap import KEYWORD_MAP
 
 CONFIG_DIR = os.path.expanduser("~/.config/quickshell")
 NOTCH_CONFIG_FILE = os.path.join(CONFIG_DIR, "notch_settings.json")
 HYPR_CONFIG_FILE = os.path.expanduser("~/.config/hypr/quickshell_hypr.lua")
 CONF_PATH = os.path.expanduser("~/.config/hypr/quickshell_hypr.conf")
-
-def to_bool(v):
-    if isinstance(v, str):
-        return v.strip().lower() == "true"
-    return bool(v)
-
-KEYWORD_MAP = {
-    "gaps_in": ("general:gaps_in", int),
-    "gaps_out": ("general:gaps_out", int),
-    "rounding": ("decoration:rounding", int),
-    "border_size": ("general:border_size", int),
-    "blur": ("decoration:blur:enabled", to_bool),
-    "layout": ("general:layout", validate_layout),
-    "animations": ("animations:enabled", to_bool),
-    "active_opacity": ("decoration:active_opacity", float),
-    "inactive_opacity": ("decoration:inactive_opacity", float),
-    "shadow": ("decoration:shadow:enabled", to_bool),
-    "shadow_range": ("decoration:shadow:range", int),
-    "dim_inactive": ("decoration:dim_inactive", to_bool),
-    "master_ratio": ("master:mfact", float),
-    "blur_passes": ("decoration:blur:passes", int),
-    "blur_size": ("decoration:blur:size", int),
-    "input_sensitivity": ("input:sensitivity", float),
-    "input_tap_to_click": ("input:touchpad:tap_to_click", to_bool),
-    "input_natural_scroll": ("input:touchpad:natural_scroll", to_bool),
-    "active_border": ("general:col.active_border", normalize_color),
-    "inactive_border": ("general:col.inactive_border", normalize_color),
-}
 
 def main():
     if os.environ.get("QUICKSHELL_SANDBOX") == "1":

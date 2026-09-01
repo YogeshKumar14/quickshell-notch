@@ -1,4 +1,14 @@
 #!/usr/bin/env python3
+"""
+persist_hypr_state.py — Dual-Format Hyprland Config Generator & State Cache.
+
+Maintains cached state in ~/.cache/quickshell/hypr_state.json and generates
+both:
+  - Lua configuration format (~/.config/hypr/quickshell_hypr.lua) with RGBA byte order
+  - Legacy Conf format (~/.config/hypr/quickshell_hypr.conf) with ARGB byte order
+  - Ensures source / dofile includes exist in primary hyprland configuration
+"""
+
 import os
 import json
 import sys

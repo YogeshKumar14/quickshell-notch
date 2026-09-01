@@ -1,4 +1,18 @@
 #!/usr/bin/env python3
+"""
+scan_wallpapers.py — Wallpaper Directory Scanner & Thumbnail Generator.
+
+Scans configured wallpaper directories (PNG, JPG, JPEG, WEBP),
+generates downsampled cached thumbnails in ~/.cache/quickshell/thumbs/
+using multi-threaded PIL workers, and outputs formatted metadata.
+
+CLI Usage:
+    python3 scan_wallpapers.py [optional_custom_dir]
+
+CLI Output:
+    JSON array: [ { "path": str, "name": str, "thumb": str }, ... ]
+"""
+
 import os
 import sys
 import json

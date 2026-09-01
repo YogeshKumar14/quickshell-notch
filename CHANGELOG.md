@@ -4,6 +4,32 @@ All notable changes to QuickShell Top Notch are documented here.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.1.0] - 2026-09-01
+
+### Added
+- **Dedicated 2-Column Audio Device Switcher**: Clean, dedicated sub-notch quick settings overlay (`components/AudioMenu.qml` & `scripts/desktop/manage_audio.py`) featuring 1-click Output Sink (Speakers, Bluetooth Headphones, DACs) and Input Source (Microphones, Cameras) routing via PipeWire `wpctl`, smart vector icon detection, active checkmark badging, spinning rescan control, and outside click-to-dismiss.
+- **Normal Solid White Battery Capsule with Light Bright Yellow Charging Bolt**: Restored solid crisp white battery capsule outline, positive terminal cap, and fill bar (`opacity: 0.90`) across charging and uncharging states with an overlay borderless solid light bright yellow lightning bolt (`#FFE81F`).
+- **OSD & Audio Drawer Mutual Exclusion**: Eliminated drawer overlap and clipping by automatically closing the audio menu when hardware volume/brightness OSDs trigger.
+- **Microsecond/Second Scrubber Normalization & Realtime Polling**: Automatic unit detection across all media players with active 500ms `playerctl position` polling and direct click/drag seeking for 100% accurate timeline tracking.
+- **Centered Camera Privacy Indicator**: Anchored hardware privacy dot to the exact mathematical center axis of the notch header.
+- **Stabilized Visualizer Spectrum**: Integer subpixel coordinate rounding (`Math.round`) and critically damped spring easing eliminating whole-cluster vertical jitter.
+- **Symmetric 12px Notch Padding**: Standardized symmetric margins across header bar, media dashboard, apps tray, and wallpapers grid.
+- **Retina 2x Mipmapped Vector Icons**: Enabled 2x density, smooth filtering, and mipmapping in `components/M3Icon.qml` for crisp retina navigation glyphs.
+- **Zero Card Clipping Geometry**: Inset App Launcher and Wallpaper Selector cards (60px height with 6px vertical headroom) preventing magic highlight borders and card edges from clipping against the viewport AABB scissor.
+- **Zero-Delay OSD Pipeline**: Optimized `scripts/core/osd.sh` and spring dynamics for instantaneous volume and brightness feedback.
+- **149-Test Comprehensive Verification Suite**: Added Module 14 testing PipeWire wpctl audio backend and drawer integrations with 100% pass rate.
+
+## [2.0.0] - 2026-09-01
+
+### Added
+- **NotchNook Modern 3-Column Landscape Architecture**: Re-architected expanded notch with compact 106px height, 3-column media controller, 7-day live calendar timeline, and hardware stats dashboard.
+- **Hardware-Accelerated OpacityMask Squircle Clipping**: True anti-aliased squircle corner clipping across album art, compact thumbnails, and 16:9 wallpaper preview cards eliminating SceneGraph AABB scissor corner bleed.
+- **Visualizer DSP Signal Conditioning & Spring Damping**: Exponential Moving Average (EMA) low-pass filter and noise floor deadband in Python CAVA streamer, paired with spring-damped bar heights in QML.
+- **Minimal Borderless Header Navigation**: Clean floating glyphs (`🏠`, `📥`, `⏱️`, `📈`) matching reference design with spring scale micro-interactions and smooth color transitions.
+- **Continuous Realtime Scrubber Timestamps**: Sub-second MPRIS timeline position polling with live progress scrubber and `replay_10` circular rewind button.
+- **OSD Morphing & Zero-Clipping Pipeline**: Dynamic notch morphing to $240\times 34\text{px}$ OSD pill with rotating Sun icon ($\pm 45^\circ$), clamped percentages ($0-100\%$), and automatic pre-expansion restoration.
+- **Comprehensive 144-Test Aggressive Verification Harness**: Added Module 13 stress testing rapid IPC morphing bursts, Scrubber division-by-zero bounds, and `OpacityMask` declarations.
+
 ## [1.2.0] - 2026-08-26
 
 ### Added

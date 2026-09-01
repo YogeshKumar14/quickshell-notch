@@ -1,14 +1,23 @@
+/**
+ * SparklineCanvas.qml — 2D History Sparkline Chart for QuickShell Notch
+ *
+ * Renders an anti-aliased continuous line chart with semi-transparent vertical gradient fill:
+ *   - Supports dynamic threshold coloring (accent -> warning >60% -> danger >80%)
+ *   - Auto-scales across variable history series lengths
+ *   - Repaints only when visible and series data updates
+ */
+
 import QtQuick
 import "../theme"
 
 Canvas {
     id: root
 
-    // History series (0-100 scale) drawn as a stroked line with a gradient fill.
+    /** History series array (0-100 scale) drawn as a stroked line with a gradient fill */
     property var hist: []
-    // Current value for optional danger/warning threshold coloring.
+    /** Current instantaneous value for threshold calculation */
     property int currentVal: 0
-    // When true, line color shifts to warning (>60) / danger (>80).
+    /** When true, line color dynamically shifts to warning (>60) / danger (>80) */
     property bool thresholdColors: false
 
     implicitHeight: 42
@@ -28,13 +37,13 @@ Canvas {
         }
 
         ctx.strokeStyle = colorObj;
-        ctx.lineWidth = 1.3;
+        ctx.lineWidth = 1.8;
         ctx.beginPath();
 
-        var step = width / (hist.length - 1);
+        var step = width / Math.max(1, hist.length - 1);
         for (var i = 0; i < hist.length; i++) {
             var x = i * step;
-            var y = height - (hist[i] / 100.0 * (height - 4)) - 2;
+            var y = height - (Math.max(0, Math.min(100, hist[i])) / 100.0 * (height - 8)) - 4;
             if (i === 0) ctx.moveTo(x, y);
             else ctx.lineTo(x, y);
         }
@@ -44,8 +53,8 @@ Canvas {
         ctx.lineTo(0, height);
         ctx.closePath();
         var grad = ctx.createLinearGradient(0, 0, 0, height);
-        grad.addColorStop(0, Qt.rgba(colorObj.r, colorObj.g, colorObj.b, 0.08));
-        grad.addColorStop(1, Qt.rgba(colorObj.r, colorObj.g, colorObj.b, 0.0));
+        grad.addColorStop(0, Qt.rgba(colorObj.r, colorObj.g, colorObj.b, 0.25));
+        grad.addColorStop(1, Qt.rgba(colorObj.r, colorObj.g, colorObj.b, 0.02));
         ctx.fillStyle = grad;
         ctx.fill();
     }
