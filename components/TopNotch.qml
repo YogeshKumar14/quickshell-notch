@@ -954,7 +954,7 @@ FocusScope {
                     : (root.isNotifMenuOpen
                         ? root.notifStackHeight
                         : (root.isAudioMenuOpen
-                            ? 190
+                            ? 175
                             : (root.isExpanded ? root.pageNotchHeight : Style.notchHeightCompact)))))
 
         color: "#000000"
@@ -1377,9 +1377,6 @@ FocusScope {
             anchors.fill: parent
             isOpen: root.isAudioMenuOpen && !root.isOsdActive
             onCloseRequested: root.isAudioMenuOpen = false
-            onVolumeChanged: function(val) {
-                root.volumeLevel = val;
-            }
         }
     }
 }
