@@ -109,6 +109,7 @@ FocusScope {
         root.isWifiMenuOpen = false;
         root.isBluetoothMenuOpen = false;
         root.isNotifMenuOpen = false;
+        root.isAudioMenuOpen = false;
         root.isWifiPasswordPromptOpen = false;
         root.isPowerConfirming = false;
         osdTimer.restart();
@@ -1374,7 +1375,7 @@ FocusScope {
         AudioMenu {
             id: audioMenuComp
             anchors.fill: parent
-            isOpen: root.isAudioMenuOpen
+            isOpen: root.isAudioMenuOpen && !root.isOsdActive
             onCloseRequested: root.isAudioMenuOpen = false
             onVolumeChanged: function(val) {
                 root.volumeLevel = val;

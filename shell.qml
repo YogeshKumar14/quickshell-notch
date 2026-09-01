@@ -127,9 +127,11 @@ Scope {
                             notchComp.isAudioMenuOpen = false;
                         } else if (cmd.startsWith("osd:vol:")) {
                             var v = parseInt(cmd.split(":")[2]);
+                            notchComp.isAudioMenuOpen = false;
                             if (!isNaN(v)) notchComp.showOsd("volume", Math.max(0, Math.min(150, v)));
                         } else if (cmd.startsWith("osd:bri:")) {
                             var b = parseInt(cmd.split(":")[2]);
+                            notchComp.isAudioMenuOpen = false;
                             if (!isNaN(b)) notchComp.showOsd("brightness", Math.max(0, Math.min(100, b)));
                         }
                         clientSocket.connected = false;

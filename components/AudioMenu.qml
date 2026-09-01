@@ -63,6 +63,9 @@ Item {
         }
     }
 
+    /** Timestamp of last user slider drag to prevent stale polling overwrites */
+    property double lastUserActionTime: 0
+
     Process {
         id: audioProc
         command: ["python3", Quickshell.shellDir + "/scripts/desktop/manage_audio.py", "status"]
@@ -70,10 +73,12 @@ Item {
             onStreamFinished: {
                 try {
                     var data = JSON.parse(this.text);
-                    root.volumeLevel = data.volume !== undefined ? data.volume : root.volumeLevel;
-                    root.volumeMuted = data.volume_muted !== undefined ? data.volume_muted : false;
-                    root.micLevel = data.mic !== undefined ? data.mic : root.micLevel;
-                    root.micMuted = data.mic_muted !== undefined ? data.mic_muted : false;
+                    if (Date.now() - root.lastUserActionTime > 1200) {
+                        root.volumeLevel = data.volume !== undefined ? data.volume : root.volumeLevel;
+                        root.volumeMuted = data.volume_muted !== undefined ? data.volume_muted : false;
+                        root.micLevel = data.mic !== undefined ? data.mic : root.micLevel;
+                        root.micMuted = data.mic_muted !== undefined ? data.mic_muted : false;
+                    }
                     root.sinks = Array.isArray(data.sinks) ? data.sinks : [];
                     root.sources = Array.isArray(data.sources) ? data.sources : [];
                 } catch(e) {}
@@ -82,15 +87,32 @@ Item {
     }
 
     Process {
+        id: wpctlVolProc
+        stdout: StdioCollector {}
+    }
+
+    Process {
+        id: wpctlMicProc
+        stdout: StdioCollector {}
+    }
+
+    Process {
+        id: wpctlMuteProc
+        stdout: StdioCollector {}
+    }
+
+    Process {
         id: audioActionProc
         stdout: StdioCollector {
             onStreamFinished: {
                 try {
                     var data = JSON.parse(this.text);
-                    root.volumeLevel = data.volume !== undefined ? data.volume : root.volumeLevel;
-                    root.volumeMuted = data.volume_muted !== undefined ? data.volume_muted : false;
-                    root.micLevel = data.mic !== undefined ? data.mic : root.micLevel;
-                    root.micMuted = data.mic_muted !== undefined ? data.mic_muted : false;
+                    if (Date.now() - root.lastUserActionTime > 1200) {
+                        root.volumeLevel = data.volume !== undefined ? data.volume : root.volumeLevel;
+                        root.volumeMuted = data.volume_muted !== undefined ? data.volume_muted : false;
+                        root.micLevel = data.mic !== undefined ? data.mic : root.micLevel;
+                        root.micMuted = data.mic_muted !== undefined ? data.mic_muted : false;
+                    }
                     root.sinks = Array.isArray(data.sinks) ? data.sinks : [];
                     root.sources = Array.isArray(data.sources) ? data.sources : [];
                 } catch(e) {}
@@ -105,28 +127,32 @@ Item {
     }
 
     function setVolume(val) {
+        root.lastUserActionTime = Date.now();
         root.volumeLevel = val;
-        audioActionProc.command = ["python3", Quickshell.shellDir + "/scripts/desktop/manage_audio.py", "set-volume", val.toString()];
-        audioActionProc.running = true;
+        wpctlVolProc.command = ["wpctl", "set-volume", "-l", "1.0", "@DEFAULT_AUDIO_SINK@", (val / 100.0).toFixed(2)];
+        wpctlVolProc.running = true;
         root.volumeChanged(val);
     }
 
     function setMic(val) {
+        root.lastUserActionTime = Date.now();
         root.micLevel = val;
-        audioActionProc.command = ["python3", Quickshell.shellDir + "/scripts/desktop/manage_audio.py", "set-mic", val.toString()];
-        audioActionProc.running = true;
+        wpctlMicProc.command = ["wpctl", "set-volume", "-l", "1.0", "@DEFAULT_AUDIO_SOURCE@", (val / 100.0).toFixed(2)];
+        wpctlMicProc.running = true;
     }
 
     function toggleVolumeMute() {
+        root.lastUserActionTime = Date.now();
         root.volumeMuted = !root.volumeMuted;
-        audioActionProc.command = ["python3", Quickshell.shellDir + "/scripts/desktop/manage_audio.py", "toggle-volume-mute"];
-        audioActionProc.running = true;
+        wpctlMuteProc.command = ["wpctl", "set-mute", "@DEFAULT_AUDIO_SINK@", "toggle"];
+        wpctlMuteProc.running = true;
     }
 
     function toggleMicMute() {
+        root.lastUserActionTime = Date.now();
         root.micMuted = !root.micMuted;
-        audioActionProc.command = ["python3", Quickshell.shellDir + "/scripts/desktop/manage_audio.py", "toggle-mic-mute"];
-        audioActionProc.running = true;
+        wpctlMuteProc.command = ["wpctl", "set-mute", "@DEFAULT_AUDIO_SOURCE@", "toggle"];
+        wpctlMuteProc.running = true;
     }
 
     function setSink(id) {

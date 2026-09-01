@@ -100,13 +100,13 @@ def main():
     if cmd == "set-volume" and len(sys.argv) > 2:
         try:
             val = max(0, min(100, int(sys.argv[2])))
-            subprocess.run(["wpctl", "set-volume", "-l", "1.0", "@DEFAULT_AUDIO_SINK@", f"{val}%"], check=False)
+            subprocess.run(["wpctl", "set-volume", "-l", "1.0", "@DEFAULT_AUDIO_SINK@", f"{val / 100.0:.2f}"], check=False)
         except Exception:
             pass
     elif cmd == "set-mic" and len(sys.argv) > 2:
         try:
             val = max(0, min(100, int(sys.argv[2])))
-            subprocess.run(["wpctl", "set-volume", "-l", "1.0", "@DEFAULT_AUDIO_SOURCE@", f"{val}%"], check=False)
+            subprocess.run(["wpctl", "set-volume", "-l", "1.0", "@DEFAULT_AUDIO_SOURCE@", f"{val / 100.0:.2f}"], check=False)
         except Exception:
             pass
     elif cmd == "toggle-volume-mute":
