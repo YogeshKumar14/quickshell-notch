@@ -7,9 +7,11 @@ Format follows [Keep a Changelog](https://keepachangelog.com/).
 ## [2.1.0] - 2026-09-01
 
 ### Added
-- **Audio & Sound Devices Notch Drawer**: Dedicated sub-notch quick settings overlay (`components/AudioMenu.qml` & `scripts/desktop/manage_audio.py`) featuring Master Output Volume & Microphone Level cards with instant mute toggles, interactive pill sliders, and dynamic Output & Input device switching with Bluetooth badges.
-- **Interactive Scrubber Seeking**: Direct click-to-seek and drag-to-seek progress timeline bar in `components/MediaController.qml` with dual Quickshell MPRIS and `playerctl` fallback.
-- **Dynamic Track Length Calculation**: Accurate track duration formatting replacing legacy static fallbacks.
+- **Audio & Sound Devices Notch Drawer**: Dedicated sub-notch quick settings overlay (`components/AudioMenu.qml` & `scripts/desktop/manage_audio.py`) featuring Master Output Volume & Microphone Level cards with instant mute toggles, optimistic interactive pill sliders, dynamic Output & Input device switching with Bluetooth badges, and background click-to-dismiss.
+- **Microsecond/Second Scrubber Normalization & Realtime Polling**: Automatic unit detection across all media players with active 500ms `playerctl position` polling and direct click/drag seeking for 100% accurate timeline tracking.
+- **Centered Camera Privacy Indicator**: Anchored hardware privacy dot to the exact mathematical center axis of the notch header.
+- **Stabilized Visualizer Spectrum**: Integer subpixel coordinate rounding (`Math.round`) and critically damped spring easing eliminating whole-cluster vertical jitter.
+- **Symmetric 12px Notch Padding**: Standardized symmetric margins across header bar, media dashboard, apps tray, and wallpapers grid.
 - **Retina 2x Mipmapped Vector Icons**: Enabled 2x density, smooth filtering, and mipmapping in `components/M3Icon.qml` for crisp retina navigation glyphs.
 - **Zero Card Clipping Geometry**: Inset App Launcher and Wallpaper Selector cards (60px height with 6px vertical headroom) preventing magic highlight borders and card edges from clipping against the viewport AABB scissor.
 - **Zero-Delay OSD Pipeline**: Optimized `scripts/core/osd.sh` and spring dynamics for instantaneous volume and brightness feedback.
