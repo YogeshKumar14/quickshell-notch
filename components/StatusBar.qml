@@ -170,7 +170,7 @@ Item {
                     width: Math.max(0, Math.min(parent.width - 2.4, (parent.width - 2.4) * (root.batteryLevel / 100.0)))
                     radius: 1.5
                     color: parent.parent.parent.batColor
-                    opacity: root.batteryStatus === "Charging" ? 0.45 : 0.90
+                    opacity: 0.90
 
                     Behavior on width { NumberAnimation { duration: 300; easing.type: Easing.OutQuad } }
                     Behavior on color { ColorAnimation { duration: Style.animNormal; easing.type: Easing.OutQuad } }
@@ -180,7 +180,7 @@ Item {
                 M3Icon {
                     name: "bolt"
                     size: 8
-                    color: Style.iosYellow
+                    color: "#FFE81F"
                     visible: root.batteryStatus === "Charging"
                     anchors.centerIn: parent
                     z: 5
