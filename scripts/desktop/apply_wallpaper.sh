@@ -73,5 +73,5 @@ mv "$TMP_FILE" "$CURRENT_FILE"
 
 # 5. Run wallust quietly without hyprctl reload to ensure layer-shell stability
 if command -v wallust >/dev/null 2>&1; then
-    wallust run "$TARGET_PIC" >/dev/null 2>&1
+    wallust run "$TARGET_PIC" >/dev/null 2>&1 || wallust run -s "$TARGET_PIC" >/dev/null 2>&1 || true
 fi

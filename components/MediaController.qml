@@ -539,7 +539,8 @@ Item {
                             width: modelData.isToday ? 24 : 20
                             height: 32
                             radius: modelData.isToday ? 7 : 0
-                            color: modelData.isToday ? "#007AFF" : "transparent"
+                            color: modelData.isToday ? Style.accent : "transparent"
+                            Behavior on color { ColorAnimation { duration: 150 } }
 
                             Column {
                                 anchors.centerIn: parent

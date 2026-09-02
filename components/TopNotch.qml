@@ -770,6 +770,7 @@ FocusScope {
     }
 
     function refreshAccent() {
+        wallustAccentProc.running = false;
         wallustAccentProc.running = true;
     }
 

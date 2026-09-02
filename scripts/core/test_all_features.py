@@ -582,6 +582,21 @@ def test_module_8():
         passed = (code == 0 and out.strip() == "[]")
         record(mod, "Non-Existent Wallpaper Directory Safe Fallback", passed, dur, err)
 
+        # 8.3 get_wallust_colors.sh Accent Output Schema & Validation
+        code, out, err, dur = run_cmd(["bash", str(SCRIPTS_DIR / "desktop/get_wallust_colors.sh")])
+        color_hex = out.strip()
+        is_valid_hex = (code == 0 and len(color_hex) == 7 and color_hex.startswith("#") and all(c in "0123456789abcdefABCDEF" for c in color_hex[1:]))
+        record(mod, "get_wallust_colors.sh Hex Color Output Schema", is_valid_hex, dur, f"out: {color_hex}, err: {err}")
+
+        # 8.4 Wallust v4 Configuration TOML Compatibility Check
+        wallust_cfg = Path.home() / ".config/wallust/wallust.toml"
+        cfg_valid = False
+        if wallust_cfg.exists():
+            cfg_text = wallust_cfg.read_text()
+            # Must not contain deprecated v3 keys that crash wallust 4
+            cfg_valid = ('backend = "resized"' in cfg_text or 'backend = "fastresize"' in cfg_text) and ('palette = "kmeans"' in cfg_text or 'palette = "salience"' in cfg_text)
+        record(mod, "Wallust v4 Configuration TOML Compatibility", cfg_valid, 0.001, "wallust.toml contains incompatible keys")
+
 
 # ==============================================================================
 # MODULE 9: APP LAUNCHER ENGINE (NEW)
