@@ -247,7 +247,7 @@ FocusScope {
         id: visFrameTimer
         interval: 66
         repeat: true
-        running: (root.showVisualizer || (root.isExpanded && root.currentPage === 0)) && root.visualizerBars.length > 0
+        running: (root.showVisualizer || (root.isExpanded && root.currentPage === 0)) && !root.isOsdActive && root.visualizerBars.length > 0
         onTriggered: {
             if (root.visualizerBars.length > 0) root.visualizerFrame = root.visualizerBars;
         }
@@ -1054,7 +1054,7 @@ FocusScope {
         CompactPill {
             id: compactPillComp
             anchors.fill: parent
-            opacity: (root.isExpanded || root.isNotifMenuOpen || root.isPowerMenuOpen || root.isWifiMenuOpen || root.isBluetoothMenuOpen || root.isAudioMenuOpen) ? 0.0 : 1.0
+            opacity: (root.isExpanded || root.isOsdActive || root.isNotifMenuOpen || root.isPowerMenuOpen || root.isWifiMenuOpen || root.isBluetoothMenuOpen || root.isAudioMenuOpen) ? 0.0 : 1.0
             visible: opacity > 0.01
 
             timeStr: root.timeStr

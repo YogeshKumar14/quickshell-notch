@@ -857,6 +857,22 @@ def test_module_13():
     dur = time.perf_counter() - t0
     record(mod, "Visualizer DSP Noise Floor Gate (<6% Deadband)", noise_gate_valid, dur)
 
+    # 13.5 OSD & Visualizer Layer Isolation & Zero-Overlap Gating
+    t0 = time.perf_counter()
+    tn_code = (COMPONENTS_DIR / "TopNotch.qml").read_text()
+    cp_code = (COMPONENTS_DIR / "CompactPill.qml").read_text()
+    osd_code = (COMPONENTS_DIR / "OsdOverlay.qml").read_text()
+
+    osd_isolation_valid = (
+        "root.isOsdActive" in tn_code and
+        "!root.isOsdActive" in tn_code and
+        "opacity: (root.showVisualizer && !root.isOsdActive)" in cp_code and
+        "opacity: (root.isWorkspaceActive && !root.isOsdActive)" in cp_code and
+        "z: 10" in osd_code
+    )
+    dur = time.perf_counter() - t0
+    record(mod, "OSD vs Visualizer Zero-Overlap Layer Isolation", osd_isolation_valid, dur, "OSD layer isolation checks failed")
+
 
 # ==============================================================================
 # MODULE 14: AUDIO & SOUND DEVICES BACKEND (NEW)

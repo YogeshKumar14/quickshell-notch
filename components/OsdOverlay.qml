@@ -28,6 +28,7 @@ Item {
     property real osdIconRotation: 0
 
     anchors.fill: parent
+    z: 10
     opacity: root.isOsdActive ? 1.0 : 0.0
     scale: root.isOsdActive ? 1.0 : 0.92
     visible: opacity > 0.01

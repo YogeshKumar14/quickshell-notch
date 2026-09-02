@@ -112,7 +112,7 @@ Item {
     // 2. REALTIME WORKSPACE OVERLAY
     Item {
         anchors.fill: parent
-        opacity: root.isWorkspaceActive ? 1.0 : 0.0
+        opacity: (root.isWorkspaceActive && !root.isOsdActive) ? 1.0 : 0.0
         visible: opacity > 0.01
 
         Behavior on opacity {
@@ -180,7 +180,7 @@ Item {
     // 3. REALTIME CAVA MUSIC VISUALIZER OVERLAY
     Item {
         anchors.fill: parent
-        opacity: root.showVisualizer ? 1.0 : 0.0
+        opacity: (root.showVisualizer && !root.isOsdActive) ? 1.0 : 0.0
         visible: opacity > 0.01
 
         Behavior on opacity {
