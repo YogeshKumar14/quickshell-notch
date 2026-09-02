@@ -857,7 +857,7 @@ def test_module_13():
     dur = time.perf_counter() - t0
     record(mod, "Visualizer DSP Noise Floor Gate (<6% Deadband)", noise_gate_valid, dur)
 
-    # 13.5 OSD & Visualizer Layer Isolation & Zero-Overlap Gating
+    # 13.5 OSD & Workspace vs Visualizer Zero-Overlap Layer Isolation
     t0 = time.perf_counter()
     tn_code = (COMPONENTS_DIR / "TopNotch.qml").read_text()
     cp_code = (COMPONENTS_DIR / "CompactPill.qml").read_text()
@@ -866,12 +866,13 @@ def test_module_13():
     osd_isolation_valid = (
         "root.isOsdActive" in tn_code and
         "!root.isOsdActive" in tn_code and
-        "opacity: (root.showVisualizer && !root.isOsdActive)" in cp_code and
+        "!root.isWorkspaceActive" in tn_code and
+        "opacity: (root.showVisualizer && !root.isOsdActive && !root.isWorkspaceActive)" in cp_code and
         "opacity: (root.isWorkspaceActive && !root.isOsdActive)" in cp_code and
         "z: 10" in osd_code
     )
     dur = time.perf_counter() - t0
-    record(mod, "OSD vs Visualizer Zero-Overlap Layer Isolation", osd_isolation_valid, dur, "OSD layer isolation checks failed")
+    record(mod, "OSD & Workspace vs Visualizer Zero-Overlap Layer Isolation", osd_isolation_valid, dur, "OSD/Workspace layer isolation checks failed")
 
 
 # ==============================================================================

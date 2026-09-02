@@ -241,13 +241,13 @@ FocusScope {
     property var visualizerFrame: []
     property bool isAudioActive: false
     property bool isVisualizerActive: false
-    readonly property bool showVisualizer: root.visualizerEnabledVal && root.isVisualizerActive && !root.isExpanded && !root.isOsdActive && !root.isNotifMenuOpen
+    readonly property bool showVisualizer: root.visualizerEnabledVal && root.isVisualizerActive && !root.isExpanded && !root.isOsdActive && !root.isNotifMenuOpen && !root.isWorkspaceActive
 
     Timer {
         id: visFrameTimer
         interval: 66
         repeat: true
-        running: (root.showVisualizer || (root.isExpanded && root.currentPage === 0)) && !root.isOsdActive && root.visualizerBars.length > 0
+        running: (root.showVisualizer || (root.isExpanded && root.currentPage === 0)) && !root.isOsdActive && !root.isWorkspaceActive && root.visualizerBars.length > 0
         onTriggered: {
             if (root.visualizerBars.length > 0) root.visualizerFrame = root.visualizerBars;
         }

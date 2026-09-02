@@ -180,7 +180,7 @@ Item {
     // 3. REALTIME CAVA MUSIC VISUALIZER OVERLAY
     Item {
         anchors.fill: parent
-        opacity: (root.showVisualizer && !root.isOsdActive) ? 1.0 : 0.0
+        opacity: (root.showVisualizer && !root.isOsdActive && !root.isWorkspaceActive) ? 1.0 : 0.0
         visible: opacity > 0.01
 
         Behavior on opacity {
