@@ -2,7 +2,7 @@
  * StatusBar.qml — Expanded Notch Header Bar & Quick Actions for QuickShell Notch
  *
  * Renders the top header row of the expanded notch matching macOS NotchNook:
- *   - Clean borderless macOS tab icons ("home", "inbox", "wallpaper", "trending_up")
+ *   - Clean borderless macOS tab icons ("home", "inbox", "eyedropper", "trending_up")
  *   - Center green hardware camera privacy indicator dot
  *   - Quick-action toggles: Wi-Fi, Bluetooth, Notification Bell with badge, Power
  *   - Settings gear icon
@@ -103,7 +103,7 @@ Item {
 
             Repeater {
                 id: tabRepeater
-                model: [ "home", "inbox", "arrow.counterclockwise", "trending_up" ]
+                model: [ "home", "inbox", "eyedropper", "trending_up" ]
 
                 Item {
                     width: 16
