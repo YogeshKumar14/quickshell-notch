@@ -131,7 +131,7 @@ FocusScope {
     /** Expose notchBox to shell.qml for input region masking */
     property alias notchBoxItem: notchBox
 
-    /** Navigation tab index: 0=Media, 1=Walls, 2=Apps, 3=Stats */
+    /** Navigation tab index: 0=Media, 1=Apps, 2=Walls, 3=Stats */
     property int currentPage: 0
     property int totalPages: 4
 
@@ -247,7 +247,7 @@ FocusScope {
         id: visFrameTimer
         interval: 66
         repeat: true
-        running: (root.showVisualizer || (root.isExpanded && root.currentPage === 0)) && !root.isOsdActive && !root.isWorkspaceActive && root.visualizerBars.length > 0
+        running: root.showVisualizer && !root.isOsdActive && !root.isWorkspaceActive && root.visualizerBars.length > 0
         onTriggered: {
             if (root.visualizerBars.length > 0) root.visualizerFrame = root.visualizerBars;
         }
@@ -500,7 +500,15 @@ FocusScope {
     Process {
         id: visualizerProc
         command: ["python3", Quickshell.shellDir + "/scripts/notch/stream_audio_visualizer.py"]
-        running: root.visualizerEnabledVal
+        running: root.visualizerEnabledVal && !root.isExpanded && !root.isOsdActive && !root.isNotifMenuOpen && !root.isWorkspaceActive && root.isPlaying
+        onRunningChanged: {
+            if (!running) {
+                root.isAudioActive = false;
+                root.isVisualizerActive = false;
+                root.visualizerBars = [];
+                root.visualizerFrame = [];
+            }
+        }
         stdout: SplitParser {
             onRead: function(data) {
                 try {
@@ -642,7 +650,7 @@ FocusScope {
 
     Timer {
         id: devicePollTimer
-        interval: 2000
+        interval: (root.isExpanded || root.isOsdActive || root.isAudioMenuOpen) ? 2000 : 12000
         repeat: true
         running: true
         onTriggered: root.refreshDeviceLevels()
@@ -786,6 +794,14 @@ FocusScope {
     property string trackTitle: activePlayer && activePlayer.trackTitle ? activePlayer.trackTitle : "No Media Playing"
     property string trackArtist: activePlayer && activePlayer.trackArtist ? activePlayer.trackArtist : "Top Notch"
     property bool isPlaying: activePlayer ? (activePlayer.playbackState === MprisPlaybackState.Playing) : false
+    onIsPlayingChanged: {
+        if (!root.isPlaying) {
+            root.isAudioActive = false;
+            root.isVisualizerActive = false;
+            root.visualizerBars = [];
+            root.visualizerFrame = [];
+        }
+    }
     property real trackPosition: activePlayer && activePlayer.position ? activePlayer.position : 0
 
     onActivePlayerChanged: {
@@ -1008,6 +1024,7 @@ FocusScope {
         }
 
         Behavior on width {
+            enabled: notchBox.width > 0
             SpringAnimation {
                 spring: root.expandSpringTension
                 damping: root.expandSpringDamping
@@ -1016,6 +1033,7 @@ FocusScope {
             }
         }
         Behavior on height {
+            enabled: notchBox.height > 0
             SpringAnimation {
                 spring: root.expandSpringTension
                 damping: root.expandSpringDamping
@@ -1239,7 +1257,6 @@ FocusScope {
                         buttonSpeed: root.buttonSpeedVal
                         tabSpringTension: root.tabSpringTension
                         tabSpringDamping: root.tabSpringDamping
-                        visualizerFrame: root.visualizerFrame
                         onAudioMenuRequested: root.toggleAudioMenu()
                     }
 
@@ -1254,7 +1271,6 @@ FocusScope {
                             anchors.fill: parent
                             active: root.appsTabAlive
                             sourceComponent: AppLauncher {
-                                appColumns: root.appColumnsVal
                                 highlightAnimType: root.highlightAnimTypeVal
                                 highlightSpringTension: root.highlightSpringTensionVal
                                 highlightSpringDamping: root.highlightSpringDampingVal

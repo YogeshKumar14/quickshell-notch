@@ -27,7 +27,7 @@ BASE_DIR = Path(__file__).resolve().parent.parent.parent
 SCRIPTS_DIR = BASE_DIR / "scripts"
 COMPONENTS_DIR = BASE_DIR / "components"
 THEME_DIR = BASE_DIR / "theme"
-REPORT_FILE = Path("/home/yogesh/.gemini/antigravity-cli/brain/acd04567-8979-42f6-8fee-ca5ba63ded56/test_report.md")
+REPORT_FILE = Path(__file__).resolve().parent / "test_report.md"
 IPC_SOCK = Path("/tmp/quickshell-notch.sock")
 
 
@@ -302,7 +302,7 @@ def test_module_3():
         if code == 0:
             try:
                 res = json.loads(out.strip())
-                hyprland_key_ok = res.get("status") in ("ok", "partial") and "note" not in res
+                hyprland_key_ok = res.get("status") == "ok" and "note" not in res
             except Exception:
                 pass
         dur = time.perf_counter() - t0
@@ -318,11 +318,64 @@ def test_module_3():
         if code == 0:
             try:
                 res = json.loads(out.strip())
-                hypr_key_ok = res.get("status") in ("ok", "partial") and "note" not in res
+                hypr_key_ok = res.get("status") == "ok" and "note" not in res
             except Exception:
                 pass
         dur = time.perf_counter() - t0
         record(mod, "apply_all_settings.py nested 'hypr' payload ingestion", hypr_key_ok, dur, f"out: {out.strip()}, err: {err.strip()}")
+
+        # 3.7 set_hypr_option.sh integer options apply test
+        t0 = time.perf_counter()
+        code_b, out_b, err_b, _ = run_cmd([
+            "bash", str(SCRIPTS_DIR / "hyprland/set_hypr_option.sh"), "border_size", "2"
+        ], env={"QUICKSHELL_SANDBOX": "0"})
+        code_r, out_r, err_r, _ = run_cmd([
+            "bash", str(SCRIPTS_DIR / "hyprland/set_hypr_option.sh"), "rounding", "10"
+        ], env={"QUICKSHELL_SANDBOX": "0"})
+        int_apply_ok = (code_b == 0 and code_r == 0)
+        dur = time.perf_counter() - t0
+        record(mod, "set_hypr_option.sh integer options apply (border_size, rounding)", int_apply_ok, dur, f"border_size: {err_b or out_b}, rounding: {err_r or out_r}")
+
+        # 3.8 apply_hypr_option.py direct CLI & _lua_value numeric serialization
+        t0 = time.perf_counter()
+        code_apply, out_apply, err_apply, _ = run_cmd([
+            "python3", str(SCRIPTS_DIR / "hyprland/apply_hypr_option.py"), "general:border_size", "2"
+        ])
+        from apply_hypr_option import _lua_value
+        lua_num_ok = (
+            code_apply == 0 and
+            _lua_value("2") == "2" and
+            _lua_value("general:border_size", "2") == "2" and
+            _lua_value("2.5") == "2.5" and
+            _lua_value("dwindle") == '"dwindle"' and
+            _lua_value("true") == "true"
+        )
+        dur = time.perf_counter() - t0
+        record(mod, "apply_hypr_option.py direct CLI & _lua_value numeric serialization", lua_num_ok, dur, f"code: {code_apply}, err: {err_apply}")
+
+        # 3.9 persist_hypr_state.py QUICKSHELL_SANDBOX guard verification
+        t0 = time.perf_counter()
+        from persist_hypr_state import update_and_persist, LUA_PATH, CONF_PATH
+        lua_stat_before = os.path.getmtime(LUA_PATH) if os.path.exists(LUA_PATH) else 0
+        conf_stat_before = os.path.getmtime(CONF_PATH) if os.path.exists(CONF_PATH) else 0
+        old_sandbox = os.environ.get("QUICKSHELL_SANDBOX")
+        os.environ["QUICKSHELL_SANDBOX"] = "1"
+        try:
+            sandbox_ret = update_and_persist("border_size", "99")
+            lua_stat_after = os.path.getmtime(LUA_PATH) if os.path.exists(LUA_PATH) else 0
+            conf_stat_after = os.path.getmtime(CONF_PATH) if os.path.exists(CONF_PATH) else 0
+            sandbox_isolated = (
+                sandbox_ret is True and
+                lua_stat_before == lua_stat_after and
+                conf_stat_before == conf_stat_after
+            )
+        finally:
+            if old_sandbox is None:
+                os.environ.pop("QUICKSHELL_SANDBOX", None)
+            else:
+                os.environ["QUICKSHELL_SANDBOX"] = old_sandbox
+        dur = time.perf_counter() - t0
+        record(mod, "persist_hypr_state.py QUICKSHELL_SANDBOX guard verification", sandbox_isolated, dur, f"sandbox_ret: {sandbox_ret}")
 
 
 # ==============================================================================

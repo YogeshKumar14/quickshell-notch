@@ -51,6 +51,19 @@ ICONS=(
   "apps"
   "mouse"
   "auto_awesome"
+  "space_dashboard"
+  "graphic_eq"
+  "palette"
+  "blur_on"
+  "touch_app"
+  "aspect_ratio"
+  "view_carousel"
+  "tune"
+  "timer"
+  "schedule"
+  "monitoring"
+  "check_circle"
+  "pending"
 )
 
 for icon in "${ICONS[@]}"; do

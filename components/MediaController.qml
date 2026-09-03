@@ -29,10 +29,6 @@ Item {
     property real trackPosition: 0
     /** Whether media is currently playing */
     property bool isPlaying: false
-    /** Audio visualizer frame amplitude array */
-    property var visualizerFrame: []
-    /** Visualizer peak bar height in pixels */
-    property int visualizerHeight: 16
 
     /** Master volume level (0..100) */
     property int volumeLevel: 50

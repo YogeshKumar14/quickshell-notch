@@ -1,4 +1,4 @@
-# QuickShell Notch — System Architecture Specification (v2.0.0)
+# QuickShell Notch — System Architecture Specification (v2.1.0)
 
 This document provides a comprehensive technical reference for the architecture, component topology, data flows, persistence pipelines, and lifecycle models of the **QuickShell Notch** desktop shell for Hyprland.
 
@@ -32,8 +32,9 @@ graph TD
     end
 
     subgraph Overlays["Drawer & Tab Overlays"]
-        Walls["WallpaperSelector.qml"]
-        Apps["AppLauncher.qml"]
+        Apps["AppLauncher.qml (Page 1)"]
+        Walls["WallpaperSelector.qml (Page 2)"]
+        Audio["AudioMenu.qml (Audio Drawer)"]
         Wifi["WifiMenu.qml"]
         BT["BluetoothMenu.qml"]
         Power["PowerMenu.qml"]
@@ -47,6 +48,7 @@ graph TD
         SysInfo["get_system_info.py"]
         AppScanner["get_apps.py"]
         WallScanner["scan_wallpapers.py"]
+        AudioBackend["manage_audio.py"]
         WifiBackend["manage_wifi.py"]
         BTBackend["manage_bluetooth.py"]
         DualWrite["apply_all_settings.py"]
@@ -60,8 +62,9 @@ graph TD
     Notch --> OSD
     Notch --> StatusBar
     Notch --> Stats
-    Notch --> Walls
     Notch --> Apps
+    Notch --> Walls
+    Notch --> Audio
     Notch --> Wifi
     Notch --> BT
     Notch --> Power
@@ -72,8 +75,9 @@ graph TD
     MediaCtrl -.-> CAVA
     Stats -.-> SysInfo
     StatusBar -.-> DevLevels
-    Walls -.-> WallScanner
     Apps -.-> AppScanner
+    Walls -.-> WallScanner
+    Audio -.-> AudioBackend
     Wifi -.-> WifiBackend
     BT -.-> BTBackend
     Settings -.-> DualWrite
@@ -91,11 +95,12 @@ graph TD
 │   ├── TopNotch.qml              # High-level orchestrator & geometry morphing state machine
 │   ├── CompactPill.qml           # Collapsed notch: clock, workspace dots, CAVA visualizer
 │   ├── MediaController.qml       # PAGE 0: MPRIS media controls, circular visualizer, volume/mic
-│   ├── WallpaperSelector.qml     # PAGE 1: Wallpaper grid, thumbnail cache, search filter
-│   ├── AppLauncher.qml           # PAGE 2: Application grid, fuzzy search, .desktop launcher
+│   ├── AppLauncher.qml           # PAGE 1: Application grid, fuzzy search, .desktop launcher
+│   ├── WallpaperSelector.qml     # PAGE 2: Wallpaper grid, thumbnail cache, search filter
 │   ├── HardwareStats.qml         # PAGE 3: CPU/RAM/Disk/Network realtime sparkline gauges
 │   ├── StatusBar.qml             # Expanded header row, segmented tab switcher, iOS battery capsule
 │   ├── OsdOverlay.qml            # Volume/brightness OSD popup with rotating icon impulse
+│   ├── AudioMenu.qml             # PipeWire sink/source audio routing drawer
 │   ├── WifiMenu.qml              # Wi-Fi network scanner and connection drawer
 │   ├── BluetoothMenu.qml         # Bluetooth device manager drawer
 │   ├── PowerMenu.qml             # Power actions (lock, logout, suspend, reboot, shutdown)
@@ -111,16 +116,19 @@ graph TD
 │   ├── core/                     # Lifecycle, process safety, and validation tools
 │   │   ├── atomic_write.py       # Crash-resilient file write helper
 │   │   ├── process_utils.py      # Linux PR_SET_PDEATHSIG child process reaper
-│   │   ├── test_all_features.py  # 170+ test automated test harness
+│   │   ├── test_all_features.py  # 160-test automated test harness
 │   │   ├── validate_codebase.sh  # QML lint + Python compile + Bash AST validator
 │   │   ├── launch_quickshell.sh  # Clean daemon launcher with process reaper
-│   │   └── sandbox.sh            # Isolated test environment launcher
+│   │   ├── sandbox.sh            # Isolated test environment launcher
+│   │   ├── osd.sh                # Volume/brightness OSD helper
+│   │   └── download_m3_icons.sh  # Material Symbols SVG asset fetcher
 │   ├── desktop/                  # Desktop metadata providers
 │   │   ├── apply_wallpaper.sh    # Non-blocking wallpaper changer with wallust trigger
 │   │   ├── get_apps.py           # .desktop parser with icon heuristic resolver
 │   │   ├── get_device_levels.py  # Audio (wpctl), brightness, battery sysfs poller
 │   │   ├── get_system_info.py    # Zero-dependency /proc parser (CPU, RAM, Disk, Net)
 │   │   ├── get_wallust_colors.sh # Wallust accent color reader
+│   │   ├── manage_audio.py       # PipeWire / WirePlumber audio stream & device manager
 │   │   └── scan_wallpapers.py    # Multi-threaded image scanner & thumbnailer
 │   ├── hyprland/                 # Hyprland integration & persistence
 │   │   ├── apply_all_settings.py # Atomic dual-write settings applier
@@ -129,11 +137,16 @@ graph TD
 │   │   ├── hypr_keymap.py        # Single source of truth for Hyprland option keys
 │   │   ├── persist_hypr_state.py # Lua and Conf config syntax generator
 │   │   └── set_hypr_option.sh    # Single option persistence CLI shim
-│   └── network/                  # Network management backends
-│       ├── manage_bluetooth.py   # bluetoothctl device controller
-│       └── manage_wifi.py        # nmcli Wi-Fi controller
-└── assets/
-    └── icons/                    # Material Symbols Rounded SVGs
+│   ├── network/                  # Network management backends
+│   │   ├── manage_bluetooth.py   # bluetoothctl device controller
+│   │   └── manage_wifi.py        # nmcli Wi-Fi controller
+│   └── notch/                    # Notch IPC, preferences, and visualizer daemons
+│       ├── notch_ipc.py          # IPC socket client (keybind commands)
+│       ├── get_notch_settings.py # Notch preferences loader and defaults store
+│       └── stream_audio_visualizer.py # CAVA child -> JSON stream (pdeathsig)
+├── assets/
+│   └── icons/                    # Material Symbols Rounded SVGs
+└── notch_settings.json           # Runtime notch preferences
 ```
 
 ---
@@ -147,8 +160,8 @@ graph TD
   - Expanded Island: `560px` width, dynamically calculated height (`pageNotchHeight`) based on active tab content.
   - Inverted Dripping Ears: 2D Canvas arcs attached to the top-left and top-right of the notch box for continuous bezel styling.
 - **Navigation Lifecycle**:
-  - `currentPage`: 0 (Media), 1 (Walls), 2 (Apps), 3 (Stats).
-  - Lazy Tab Loading: Wallpaper and App launcher tabs are dynamically activated and unloaded after 5 seconds of inactivity to conserve memory.
+  - `currentPage`: 0 (Media), 1 (Apps), 2 (Walls), 3 (Stats).
+  - Lazy Tab Loading: App launcher and Wallpaper tabs are dynamically activated and unloaded after 5 seconds of inactivity to conserve memory.
 
 ### 3.2 Hyprland Dual-Write Persistence Pipeline
 Hyprland builds can use either the modern Lua config parser or the legacy configuration format. QuickShell Notch guarantees cross-version compatibility by executing an **Atomic Dual-Write**:
@@ -179,8 +192,10 @@ The shell listens on a local Unix Domain Socket for fast keybind integration:
 |---|---|
 | `toggle` | Toggle between compact pill and expanded island |
 | `close` | Immediately collapse notch and close all open sub-menus |
-| `walls` | Toggle directly to the Wallpaper Selector tab (PAGE 1) |
-| `apps` | Toggle directly to the App Launcher tab (PAGE 2) |
+| `apps` | Toggle directly to the App Launcher tab (PAGE 1) |
+| `walls` | Toggle directly to the Wallpaper Selector tab (PAGE 2) |
+| `audio` | Toggle Audio Routing Drawer |
+| `settings` | Toggle Settings Window |
 | `osd:vol:<0-100>` | Display Volume OSD with percentage and icon animation |
 | `osd:bri:<0-100>` | Display Brightness OSD with ±45° rotating sun/moon impulse |
 

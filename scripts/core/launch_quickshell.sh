@@ -3,7 +3,6 @@
 # Kill specific known helper processes (path-prefixed to avoid system-wide matches)
 pkill -9 -f "/stream_audio_visualizer\.py" >/dev/null 2>&1
 pkill -9 -x cava >/dev/null 2>&1
-pkill -9 -f "/watch_workspaces\.py" >/dev/null 2>&1
 # Kill SwayNC so QuickShell can claim the notification D-Bus interface
 pkill -9 -x swaync >/dev/null 2>&1
 pkill -9 -x swaync-client >/dev/null 2>&1

@@ -1,7 +1,7 @@
 /**
  * WallpaperSelector.qml — Wallpaper Carousel & Thumbnail Selector for QuickShell Notch
  *
- * Renders PAGE 1 of the expanded notch:
+ * Renders PAGE 2 of the expanded notch:
  *   - Asynchronously scans wallpaper directories via Python backend
  *   - High-performance cached thumbnail grid with active selection highlight
  *   - Real-time search filtering by image name

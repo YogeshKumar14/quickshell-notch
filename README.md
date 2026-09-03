@@ -21,13 +21,14 @@ Top Notch morphs dynamically between a compact top-center status pill and an exp
 
 - **Dynamic Pill Morphing**: Spring-physics morphing between compact, expanded, and power-menu states.
 - **Workspace Overlay**: Real-time workspace dots on the compact pill — occupied workspaces are highlighted, clicking a dot jumps to that workspace, clicking anywhere expands the notch.
-- **Hardware Stats Dashboard**: Real-time graphs for CPU and RAM load using custom canvas paths, plus disk storage tracking. Polling sleeps while the tab is hidden (0% idle overhead) and the polling interval is configurable.
-- **MPRIS Media Controller**: Fully functional music controller with dynamic album art, seek-enabled timeline slider, volume controls, and metadata (native `Quickshell.Services.Mpris`, no extra daemons).
-- **Fast App Launcher**: Desktop application scanner with icon path matching and flatpak walk-pruning. Caches results and re-scans when packages change.
-- **Wallpaper Selector**: Dynamic grid with parallel thumbnail generation. Sets wallpapers via `awww` with Wallust palette transitions.
-- **SwayNC Notification Panel**: Notification popups and history styled to match the notch. QuickShell hosts the notification D-Bus interface directly.
+- **Tab 0 — MPRIS Media Controller**: Fully functional music controller with dynamic album art, circular visualizer, seek-enabled timeline slider, volume/mic controls, and metadata (native `Quickshell.Services.Mpris`, no extra daemons).
+- **Tab 1 — Fast App Launcher**: Desktop application scanner with icon path matching and flatpak walk-pruning. Caches results and re-scans when packages change.
+- **Tab 2 — Wallpaper Selector**: Dynamic grid with parallel thumbnail generation. Sets wallpapers via `awww` with Wallust palette transitions.
+- **Tab 3 — Hardware Stats Dashboard**: Real-time graphs for CPU, RAM, and Network load using custom sparkline canvas paths, plus disk storage tracking. Polling sleeps while the tab is hidden (0% idle overhead) and the polling interval is configurable.
+- **Audio Routing Drawer**: Dedicated menu for switching audio sinks, sources, and controlling per-stream volume via PipeWire / WirePlumber.
 - **Wi-Fi & Bluetooth Panels**: Connect to networks, toggle devices, and manage saved connections via `nmcli` and `bluetoothctl` backends.
 - **Audio Visualizer**: CAVA-driven reactive bars that animate when audio plays and hide when idle.
+- **Notification Center**: Notification history styled to match the notch. QuickShell hosts the notification D-Bus interface directly.
 - **Settings Controller**: Adjust animation physics, visualizer styles, polling rates, notch geometry, and Hyprland options — all applied live, persisted across restarts.
 
 ---
@@ -126,15 +127,15 @@ The notch reads its accent color from the Wallust shell template. Set up Wallust
 mkdir -p ~/.config/wallust
 ```
 
-Create `~/.config/wallust/wallust.toml` (minimal example):
+Create `~/.config/wallust/wallust.toml` (Wallust v4 syntax):
 
 ```toml
-wallpaper = "~/.config/wallust/current_wallpaper"   # path to your wallpaper
-backend = "wal"
-palette = 16
+backend = "resized"
+palette = "salience"
+style = "dark"
 
-[template]
-  "shell-colors" = { output = "~/.cache/wal/colors.sh" }
+[templates]
+shell-colors = { template = "colors.sh", target = "~/.cache/wal/colors.sh" }
 ```
 
 Then generate the palette once:
@@ -226,8 +227,10 @@ Socket: `/tmp/quickshell-notch.sock` — control via `scripts/notch/notch_ipc.py
 |---------|--------|
 | `toggle` | Expand/collapse notch |
 | `close` | Collapse notch |
-| `walls` | Toggle wallpaper tab |
-| `apps` | Toggle app launcher tab |
+| `apps` | Toggle app launcher tab (Tab 1) |
+| `walls` | Toggle wallpaper selector tab (Tab 2) |
+| `audio` | Toggle audio routing drawer |
+| `settings` | Toggle settings window |
 | `osd:vol:{0-100}` | Show volume OSD |
 | `osd:bri:{0-100}` | Show brightness OSD |
 
@@ -238,16 +241,21 @@ Socket: `/tmp/quickshell-notch.sock` — control via `scripts/notch/notch_ipc.py
 ```
 ~/.config/quickshell/
 ├── shell.qml                      # Main entry point (LayerShell window + input mask)
-├── components/                    # QML layouts and tabs
-│   ├── TopNotch.qml               # Primary notch: pill, tabs, media, stats, visualizer
-│   ├── AppLauncher.qml            # App grid launcher with cached matching
-│   ├── WallpaperSelector.qml      # Wallpaper grid selector
+├── components/                    # Modular QML layouts and tabs
+│   ├── TopNotch.qml               # Primary notch orchestrator & geometry state machine
+│   ├── CompactPill.qml            # Collapsed notch: clock, workspace dots, CAVA visualizer
+│   ├── MediaController.qml        # Tab 0: MPRIS media controls, circular visualizer, sliders
+│   ├── AppLauncher.qml            # Tab 1: App grid launcher with cached matching
+│   ├── WallpaperSelector.qml      # Tab 2: Wallpaper grid selector & thumbnail cache
+│   ├── HardwareStats.qml          # Tab 3: Real-time CPU/RAM/Disk/Network gauges
+│   ├── StatusBar.qml              # Expanded header bar, segmented tab switcher, battery capsule
+│   ├── OsdOverlay.qml             # Volume/brightness OSD popup with rotating icon impulse
+│   ├── AudioMenu.qml              # Audio sink/source switcher and stream controls
 │   ├── WifiMenu.qml               # Wi-Fi networks panel
 │   ├── BluetoothMenu.qml          # Bluetooth devices panel
 │   ├── PowerMenu.qml              # Power actions overlay
+│   ├── NotificationHistory.qml    # Notification history drawer & D-Bus integration
 │   ├── SettingsWindow.qml         # Configuration options panel
-│   ├── NotificationPopups.qml     # SwayNC-styled notification popups
-│   ├── NotificationHistory.qml    # Notification history view
 │   ├── CustomSlider.qml           # Styled slider
 │   ├── CustomSwitch.qml           # Styled toggle switch
 │   ├── M3Icon.qml                 # Nerd Font glyph → M3 SVG icon mapper
@@ -257,25 +265,32 @@ Socket: `/tmp/quickshell-notch.sock` — control via `scripts/notch/notch_ipc.py
 │   │   ├── launch_quickshell.sh   # Clean relaunch (kills strays first)
 │   │   ├── validate_codebase.sh   # QML/Python/Bash validation pipeline
 │   │   ├── sandbox.sh             # Non-disruptive test instance launcher
+│   │   ├── test_all_features.py   # Comprehensive automated test suite
+│   │   ├── atomic_write.py        # Crash-resilient atomic file write helper
+│   │   ├── process_utils.py       # PR_SET_PDEATHSIG child process lifecycle safety
 │   │   ├── osd.sh                 # Volume/brightness OSD helper
 │   │   └── download_m3_icons.sh   # Fetches Material Symbols SVGs
 │   ├── desktop/
 │   │   ├── get_apps.py            # Desktop entry scanner with caching
 │   │   ├── scan_wallpapers.py     # Parallel wallpaper thumbnail generator
 │   │   ├── apply_wallpaper.sh     # awww-daemon wallpaper setter
-│   │   └── get_wallust_colors.sh  # Reads accent color from wal cache
+│   │   ├── get_wallust_colors.sh  # Reads accent color from wal cache
+│   │   ├── get_device_levels.py   # Audio (wpctl), brightness, battery sysfs poller
+│   │   ├── get_system_info.py     # Zero-dependency /proc parser (CPU, RAM, Disk, Net)
+│   │   └── manage_audio.py        # PipeWire / WirePlumber audio stream & device manager
 │   ├── hyprland/
 │   │   ├── apply_all_settings.py  # Atomic dual-write of notch+hypr settings
 │   │   ├── apply_hypr_option.py   # hyprctl live-apply (lua-aware fallback)
 │   │   ├── persist_hypr_state.py  # Writes lua + conf persistence files
-│   │   └── set_hypr_option.sh     # Shell wrapper for live apply
+│   │   ├── set_hypr_option.sh     # Shell wrapper for live apply
+│   │   ├── get_hypr_options.py    # Reads active Hyprland options
+│   │   └── hypr_keymap.py         # Hyprland option keys and type converters
 │   ├── network/
 │   │   ├── manage_wifi.py         # nmcli backend (scan/connect/status)
 │   │   └── manage_bluetooth.py    # bluetoothctl backend
 │   └── notch/
 │       ├── notch_ipc.py           # IPC socket client (keybind commands)
 │       ├── get_notch_settings.py  # Reads notch_settings.json (defaults live here)
-│       ├── set_notch_option.sh    # Writes notch settings
 │       └── stream_audio_visualizer.py  # CAVA child → JSON stream (pdeathsig)
 ├── theme/
 │   └── Style.qml                  # Global colors, fonts, radii

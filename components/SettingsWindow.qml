@@ -5,7 +5,7 @@
  *   - Hyprland Options: Layout, Gaps, Rounding, Borders, Opacity, Blur, Shadow, Animations, Input
  *   - Notch Island Options: Compact Width, Corner Radius, Dripping Ears, Workspaces, Animations
  *   - Music Visualizer Options: Styles (Bars/Wave/Pulsar), Heights, Spectrum Count, Timeouts
- *   - System & Drawers: Launcher Columns, Magic Highlight, Wallpapers, Clock, Battery, OSD, Stats
+ *   - System & Drawers: Magic Highlight, Wallpapers, Clock, Battery, OSD, Stats
  *   - Atomic Dual-Write persistence to ~/.config/hypr/quickshell_hypr.{lua,conf} and notch_settings.json
  */
 
@@ -1373,17 +1373,6 @@ PanelWindow {
                                     spacing: 8
                                     M3Icon { name: "apps"; size: 14; color: Style.accent }
                                     Text { text: "Application Launcher & Wallpapers Grid"; font.family: Style.fontFamily; font.pixelSize: 12; font.weight: Font.Bold; color: Style.textSecondary }
-                                }
-
-                                ColumnLayout {
-                                    Layout.fillWidth: true; spacing: 4
-                                    RowLayout {
-                                        Layout.fillWidth: true
-                                        Text { text: "Launcher Grid Columns"; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
-                                        Item { Layout.fillWidth: true }
-                                        Text { text: root.appColumnsVal + " Columns"; font.family: Style.fontFamilyMono; font.pixelSize: 12; font.weight: Font.Bold; color: Style.accent }
-                                    }
-                                    CustomSlider { Layout.fillWidth: true; from: 3; to: 6; stepSize: 1; value: root.appColumnsVal; onMoved: function(val) { root.appColumnsVal = Math.round(val); root.hasPendingChanges = true; } }
                                 }
 
                                 RowLayout {

@@ -4,6 +4,7 @@ current_wallpaper
 *.qslog
 nohup.out
 /tmp/
+test_report.md
 
 # Ignore local developer files and guidelines
 AGENTS.md
