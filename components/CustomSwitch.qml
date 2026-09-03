@@ -3,7 +3,7 @@
  *
  * Provides an authentic Apple-style toggle switch:
  *   - Spring-animated sliding circular knob with tactile micro-scaling
- *   - Smooth animated track transitions (Apple System Green #30D158 when active vs dark gray #39393D inactive)
+ *   - Smooth animated track transitions (Wallust System Accent when active vs dark gray #39393D inactive)
  */
 
 import QtQuick
@@ -26,7 +26,7 @@ Item {
         id: track
         anchors.fill: parent
         radius: 12
-        color: root.checked ? Style.success : "#39393D"
+        color: root.checked ? Style.accent : "#39393D"
 
         Behavior on color {
             ColorAnimation { duration: Style.animNormal; easing.type: Easing.OutQuad }

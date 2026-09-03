@@ -4,7 +4,9 @@
  * Maps icon names, SF Symbol identifiers, and legacy glyphs to local SVG assets:
  *   - Automatically resolves SVG assets relative to component directory
  *   - Applies dynamic ColorOverlay with animated color transitions
- *   - Supports asynchronous SVG rasterization with custom sourceSize constraints
+ *   - High-fidelity vector SVG rendering without box-filter mipmap blurring
+ *   - Clean single-FBO ColorOverlay pipeline with dynamic color transitions
+ *   - Native vector resolution for UI icons with auto-scaling for sizes > 48px
  */
 
 import QtQuick
@@ -110,11 +112,9 @@ Item {
         id: img
         anchors.fill: parent
         source: name !== "" ? Qt.resolvedUrl("../assets/icons/" + getSvgName(name) + ".svg") : ""
-        sourceSize: Qt.size(Math.max(24, Math.min(64, size * 2)), Math.max(24, Math.min(64, size * 2)))
+        sourceSize: root.size > 48 ? Qt.size(root.size * 2, root.size * 2) : undefined
         fillMode: Image.PreserveAspectFit
-        asynchronous: true
         smooth: true
-        mipmap: true
         antialiasing: true
         visible: false
     }
@@ -125,7 +125,7 @@ Item {
         color: root.color
         smooth: true
         antialiasing: true
-        visible: img.status === Image.Ready
+        visible: name !== "" && img.status === Image.Ready
 
         Behavior on color { ColorAnimation { duration: 150 } }
     }
