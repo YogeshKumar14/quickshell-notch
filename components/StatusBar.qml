@@ -5,7 +5,6 @@
  *   - Clean borderless macOS tab icons ("home", "inbox", "wallpaper", "trending_up")
  *   - Center green hardware camera privacy indicator dot
  *   - Quick-action toggles: Wi-Fi, Bluetooth, Notification Bell with badge, Power
- *   - Wallpaper / Eyedropper palette icon
  *   - Settings gear icon
  *   - macOS Battery capsule placed on far right: [percentage]% [battery pill]
  */
@@ -137,7 +136,7 @@ Item {
 
         Item { Layout.fillWidth: true }
 
-        // Right Controls: Quick Toggles, Palette, Settings, and macOS Battery Display
+        // Right Controls: Quick Toggles, Settings, and macOS Battery Display
         RowLayout {
             spacing: 8
             Layout.alignment: Qt.AlignVCenter
@@ -258,29 +257,6 @@ Item {
 
             // Subtle spacer separating system quick-toggles from NotchNook tools
             Item { width: 4; height: 16 }
-
-            // Eyedropper / Wallpaper Palette Icon (Matching Reference)
-            Item {
-                width: 14; height: 16
-                scale: (root.buttonAnims && eyeM.pressed) ? 0.85 : ((root.buttonAnims && eyeM.containsMouse) ? 1.15 : 1.0)
-                Behavior on scale { enabled: root.buttonAnims; SpringAnimation { spring: root.tabSpringTension; damping: root.tabSpringDamping } }
-
-                M3Icon {
-                    anchors.centerIn: parent
-                    name: "eyedropper"
-                    size: 13
-                    color: eyeM.containsMouse ? "#FFFFFF" : "#AEAEB2"
-                    Behavior on color { ColorAnimation { duration: root.buttonSpeed; easing.type: Easing.OutQuad } }
-                }
-
-                MouseArea {
-                    id: eyeM
-                    anchors.fill: parent
-                    hoverEnabled: true
-                    cursorShape: Qt.PointingHandCursor
-                    onClicked: root.tabSelected(2)
-                }
-            }
 
             // Settings Gear Icon (Matching Reference)
             Item {
