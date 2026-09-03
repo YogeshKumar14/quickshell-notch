@@ -104,11 +104,34 @@ QtObject {
     readonly property int radiusMedium: 10
     readonly property int radiusLarge: 14
 
+    // === System Typography Resolution ===
+    function _resolveFont(candidates, fallback) {
+        var avail = Qt.fontFamilies();
+        for (var i = 0; i < candidates.length; i++) {
+            if (avail.indexOf(candidates[i]) !== -1) {
+                return candidates[i];
+            }
+        }
+        return fallback;
+    }
+
     // === System Typography ===
-    readonly property string fontFamily: "-apple-system, BlinkMacSystemFont, 'SF Pro Display', 'SF Pro Text', 'Helvetica Neue', 'Cantarell', sans-serif"
-    readonly property string fontFamilyMono: "'SF Pro Mono', 'Menlo', 'Monaco', monospace"
+    /** Primary body and interface font family (Apple SF Pro / SF Pro Text / Fallbacks) */
+    readonly property string fontFamily: _resolveFont(["SF Pro", "SF Pro Text", "Inter", "Helvetica Neue", "Cantarell"], "sans-serif")
+    /** Display and prominent heading font family (Apple SF Pro Display / SF Pro / Fallbacks) */
+    readonly property string fontFamilyDisplay: _resolveFont(["SF Pro Display", "SF Pro", "Inter", "Helvetica Neue", "Cantarell"], "sans-serif")
+    /** Monospace and tabular numbers font family (Apple SF Mono / Fallbacks) */
+    readonly property string fontFamilyMono: _resolveFont(["SF Mono", "SF Pro Mono", "Menlo", "Monaco"], "monospace")
+    readonly property int fontSizeTiny: 8
+    readonly property int fontSizeCaption: 10
     readonly property int fontSizeSmall: 11
     readonly property int fontSizeNormal: 13
     readonly property int fontSizeLarge: 15
     readonly property int fontSizeTitle: 18
+    readonly property int fontWeightLight: Font.Light
+    readonly property int fontWeightRegular: Font.Normal
+    readonly property int fontWeightMedium: Font.Medium
+    readonly property int fontWeightSemibold: Font.DemiBold
+    readonly property int fontWeightBold: Font.Bold
+    readonly property int fontWeightBlack: Font.Black
 }

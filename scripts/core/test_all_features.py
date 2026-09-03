@@ -121,9 +121,46 @@ def test_module_1():
         for match in re.findall(r'Style\.(\w+)', text):
             used_props.add(match)
 
-    missing = used_props - defined_props
+    # 1.5 macOS Typography Suite Assets
+    t0 = time.perf_counter()
+    fonts_dir = BASE_DIR / "assets" / "fonts"
+    expected_fonts = ["SF-Pro.ttf", "SFMono-Regular.otf", "SFMono-Bold.otf", "SF-Pro-Display-Bold.otf"]
+    found_fonts = [f.name for f in fonts_dir.glob("*") if f.name in expected_fonts]
     dur = time.perf_counter() - t0
-    record(mod, f"Theme Token Resolution ({len(used_props)} Style tokens)", len(missing) == 0, dur, f"Missing properties: {missing}")
+    record(mod, "Apple macOS SF Pro & SF Mono Asset Suite", len(found_fonts) == len(expected_fonts), dur, f"Missing: {set(expected_fonts) - set(found_fonts)}")
+
+    # 1.6 Style Typography Hierarchy Tokens
+    t0 = time.perf_counter()
+    expected_typo_tokens = [
+        "fontFamily", "fontFamilyDisplay", "fontFamilyMono",
+        "fontSizeTiny", "fontSizeCaption", "fontSizeSmall", "fontSizeNormal", "fontSizeLarge", "fontSizeTitle",
+        "fontWeightLight", "fontWeightRegular", "fontWeightMedium", "fontWeightSemibold", "fontWeightBold", "fontWeightBlack"
+    ]
+    missing_typo = set(expected_typo_tokens) - defined_props
+    dur = time.perf_counter() - t0
+    record(mod, "Style.qml Apple Typography Hierarchy Tokens", len(missing_typo) == 0, dur, f"Missing typography tokens: {missing_typo}")
+
+    # 1.7 Zero Unstyled Text Declarations in Codebase
+    t0 = time.perf_counter()
+    unstyled_texts = []
+    for qml in qml_files:
+        with open(qml, "r", encoding="utf-8") as f:
+            lines = f.read().splitlines()
+        for i, line in enumerate(lines):
+            if "Text {" in line or "Text{" in line:
+                depth = 0
+                block_lines = []
+                for j in range(i, len(lines)):
+                    l = lines[j]
+                    block_lines.append(l)
+                    depth += l.count("{") - l.count("}")
+                    if depth == 0:
+                        break
+                block_str = "\n".join(block_lines)
+                if "font.family" not in block_str and "font:" not in block_str:
+                    unstyled_texts.append(f"{qml.name}:{i+1}")
+    dur = time.perf_counter() - t0
+    record(mod, "Zero Unstyled Text Declarations (100% font.family coverage)", len(unstyled_texts) == 0, dur, f"Unstyled: {unstyled_texts}")
 
 
 # ==============================================================================

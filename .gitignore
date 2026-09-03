@@ -2,6 +2,7 @@
 notch_settings.json
 current_wallpaper
 *.qslog
+*.log
 nohup.out
 /tmp/
 test_report.md

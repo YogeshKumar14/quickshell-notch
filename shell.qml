@@ -20,7 +20,22 @@ import "theme"
 
 Scope {
     id: root
-    
+
+    // === Apple macOS San Francisco (SF Pro) & SF Mono Font Loaders ===
+    FontLoader { id: fontSfPro; source: Qt.resolvedUrl("assets/fonts/SF-Pro.ttf") }
+    FontLoader { id: fontSfProTextReg; source: Qt.resolvedUrl("assets/fonts/SF-Pro-Text-Regular.otf") }
+    FontLoader { id: fontSfProTextMed; source: Qt.resolvedUrl("assets/fonts/SF-Pro-Text-Medium.otf") }
+    FontLoader { id: fontSfProTextSemi; source: Qt.resolvedUrl("assets/fonts/SF-Pro-Text-Semibold.otf") }
+    FontLoader { id: fontSfProTextBold; source: Qt.resolvedUrl("assets/fonts/SF-Pro-Text-Bold.otf") }
+    FontLoader { id: fontSfProDispReg; source: Qt.resolvedUrl("assets/fonts/SF-Pro-Display-Regular.otf") }
+    FontLoader { id: fontSfProDispMed; source: Qt.resolvedUrl("assets/fonts/SF-Pro-Display-Medium.otf") }
+    FontLoader { id: fontSfProDispSemi; source: Qt.resolvedUrl("assets/fonts/SF-Pro-Display-Semibold.otf") }
+    FontLoader { id: fontSfProDispBold; source: Qt.resolvedUrl("assets/fonts/SF-Pro-Display-Bold.otf") }
+    FontLoader { id: fontSfMonoReg; source: Qt.resolvedUrl("assets/fonts/SFMono-Regular.otf") }
+    FontLoader { id: fontSfMonoMed; source: Qt.resolvedUrl("assets/fonts/SFMono-Medium.otf") }
+    FontLoader { id: fontSfMonoSemi; source: Qt.resolvedUrl("assets/fonts/SFMono-Semibold.otf") }
+    FontLoader { id: fontSfMonoBold; source: Qt.resolvedUrl("assets/fonts/SFMono-Bold.otf") }
+
     // Global Notification Engine
     ListModel {
         id: notifHistoryModel

@@ -407,7 +407,7 @@ PanelWindow {
                     }
                     Text {
                         text: "Settings"
-                        font.family: Style.fontFamily
+                        font.family: Style.fontFamilyDisplay
                         font.pixelSize: 16
                         font.weight: Font.Bold
                         color: Style.textPrimary
@@ -607,13 +607,13 @@ PanelWindow {
                                             Rectangle {
                                                 Layout.fillWidth: true; Layout.fillHeight: true; radius: 14
                                                 color: root.layoutVal === "dwindle" ? Style.accent : "transparent"
-                                                Text { anchors.centerIn: parent; text: "Dwindle"; font.pixelSize: 11; font.weight: Font.Bold; color: root.layoutVal === "dwindle" ? Style.textOnAccent : Style.textPrimary }
+                                                Text { anchors.centerIn: parent; text: "Dwindle"; font.family: Style.fontFamily; font.pixelSize: 11; font.weight: Font.Bold; color: root.layoutVal === "dwindle" ? Style.textOnAccent : Style.textPrimary }
                                                 MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { root.layoutVal = "dwindle"; root.hasPendingChanges = true; } }
                                             }
                                             Rectangle {
                                                 Layout.fillWidth: true; Layout.fillHeight: true; radius: 14
                                                 color: root.layoutVal === "master" ? Style.accent : "transparent"
-                                                Text { anchors.centerIn: parent; text: "Master"; font.pixelSize: 11; font.weight: Font.Bold; color: root.layoutVal === "master" ? Style.textOnAccent : Style.textPrimary }
+                                                Text { anchors.centerIn: parent; text: "Master"; font.family: Style.fontFamily; font.pixelSize: 11; font.weight: Font.Bold; color: root.layoutVal === "master" ? Style.textOnAccent : Style.textPrimary }
                                                 MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { root.layoutVal = "master"; root.hasPendingChanges = true; } }
                                             }
                                         }
@@ -625,7 +625,7 @@ PanelWindow {
                                     Layout.fillWidth: true; spacing: 4
                                     RowLayout {
                                         Layout.fillWidth: true
-                                        Text { text: "Inner Window Gaps"; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
+                                        Text { text: "Inner Window Gaps"; font.family: Style.fontFamily; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
                                         Item { Layout.fillWidth: true }
                                         Text { text: root.gapsInVal + " px"; font.family: Style.fontFamilyMono; font.pixelSize: 12; font.weight: Font.Bold; color: Style.accent }
                                     }
@@ -637,7 +637,7 @@ PanelWindow {
                                     Layout.fillWidth: true; spacing: 4
                                     RowLayout {
                                         Layout.fillWidth: true
-                                        Text { text: "Outer Screen Gaps"; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
+                                        Text { text: "Outer Screen Gaps"; font.family: Style.fontFamily; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
                                         Item { Layout.fillWidth: true }
                                         Text { text: root.gapsOutVal + " px"; font.family: Style.fontFamilyMono; font.pixelSize: 12; font.weight: Font.Bold; color: Style.accent }
                                     }
@@ -671,7 +671,7 @@ PanelWindow {
                                     Layout.fillWidth: true; spacing: 4
                                     RowLayout {
                                         Layout.fillWidth: true
-                                        Text { text: "Window Corner Rounding"; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
+                                        Text { text: "Window Corner Rounding"; font.family: Style.fontFamily; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
                                         Item { Layout.fillWidth: true }
                                         Text { text: root.roundingVal + " px"; font.family: Style.fontFamilyMono; font.pixelSize: 12; font.weight: Font.Bold; color: Style.accent }
                                     }
@@ -683,7 +683,7 @@ PanelWindow {
                                     Layout.fillWidth: true; spacing: 4
                                     RowLayout {
                                         Layout.fillWidth: true
-                                        Text { text: "Border Thickness"; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
+                                        Text { text: "Border Thickness"; font.family: Style.fontFamily; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
                                         Item { Layout.fillWidth: true }
                                         Text { text: root.borderWidthVal + " px"; font.family: Style.fontFamilyMono; font.pixelSize: 12; font.weight: Font.Bold; color: Style.accent }
                                     }
@@ -695,7 +695,7 @@ PanelWindow {
                                     Layout.fillWidth: true; spacing: 4
                                     RowLayout {
                                         Layout.fillWidth: true
-                                        Text { text: "Active Window Opacity"; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
+                                        Text { text: "Active Window Opacity"; font.family: Style.fontFamily; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
                                         Item { Layout.fillWidth: true }
                                         Text { text: Math.round(root.activeOpacityVal * 100) + " %"; font.family: Style.fontFamilyMono; font.pixelSize: 12; font.weight: Font.Bold; color: Style.accent }
                                     }
@@ -707,7 +707,7 @@ PanelWindow {
                                     Layout.fillWidth: true; spacing: 4
                                     RowLayout {
                                         Layout.fillWidth: true
-                                        Text { text: "Inactive Window Opacity"; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
+                                        Text { text: "Inactive Window Opacity"; font.family: Style.fontFamily; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
                                         Item { Layout.fillWidth: true }
                                         Text { text: Math.round(root.inactiveOpacityVal * 100) + " %"; font.family: Style.fontFamilyMono; font.pixelSize: 12; font.weight: Font.Bold; color: Style.accent }
                                     }
@@ -717,7 +717,7 @@ PanelWindow {
                                 // Dim Inactive Windows Switch
                                 RowLayout {
                                     Layout.fillWidth: true
-                                    Text { text: "Dim Inactive Windows"; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
+                                    Text { text: "Dim Inactive Windows"; font.family: Style.fontFamily; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
                                     Item { Layout.fillWidth: true }
                                     CustomSwitch { checked: root.dimInactiveVal; onToggled: function(val) { root.dimInactiveVal = val; root.hasPendingChanges = true; } }
                                 }
@@ -746,7 +746,7 @@ PanelWindow {
 
                                 RowLayout {
                                     Layout.fillWidth: true
-                                    Text { text: "Dual Kawase Background Blur"; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
+                                    Text { text: "Dual Kawase Background Blur"; font.family: Style.fontFamily; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
                                     Item { Layout.fillWidth: true }
                                     CustomSwitch { checked: root.blurEnabledVal; onToggled: function(val) { root.blurEnabledVal = val; root.hasPendingChanges = true; } }
                                 }
@@ -755,7 +755,7 @@ PanelWindow {
                                     Layout.fillWidth: true; spacing: 4; visible: root.blurEnabledVal
                                     RowLayout {
                                         Layout.fillWidth: true
-                                        Text { text: "Blur Passes"; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
+                                        Text { text: "Blur Passes"; font.family: Style.fontFamily; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
                                         Item { Layout.fillWidth: true }
                                         Text { text: root.blurPassesVal.toString(); font.family: Style.fontFamilyMono; font.pixelSize: 12; font.weight: Font.Bold; color: Style.accent }
                                     }
@@ -764,7 +764,7 @@ PanelWindow {
 
                                 RowLayout {
                                     Layout.fillWidth: true
-                                    Text { text: "Window Drop Shadow"; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
+                                    Text { text: "Window Drop Shadow"; font.family: Style.fontFamily; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
                                     Item { Layout.fillWidth: true }
                                     CustomSwitch { checked: root.shadowEnabledVal; onToggled: function(val) { root.shadowEnabledVal = val; root.hasPendingChanges = true; } }
                                 }
@@ -773,7 +773,7 @@ PanelWindow {
                                     Layout.fillWidth: true; spacing: 4; visible: root.shadowEnabledVal
                                     RowLayout {
                                         Layout.fillWidth: true
-                                        Text { text: "Shadow Spread Range"; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
+                                        Text { text: "Shadow Spread Range"; font.family: Style.fontFamily; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
                                         Item { Layout.fillWidth: true }
                                         Text { text: root.shadowRangeVal + " px"; font.family: Style.fontFamilyMono; font.pixelSize: 12; font.weight: Font.Bold; color: Style.accent }
                                     }
@@ -804,7 +804,7 @@ PanelWindow {
 
                                 RowLayout {
                                     Layout.fillWidth: true
-                                    Text { text: "Hyprland Window Animations"; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
+                                    Text { text: "Hyprland Window Animations"; font.family: Style.fontFamily; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
                                     Item { Layout.fillWidth: true }
                                     CustomSwitch { checked: root.animationsEnabledVal; onToggled: function(val) { root.animationsEnabledVal = val; root.hasPendingChanges = true; } }
                                 }
@@ -813,7 +813,7 @@ PanelWindow {
                                     Layout.fillWidth: true; spacing: 4
                                     RowLayout {
                                         Layout.fillWidth: true
-                                        Text { text: "Pointer Sensitivity"; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
+                                        Text { text: "Pointer Sensitivity"; font.family: Style.fontFamily; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
                                         Item { Layout.fillWidth: true }
                                         Text { text: root.inputSensitivityVal.toFixed(2); font.family: Style.fontFamilyMono; font.pixelSize: 12; font.weight: Font.Bold; color: Style.accent }
                                     }
@@ -822,14 +822,14 @@ PanelWindow {
 
                                 RowLayout {
                                     Layout.fillWidth: true
-                                    Text { text: "Touchpad Tap-to-Click"; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
+                                    Text { text: "Touchpad Tap-to-Click"; font.family: Style.fontFamily; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
                                     Item { Layout.fillWidth: true }
                                     CustomSwitch { checked: root.inputTapToClickVal; onToggled: function(val) { root.inputTapToClickVal = val; root.hasPendingChanges = true; } }
                                 }
 
                                 RowLayout {
                                     Layout.fillWidth: true
-                                    Text { text: "Touchpad Natural Scrolling"; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
+                                    Text { text: "Touchpad Natural Scrolling"; font.family: Style.fontFamily; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
                                     Item { Layout.fillWidth: true }
                                     CustomSwitch { checked: root.inputNaturalScrollVal; onToggled: function(val) { root.inputNaturalScrollVal = val; root.hasPendingChanges = true; } }
                                 }
@@ -871,7 +871,7 @@ PanelWindow {
                                     Layout.fillWidth: true; spacing: 4
                                     RowLayout {
                                         Layout.fillWidth: true
-                                        Text { text: "Compact Idle Pill Width"; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
+                                        Text { text: "Compact Idle Pill Width"; font.family: Style.fontFamily; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
                                         Item { Layout.fillWidth: true }
                                         Text { text: root.notchCompactWidth + " px"; font.family: Style.fontFamilyMono; font.pixelSize: 12; font.weight: Font.Bold; color: Style.accent }
                                     }
@@ -883,7 +883,7 @@ PanelWindow {
                                     Layout.fillWidth: true; spacing: 4
                                     RowLayout {
                                         Layout.fillWidth: true
-                                        Text { text: "Bottom Corner Squircle Radius"; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
+                                        Text { text: "Bottom Corner Squircle Radius"; font.family: Style.fontFamily; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
                                         Item { Layout.fillWidth: true }
                                         Text { text: root.notchBottomRadius + " px"; font.family: Style.fontFamilyMono; font.pixelSize: 12; font.weight: Font.Bold; color: Style.accent }
                                     }
@@ -893,7 +893,7 @@ PanelWindow {
                                 // Dripping Ears
                                 RowLayout {
                                     Layout.fillWidth: true
-                                    Text { text: "Seamless Dripping Inverted Ears Canvas"; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
+                                    Text { text: "Seamless Dripping Inverted Ears Canvas"; font.family: Style.fontFamily; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
                                     Item { Layout.fillWidth: true }
                                     CustomSwitch { checked: root.drippingEarsVal; onToggled: function(val) { root.drippingEarsVal = val; root.hasPendingChanges = true; } }
                                 }
@@ -922,7 +922,7 @@ PanelWindow {
 
                                 RowLayout {
                                     Layout.fillWidth: true
-                                    Text { text: "Show Workspace Indicator on Switch"; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
+                                    Text { text: "Show Workspace Indicator on Switch"; font.family: Style.fontFamily; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
                                     Item { Layout.fillWidth: true }
                                     CustomSwitch { checked: root.workspaceOverlayVal; onToggled: function(val) { root.workspaceOverlayVal = val; root.hasPendingChanges = true; } }
                                 }
@@ -931,7 +931,7 @@ PanelWindow {
                                     Layout.fillWidth: true; spacing: 4; visible: root.workspaceOverlayVal
                                     RowLayout {
                                         Layout.fillWidth: true
-                                        Text { text: "Workspace Overlay Auto-Dismiss Timeout"; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
+                                        Text { text: "Workspace Overlay Auto-Dismiss Timeout"; font.family: Style.fontFamily; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
                                         Item { Layout.fillWidth: true }
                                         Text { text: (root.workspaceTimeoutVal / 1000.0).toFixed(1) + " s"; font.family: Style.fontFamilyMono; font.pixelSize: 12; font.weight: Font.Bold; color: Style.accent }
                                     }
@@ -940,7 +940,7 @@ PanelWindow {
 
                                 RowLayout {
                                     Layout.fillWidth: true; visible: root.workspaceOverlayVal
-                                    Text { text: "Indicator Physics Style"; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
+                                    Text { text: "Indicator Physics Style"; font.family: Style.fontFamily; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
                                     Item { Layout.fillWidth: true }
                                     Rectangle {
                                         implicitWidth: 160; implicitHeight: 28; radius: 14; color: "#2C2C2E"
@@ -949,13 +949,13 @@ PanelWindow {
                                             Rectangle {
                                                 Layout.fillWidth: true; Layout.fillHeight: true; radius: 14
                                                 color: root.wsAnimTypeVal === "stretch" ? Style.accent : "transparent"
-                                                Text { anchors.centerIn: parent; text: "Stretch"; font.pixelSize: 11; font.weight: Font.Bold; color: root.wsAnimTypeVal === "stretch" ? Style.textOnAccent : Style.textPrimary }
+                                                Text { anchors.centerIn: parent; text: "Stretch"; font.family: Style.fontFamily; font.pixelSize: 11; font.weight: Font.Bold; color: root.wsAnimTypeVal === "stretch" ? Style.textOnAccent : Style.textPrimary }
                                                 MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { root.wsAnimTypeVal = "stretch"; root.hasPendingChanges = true; } }
                                             }
                                             Rectangle {
                                                 Layout.fillWidth: true; Layout.fillHeight: true; radius: 14
                                                 color: root.wsAnimTypeVal === "smooth" ? Style.accent : "transparent"
-                                                Text { anchors.centerIn: parent; text: "Smooth"; font.pixelSize: 11; font.weight: Font.Bold; color: root.wsAnimTypeVal === "smooth" ? Style.textOnAccent : Style.textPrimary }
+                                                Text { anchors.centerIn: parent; text: "Smooth"; font.family: Style.fontFamily; font.pixelSize: 11; font.weight: Font.Bold; color: root.wsAnimTypeVal === "smooth" ? Style.textOnAccent : Style.textPrimary }
                                                 MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { root.wsAnimTypeVal = "smooth"; root.hasPendingChanges = true; } }
                                             }
                                         }
@@ -987,7 +987,7 @@ PanelWindow {
                                 // Quick Motion Presets
                                 RowLayout {
                                     Layout.fillWidth: true
-                                    Text { text: "Motion Dynamics Presets"; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
+                                    Text { text: "Motion Dynamics Presets"; font.family: Style.fontFamily; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
                                     Item { Layout.fillWidth: true }
                                     Rectangle {
                                         implicitWidth: 260; implicitHeight: 28; radius: 14; color: "#2C2C2E"
@@ -999,7 +999,7 @@ PanelWindow {
                                             Rectangle {
                                                 Layout.fillWidth: true; Layout.fillHeight: true; radius: 14
                                                 color: parent.parent.activePreset === "bouncy" ? Style.accent : "transparent"
-                                                Text { anchors.centerIn: parent; text: "Bouncy"; font.pixelSize: 11; font.weight: Font.Bold; color: parent.parent.parent.activePreset === "bouncy" ? Style.textOnAccent : Style.textPrimary }
+                                                Text { anchors.centerIn: parent; text: "Bouncy"; font.family: Style.fontFamily; font.pixelSize: 11; font.weight: Font.Bold; color: parent.parent.parent.activePreset === "bouncy" ? Style.textOnAccent : Style.textPrimary }
                                                 MouseArea {
                                                     anchors.fill: parent; cursorShape: Qt.PointingHandCursor
                                                     onClicked: {
@@ -1012,7 +1012,7 @@ PanelWindow {
                                             Rectangle {
                                                 Layout.fillWidth: true; Layout.fillHeight: true; radius: 14
                                                 color: parent.parent.activePreset === "snappy" ? Style.accent : "transparent"
-                                                Text { anchors.centerIn: parent; text: "Snappy"; font.pixelSize: 11; font.weight: Font.Bold; color: parent.parent.parent.activePreset === "snappy" ? Style.textOnAccent : Style.textPrimary }
+                                                Text { anchors.centerIn: parent; text: "Snappy"; font.family: Style.fontFamily; font.pixelSize: 11; font.weight: Font.Bold; color: parent.parent.parent.activePreset === "snappy" ? Style.textOnAccent : Style.textPrimary }
                                                 MouseArea {
                                                     anchors.fill: parent; cursorShape: Qt.PointingHandCursor
                                                     onClicked: {
@@ -1025,7 +1025,7 @@ PanelWindow {
                                             Rectangle {
                                                 Layout.fillWidth: true; Layout.fillHeight: true; radius: 14
                                                 color: parent.parent.activePreset === "gentle" ? Style.accent : "transparent"
-                                                Text { anchors.centerIn: parent; text: "Gentle"; font.pixelSize: 11; font.weight: Font.Bold; color: parent.parent.parent.activePreset === "gentle" ? Style.textOnAccent : Style.textPrimary }
+                                                Text { anchors.centerIn: parent; text: "Gentle"; font.family: Style.fontFamily; font.pixelSize: 11; font.weight: Font.Bold; color: parent.parent.parent.activePreset === "gentle" ? Style.textOnAccent : Style.textPrimary }
                                                 MouseArea {
                                                     anchors.fill: parent; cursorShape: Qt.PointingHandCursor
                                                     onClicked: {
@@ -1038,7 +1038,7 @@ PanelWindow {
                                             Rectangle {
                                                 Layout.fillWidth: true; Layout.fillHeight: true; radius: 14
                                                 color: parent.parent.activePreset === "custom" ? Style.accent : "transparent"
-                                                Text { anchors.centerIn: parent; text: "Custom"; font.pixelSize: 11; font.weight: Font.Bold; color: parent.parent.parent.activePreset === "custom" ? Style.textOnAccent : Style.textPrimary }
+                                                Text { anchors.centerIn: parent; text: "Custom"; font.family: Style.fontFamily; font.pixelSize: 11; font.weight: Font.Bold; color: parent.parent.parent.activePreset === "custom" ? Style.textOnAccent : Style.textPrimary }
                                                 MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor }
                                             }
                                         }
@@ -1050,7 +1050,7 @@ PanelWindow {
                                     Layout.fillWidth: true; spacing: 4
                                     RowLayout {
                                         Layout.fillWidth: true
-                                        Text { text: "Notch Expand / Collapse Spring Stiffness"; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
+                                        Text { text: "Notch Expand / Collapse Spring Stiffness"; font.family: Style.fontFamily; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
                                         Item { Layout.fillWidth: true }
                                         Text { text: root.expandSpringTension.toFixed(1); font.family: Style.fontFamilyMono; font.pixelSize: 12; font.weight: Font.Bold; color: Style.accent }
                                     }
@@ -1065,7 +1065,7 @@ PanelWindow {
                                     Layout.fillWidth: true; spacing: 4
                                     RowLayout {
                                         Layout.fillWidth: true
-                                        Text { text: "Notch Expand / Collapse Damping (Bounciness)"; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
+                                        Text { text: "Notch Expand / Collapse Damping (Bounciness)"; font.family: Style.fontFamily; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
                                         Item { Layout.fillWidth: true }
                                         Text { text: root.expandSpringDamping.toFixed(2); font.family: Style.fontFamilyMono; font.pixelSize: 12; font.weight: Font.Bold; color: Style.accent }
                                     }
@@ -1080,7 +1080,7 @@ PanelWindow {
                                     Layout.fillWidth: true; spacing: 4
                                     RowLayout {
                                         Layout.fillWidth: true
-                                        Text { text: "Tab Glider Switch Spring Stiffness"; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
+                                        Text { text: "Tab Glider Switch Spring Stiffness"; font.family: Style.fontFamily; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
                                         Item { Layout.fillWidth: true }
                                         Text { text: root.tabSpringTension.toFixed(1); font.family: Style.fontFamilyMono; font.pixelSize: 12; font.weight: Font.Bold; color: Style.accent }
                                     }
@@ -1095,7 +1095,7 @@ PanelWindow {
                                     Layout.fillWidth: true; spacing: 4
                                     RowLayout {
                                         Layout.fillWidth: true
-                                        Text { text: "Tab Glider Switch Damping (Bounciness)"; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
+                                        Text { text: "Tab Glider Switch Damping (Bounciness)"; font.family: Style.fontFamily; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
                                         Item { Layout.fillWidth: true }
                                         Text { text: root.tabSpringDamping.toFixed(2); font.family: Style.fontFamilyMono; font.pixelSize: 12; font.weight: Font.Bold; color: Style.accent }
                                     }
@@ -1129,14 +1129,14 @@ PanelWindow {
 
                                 RowLayout {
                                     Layout.fillWidth: true
-                                    Text { text: "Interactive Button Micro-Animations"; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
+                                    Text { text: "Interactive Button Micro-Animations"; font.family: Style.fontFamily; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
                                     Item { Layout.fillWidth: true }
                                     CustomSwitch { checked: root.buttonAnimsVal; onToggled: function(val) { root.buttonAnimsVal = val; root.hasPendingChanges = true; } }
                                 }
 
                                 RowLayout {
                                     Layout.fillWidth: true; visible: root.buttonAnimsVal
-                                    Text { text: "Animation Dynamics Profile"; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
+                                    Text { text: "Animation Dynamics Profile"; font.family: Style.fontFamily; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
                                     Item { Layout.fillWidth: true }
                                     Rectangle {
                                         implicitWidth: 210; implicitHeight: 28; radius: 14; color: "#2C2C2E"
@@ -1145,19 +1145,19 @@ PanelWindow {
                                             Rectangle {
                                                 Layout.fillWidth: true; Layout.fillHeight: true; radius: 14
                                                 color: root.buttonSpeedVal === 120 ? Style.accent : "transparent"
-                                                Text { anchors.centerIn: parent; text: "Fast"; font.pixelSize: 11; font.weight: Font.Bold; color: root.buttonSpeedVal === 120 ? Style.textOnAccent : Style.textPrimary }
+                                                Text { anchors.centerIn: parent; text: "Fast"; font.family: Style.fontFamily; font.pixelSize: 11; font.weight: Font.Bold; color: root.buttonSpeedVal === 120 ? Style.textOnAccent : Style.textPrimary }
                                                 MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { root.buttonSpeedVal = 120; root.hasPendingChanges = true; } }
                                             }
                                             Rectangle {
                                                 Layout.fillWidth: true; Layout.fillHeight: true; radius: 14
                                                 color: root.buttonSpeedVal === 180 ? Style.accent : "transparent"
-                                                Text { anchors.centerIn: parent; text: "Smooth"; font.pixelSize: 11; font.weight: Font.Bold; color: root.buttonSpeedVal === 180 ? Style.textOnAccent : Style.textPrimary }
+                                                Text { anchors.centerIn: parent; text: "Smooth"; font.family: Style.fontFamily; font.pixelSize: 11; font.weight: Font.Bold; color: root.buttonSpeedVal === 180 ? Style.textOnAccent : Style.textPrimary }
                                                 MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { root.buttonSpeedVal = 180; root.hasPendingChanges = true; } }
                                             }
                                             Rectangle {
                                                 Layout.fillWidth: true; Layout.fillHeight: true; radius: 14
                                                 color: root.buttonSpeedVal === 250 ? Style.accent : "transparent"
-                                                Text { anchors.centerIn: parent; text: "Gentle"; font.pixelSize: 11; font.weight: Font.Bold; color: root.buttonSpeedVal === 250 ? Style.textOnAccent : Style.textPrimary }
+                                                Text { anchors.centerIn: parent; text: "Gentle"; font.family: Style.fontFamily; font.pixelSize: 11; font.weight: Font.Bold; color: root.buttonSpeedVal === 250 ? Style.textOnAccent : Style.textPrimary }
                                                 MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { root.buttonSpeedVal = 250; root.hasPendingChanges = true; } }
                                             }
                                         }
@@ -1198,14 +1198,14 @@ PanelWindow {
 
                                 RowLayout {
                                     Layout.fillWidth: true
-                                    Text { text: "Compact Music Visualizer Overlay"; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
+                                    Text { text: "Compact Music Visualizer Overlay"; font.family: Style.fontFamily; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
                                     Item { Layout.fillWidth: true }
                                     CustomSwitch { checked: root.visualizerEnabledVal; onToggled: function(val) { root.visualizerEnabledVal = val; root.hasPendingChanges = true; } }
                                 }
 
                                 RowLayout {
                                     Layout.fillWidth: true; visible: root.visualizerEnabledVal
-                                    Text { text: "Visualizer Rendering Style"; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
+                                    Text { text: "Visualizer Rendering Style"; font.family: Style.fontFamily; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
                                     Item { Layout.fillWidth: true }
                                     Rectangle {
                                         implicitWidth: 210; implicitHeight: 28; radius: 14; color: "#2C2C2E"
@@ -1214,19 +1214,19 @@ PanelWindow {
                                             Rectangle {
                                                 Layout.fillWidth: true; Layout.fillHeight: true; radius: 14
                                                 color: root.visualizerStyleVal === "bars" ? Style.accent : "transparent"
-                                                Text { anchors.centerIn: parent; text: "Bars"; font.pixelSize: 11; font.weight: Font.Bold; color: root.visualizerStyleVal === "bars" ? Style.textOnAccent : Style.textPrimary }
+                                                Text { anchors.centerIn: parent; text: "Bars"; font.family: Style.fontFamily; font.pixelSize: 11; font.weight: Font.Bold; color: root.visualizerStyleVal === "bars" ? Style.textOnAccent : Style.textPrimary }
                                                 MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { root.visualizerStyleVal = "bars"; root.hasPendingChanges = true; } }
                                             }
                                             Rectangle {
                                                 Layout.fillWidth: true; Layout.fillHeight: true; radius: 14
                                                 color: root.visualizerStyleVal === "wave" ? Style.accent : "transparent"
-                                                Text { anchors.centerIn: parent; text: "Wave"; font.pixelSize: 11; font.weight: Font.Bold; color: root.visualizerStyleVal === "wave" ? Style.textOnAccent : Style.textPrimary }
+                                                Text { anchors.centerIn: parent; text: "Wave"; font.family: Style.fontFamily; font.pixelSize: 11; font.weight: Font.Bold; color: root.visualizerStyleVal === "wave" ? Style.textOnAccent : Style.textPrimary }
                                                 MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { root.visualizerStyleVal = "wave"; root.hasPendingChanges = true; } }
                                             }
                                             Rectangle {
                                                 Layout.fillWidth: true; Layout.fillHeight: true; radius: 14
                                                 color: root.visualizerStyleVal === "pulsar" ? Style.accent : "transparent"
-                                                Text { anchors.centerIn: parent; text: "Pulsar"; font.pixelSize: 11; font.weight: Font.Bold; color: root.visualizerStyleVal === "pulsar" ? Style.textOnAccent : Style.textPrimary }
+                                                Text { anchors.centerIn: parent; text: "Pulsar"; font.family: Style.fontFamily; font.pixelSize: 11; font.weight: Font.Bold; color: root.visualizerStyleVal === "pulsar" ? Style.textOnAccent : Style.textPrimary }
                                                 MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { root.visualizerStyleVal = "pulsar"; root.hasPendingChanges = true; } }
                                             }
                                         }
@@ -1259,7 +1259,7 @@ PanelWindow {
                                     Layout.fillWidth: true; spacing: 4; visible: root.visualizerStyleVal === "bars"
                                     RowLayout {
                                         Layout.fillWidth: true
-                                        Text { text: "Bars: Spectrum Count"; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
+                                        Text { text: "Bars: Spectrum Count"; font.family: Style.fontFamily; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
                                         Item { Layout.fillWidth: true }
                                         Text { text: root.visualizerBarCountVal + " Bars"; font.family: Style.fontFamilyMono; font.pixelSize: 12; font.weight: Font.Bold; color: Style.accent }
                                     }
@@ -1270,7 +1270,7 @@ PanelWindow {
                                     Layout.fillWidth: true; spacing: 4; visible: root.visualizerStyleVal === "bars"
                                     RowLayout {
                                         Layout.fillWidth: true
-                                        Text { text: "Visualizer Peak Height"; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
+                                        Text { text: "Visualizer Peak Height"; font.family: Style.fontFamily; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
                                         Item { Layout.fillWidth: true }
                                         Text { text: root.visualizerHeightVal + " px"; font.family: Style.fontFamilyMono; font.pixelSize: 12; font.weight: Font.Bold; color: Style.accent }
                                     }
@@ -1281,7 +1281,7 @@ PanelWindow {
                                     Layout.fillWidth: true; spacing: 4; visible: root.visualizerStyleVal === "wave"
                                     RowLayout {
                                         Layout.fillWidth: true
-                                        Text { text: "Wave Line Stroke Width"; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
+                                        Text { text: "Wave Line Stroke Width"; font.family: Style.fontFamily; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
                                         Item { Layout.fillWidth: true }
                                         Text { text: root.visualizerWaveWidthVal + " px"; font.family: Style.fontFamilyMono; font.pixelSize: 12; font.weight: Font.Bold; color: Style.accent }
                                     }
@@ -1292,7 +1292,7 @@ PanelWindow {
                                     Layout.fillWidth: true; spacing: 4; visible: root.visualizerStyleVal === "pulsar"
                                     RowLayout {
                                         Layout.fillWidth: true
-                                        Text { text: "Pulsar Aura Max Scale"; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
+                                        Text { text: "Pulsar Aura Max Scale"; font.family: Style.fontFamily; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
                                         Item { Layout.fillWidth: true }
                                         Text { text: root.visualizerPulsarScaleVal.toFixed(1) + "x"; font.family: Style.fontFamilyMono; font.pixelSize: 12; font.weight: Font.Bold; color: Style.accent }
                                     }
@@ -1325,7 +1325,7 @@ PanelWindow {
                                     Layout.fillWidth: true; spacing: 4
                                     RowLayout {
                                         Layout.fillWidth: true
-                                        Text { text: "Visualizer Display Timeout"; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
+                                        Text { text: "Visualizer Display Timeout"; font.family: Style.fontFamily; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
                                         Item { Layout.fillWidth: true }
                                         Text { text: root.visualizerTimeoutVal === 0 ? "Continuous" : (root.visualizerTimeoutVal / 1000.0).toFixed(0) + " s"; font.family: Style.fontFamilyMono; font.pixelSize: 12; font.weight: Font.Bold; color: Style.accent }
                                     }
@@ -1336,7 +1336,7 @@ PanelWindow {
                                     Layout.fillWidth: true; spacing: 4
                                     RowLayout {
                                         Layout.fillWidth: true
-                                        Text { text: "Pause / Stop Dismissal Delay"; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
+                                        Text { text: "Pause / Stop Dismissal Delay"; font.family: Style.fontFamily; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
                                         Item { Layout.fillWidth: true }
                                         Text { text: (root.visualizerPauseDelayVal / 1000.0).toFixed(1) + " s"; font.family: Style.fontFamilyMono; font.pixelSize: 12; font.weight: Font.Bold; color: Style.accent }
                                     }
@@ -1377,7 +1377,7 @@ PanelWindow {
 
                                 RowLayout {
                                     Layout.fillWidth: true
-                                    Text { text: "Magic Highlight Animation"; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
+                                    Text { text: "Magic Highlight Animation"; font.family: Style.fontFamily; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
                                     Item { Layout.fillWidth: true }
                                     Rectangle {
                                         implicitWidth: 260; implicitHeight: 28; radius: 14; color: "#2C2C2E"
@@ -1386,25 +1386,25 @@ PanelWindow {
                                             Rectangle {
                                                 Layout.fillWidth: true; Layout.fillHeight: true; radius: 14
                                                 color: root.highlightAnimTypeVal === "spring" ? Style.accent : "transparent"
-                                                Text { anchors.centerIn: parent; text: "Spring"; font.pixelSize: 11; font.weight: Font.Bold; color: root.highlightAnimTypeVal === "spring" ? Style.textOnAccent : Style.textPrimary }
+                                                Text { anchors.centerIn: parent; text: "Spring"; font.family: Style.fontFamily; font.pixelSize: 11; font.weight: Font.Bold; color: root.highlightAnimTypeVal === "spring" ? Style.textOnAccent : Style.textPrimary }
                                                 MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { root.highlightAnimTypeVal = "spring"; root.hasPendingChanges = true; } }
                                             }
                                             Rectangle {
                                                 Layout.fillWidth: true; Layout.fillHeight: true; radius: 14
                                                 color: root.highlightAnimTypeVal === "smooth" ? Style.accent : "transparent"
-                                                Text { anchors.centerIn: parent; text: "Smooth"; font.pixelSize: 11; font.weight: Font.Bold; color: root.highlightAnimTypeVal === "smooth" ? Style.textOnAccent : Style.textPrimary }
+                                                Text { anchors.centerIn: parent; text: "Smooth"; font.family: Style.fontFamily; font.pixelSize: 11; font.weight: Font.Bold; color: root.highlightAnimTypeVal === "smooth" ? Style.textOnAccent : Style.textPrimary }
                                                 MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { root.highlightAnimTypeVal = "smooth"; root.hasPendingChanges = true; } }
                                             }
                                             Rectangle {
                                                 Layout.fillWidth: true; Layout.fillHeight: true; radius: 14
                                                 color: root.highlightAnimTypeVal === "linear" ? Style.accent : "transparent"
-                                                Text { anchors.centerIn: parent; text: "Linear"; font.pixelSize: 11; font.weight: Font.Bold; color: root.highlightAnimTypeVal === "linear" ? Style.textOnAccent : Style.textPrimary }
+                                                Text { anchors.centerIn: parent; text: "Linear"; font.family: Style.fontFamily; font.pixelSize: 11; font.weight: Font.Bold; color: root.highlightAnimTypeVal === "linear" ? Style.textOnAccent : Style.textPrimary }
                                                 MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { root.highlightAnimTypeVal = "linear"; root.hasPendingChanges = true; } }
                                             }
                                             Rectangle {
                                                 Layout.fillWidth: true; Layout.fillHeight: true; radius: 14
                                                 color: root.highlightAnimTypeVal === "off" ? Style.accent : "transparent"
-                                                Text { anchors.centerIn: parent; text: "Off"; font.pixelSize: 11; font.weight: Font.Bold; color: root.highlightAnimTypeVal === "off" ? Style.textOnAccent : Style.textPrimary }
+                                                Text { anchors.centerIn: parent; text: "Off"; font.family: Style.fontFamily; font.pixelSize: 11; font.weight: Font.Bold; color: root.highlightAnimTypeVal === "off" ? Style.textOnAccent : Style.textPrimary }
                                                 MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { root.highlightAnimTypeVal = "off"; root.hasPendingChanges = true; } }
                                             }
                                         }
@@ -1417,7 +1417,7 @@ PanelWindow {
                                     visible: root.highlightAnimTypeVal === "spring"
                                     RowLayout {
                                         Layout.fillWidth: true
-                                        Text { text: "Magic Highlight Spring Stiffness"; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
+                                        Text { text: "Magic Highlight Spring Stiffness"; font.family: Style.fontFamily; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
                                         Item { Layout.fillWidth: true }
                                         Text { text: root.highlightSpringTensionVal.toFixed(1); font.family: Style.fontFamilyMono; font.pixelSize: 12; font.weight: Font.Bold; color: Style.accent }
                                     }
@@ -1433,7 +1433,7 @@ PanelWindow {
                                     visible: root.highlightAnimTypeVal === "spring"
                                     RowLayout {
                                         Layout.fillWidth: true
-                                        Text { text: "Magic Highlight Damping (Bounciness)"; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
+                                        Text { text: "Magic Highlight Damping (Bounciness)"; font.family: Style.fontFamily; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
                                         Item { Layout.fillWidth: true }
                                         Text { text: root.highlightSpringDampingVal.toFixed(2); font.family: Style.fontFamilyMono; font.pixelSize: 12; font.weight: Font.Bold; color: Style.accent }
                                     }
@@ -1449,7 +1449,7 @@ PanelWindow {
                                     visible: root.highlightAnimTypeVal === "smooth" || root.highlightAnimTypeVal === "linear"
                                     RowLayout {
                                         Layout.fillWidth: true
-                                        Text { text: "Grid Transition Duration"; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
+                                        Text { text: "Grid Transition Duration"; font.family: Style.fontFamily; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
                                         Item { Layout.fillWidth: true }
                                         Text { text: root.gridAnimDurationVal + " ms"; font.family: Style.fontFamilyMono; font.pixelSize: 12; font.weight: Font.Bold; color: Style.accent }
                                     }
@@ -1461,7 +1461,7 @@ PanelWindow {
 
                                 RowLayout {
                                     Layout.fillWidth: true
-                                    Text { text: "Wallpaper Transition Style"; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
+                                    Text { text: "Wallpaper Transition Style"; font.family: Style.fontFamily; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
                                     Item { Layout.fillWidth: true }
                                     Rectangle {
                                         implicitWidth: 260; implicitHeight: 28; radius: 14; color: "#2C2C2E"
@@ -1470,25 +1470,25 @@ PanelWindow {
                                             Rectangle {
                                                 Layout.fillWidth: true; Layout.fillHeight: true; radius: 14
                                                 color: root.wallTypeVal === "outer" ? Style.accent : "transparent"
-                                                Text { anchors.centerIn: parent; text: "Outer"; font.pixelSize: 11; font.weight: Font.Bold; color: root.wallTypeVal === "outer" ? Style.textOnAccent : Style.textPrimary }
+                                                Text { anchors.centerIn: parent; text: "Outer"; font.family: Style.fontFamily; font.pixelSize: 11; font.weight: Font.Bold; color: root.wallTypeVal === "outer" ? Style.textOnAccent : Style.textPrimary }
                                                 MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { root.wallTypeVal = "outer"; root.hasPendingChanges = true; } }
                                             }
                                             Rectangle {
                                                 Layout.fillWidth: true; Layout.fillHeight: true; radius: 14
                                                 color: root.wallTypeVal === "fade" ? Style.accent : "transparent"
-                                                Text { anchors.centerIn: parent; text: "Fade"; font.pixelSize: 11; font.weight: Font.Bold; color: root.wallTypeVal === "fade" ? Style.textOnAccent : Style.textPrimary }
+                                                Text { anchors.centerIn: parent; text: "Fade"; font.family: Style.fontFamily; font.pixelSize: 11; font.weight: Font.Bold; color: root.wallTypeVal === "fade" ? Style.textOnAccent : Style.textPrimary }
                                                 MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { root.wallTypeVal = "fade"; root.hasPendingChanges = true; } }
                                             }
                                             Rectangle {
                                                 Layout.fillWidth: true; Layout.fillHeight: true; radius: 14
                                                 color: root.wallTypeVal === "wipe" ? Style.accent : "transparent"
-                                                Text { anchors.centerIn: parent; text: "Wipe"; font.pixelSize: 11; font.weight: Font.Bold; color: root.wallTypeVal === "wipe" ? Style.textOnAccent : Style.textPrimary }
+                                                Text { anchors.centerIn: parent; text: "Wipe"; font.family: Style.fontFamily; font.pixelSize: 11; font.weight: Font.Bold; color: root.wallTypeVal === "wipe" ? Style.textOnAccent : Style.textPrimary }
                                                 MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { root.wallTypeVal = "wipe"; root.hasPendingChanges = true; } }
                                             }
                                             Rectangle {
                                                 Layout.fillWidth: true; Layout.fillHeight: true; radius: 14
                                                 color: root.wallTypeVal === "wave" ? Style.accent : "transparent"
-                                                Text { anchors.centerIn: parent; text: "Wave"; font.pixelSize: 11; font.weight: Font.Bold; color: root.wallTypeVal === "wave" ? Style.textOnAccent : Style.textPrimary }
+                                                Text { anchors.centerIn: parent; text: "Wave"; font.family: Style.fontFamily; font.pixelSize: 11; font.weight: Font.Bold; color: root.wallTypeVal === "wave" ? Style.textOnAccent : Style.textPrimary }
                                                 MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { root.wallTypeVal = "wave"; root.hasPendingChanges = true; } }
                                             }
                                         }
@@ -1499,7 +1499,7 @@ PanelWindow {
                                     Layout.fillWidth: true; spacing: 4
                                     RowLayout {
                                         Layout.fillWidth: true
-                                        Text { text: "Wallpaper Transition Duration"; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
+                                        Text { text: "Wallpaper Transition Duration"; font.family: Style.fontFamily; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
                                         Item { Layout.fillWidth: true }
                                         Text { text: root.wallDurationVal.toFixed(1) + " s"; font.family: Style.fontFamilyMono; font.pixelSize: 12; font.weight: Font.Bold; color: Style.accent }
                                     }
@@ -1530,7 +1530,7 @@ PanelWindow {
 
                                 RowLayout {
                                     Layout.fillWidth: true
-                                    Text { text: "Clock Time Format"; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
+                                    Text { text: "Clock Time Format"; font.family: Style.fontFamily; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
                                     Item { Layout.fillWidth: true }
                                     Rectangle {
                                         implicitWidth: 180; implicitHeight: 28; radius: 14; color: "#2C2C2E"
@@ -1539,13 +1539,13 @@ PanelWindow {
                                             Rectangle {
                                                 Layout.fillWidth: true; Layout.fillHeight: true; radius: 14
                                                 color: root.clockFormatVal === "h:mm A" ? Style.accent : "transparent"
-                                                Text { anchors.centerIn: parent; text: "12-Hour"; font.pixelSize: 11; font.weight: Font.Bold; color: root.clockFormatVal === "h:mm A" ? Style.textOnAccent : Style.textPrimary }
+                                                Text { anchors.centerIn: parent; text: "12-Hour"; font.family: Style.fontFamily; font.pixelSize: 11; font.weight: Font.Bold; color: root.clockFormatVal === "h:mm A" ? Style.textOnAccent : Style.textPrimary }
                                                 MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { root.clockFormatVal = "h:mm A"; root.hasPendingChanges = true; } }
                                             }
                                             Rectangle {
                                                 Layout.fillWidth: true; Layout.fillHeight: true; radius: 14
                                                 color: root.clockFormatVal === "HH:mm" ? Style.accent : "transparent"
-                                                Text { anchors.centerIn: parent; text: "24-Hour"; font.pixelSize: 11; font.weight: Font.Bold; color: root.clockFormatVal === "HH:mm" ? Style.textOnAccent : Style.textPrimary }
+                                                Text { anchors.centerIn: parent; text: "24-Hour"; font.family: Style.fontFamily; font.pixelSize: 11; font.weight: Font.Bold; color: root.clockFormatVal === "HH:mm" ? Style.textOnAccent : Style.textPrimary }
                                                 MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: { root.clockFormatVal = "HH:mm"; root.hasPendingChanges = true; } }
                                             }
                                         }
@@ -1556,7 +1556,7 @@ PanelWindow {
                                     Layout.fillWidth: true; spacing: 4
                                     RowLayout {
                                         Layout.fillWidth: true
-                                        Text { text: "Clock Typography Size"; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
+                                        Text { text: "Clock Typography Size"; font.family: Style.fontFamily; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
                                         Item { Layout.fillWidth: true }
                                         Text { text: root.clockFontSizeVal + " px"; font.family: Style.fontFamilyMono; font.pixelSize: 12; font.weight: Font.Bold; color: Style.accent }
                                     }
@@ -1567,7 +1567,7 @@ PanelWindow {
                                     Layout.fillWidth: true; spacing: 4
                                     RowLayout {
                                         Layout.fillWidth: true
-                                        Text { text: "Low Battery Alert Threshold"; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
+                                        Text { text: "Low Battery Alert Threshold"; font.family: Style.fontFamily; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
                                         Item { Layout.fillWidth: true }
                                         Text { text: root.batteryWarningThresholdVal + " %"; font.family: Style.fontFamilyMono; font.pixelSize: 12; font.weight: Font.Bold; color: Style.accent }
                                     }
@@ -1600,7 +1600,7 @@ PanelWindow {
                                     Layout.fillWidth: true; spacing: 4
                                     RowLayout {
                                         Layout.fillWidth: true
-                                        Text { text: "OSD Notification Timeout"; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
+                                        Text { text: "OSD Notification Timeout"; font.family: Style.fontFamily; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
                                         Item { Layout.fillWidth: true }
                                         Text { text: (root.osdTimeoutVal / 1000.0).toFixed(1) + " s"; font.family: Style.fontFamilyMono; font.pixelSize: 12; font.weight: Font.Bold; color: Style.accent }
                                     }
@@ -1611,7 +1611,7 @@ PanelWindow {
                                     Layout.fillWidth: true; spacing: 4
                                     RowLayout {
                                         Layout.fillWidth: true
-                                        Text { text: "Hardware Stats Polling Rate"; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
+                                        Text { text: "Hardware Stats Polling Rate"; font.family: Style.fontFamily; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
                                         Item { Layout.fillWidth: true }
                                         Text { text: (root.sysStatsIntervalVal / 1000.0).toFixed(1) + " s"; font.family: Style.fontFamilyMono; font.pixelSize: 12; font.weight: Font.Bold; color: Style.accent }
                                     }
@@ -1666,7 +1666,7 @@ PanelWindow {
                             anchors.centerIn: parent
                             spacing: 6
                             M3Icon { name: "restart_alt"; size: 14; color: Style.textPrimary }
-                            Text { text: "Reset Tab"; font.pixelSize: 11; font.weight: Font.Bold; color: Style.textPrimary }
+                            Text { text: "Reset Tab"; font.family: Style.fontFamily; font.pixelSize: 11; font.weight: Font.Bold; color: Style.textPrimary }
                         }
 
                         MouseArea {
@@ -1697,7 +1697,7 @@ PanelWindow {
                             }
                             Text {
                                 text: "Apply Changes"
-                                font.pixelSize: 11
+                                font.family: Style.fontFamily; font.pixelSize: 11
                                 font.weight: Font.Bold
                                 color: root.hasPendingChanges ? Style.textOnAccent : Style.textSecondary
                             }
