@@ -258,7 +258,7 @@ Socket: `/tmp/quickshell-notch.sock` — control via `scripts/notch/notch_ipc.py
 │   ├── SettingsWindow.qml         # Configuration options panel
 │   ├── CustomSlider.qml           # Styled slider
 │   ├── CustomSwitch.qml           # Styled toggle switch
-│   ├── M3Icon.qml                 # Nerd Font glyph → M3 SVG icon mapper
+│   ├── M3Icon.qml                 # macOS SF Symbols & glyph vector icon renderer
 │   └── SparklineCanvas.qml        # CPU/RAM graph rendering
 ├── scripts/
 │   ├── core/
@@ -269,7 +269,8 @@ Socket: `/tmp/quickshell-notch.sock` — control via `scripts/notch/notch_ipc.py
 │   │   ├── atomic_write.py        # Crash-resilient atomic file write helper
 │   │   ├── process_utils.py       # PR_SET_PDEATHSIG child process lifecycle safety
 │   │   ├── osd.sh                 # Volume/brightness OSD helper
-│   │   └── download_m3_icons.sh   # Fetches Material Symbols SVGs
+│   │   ├── download_macos_icons.sh # Fetches Apple macOS SF Symbols SVGs
+│   │   └── download_m3_icons.sh   # Legacy redirect to download_macos_icons.sh
 │   ├── desktop/
 │   │   ├── get_apps.py            # Desktop entry scanner with caching
 │   │   ├── scan_wallpapers.py     # Parallel wallpaper thumbnail generator
@@ -295,7 +296,7 @@ Socket: `/tmp/quickshell-notch.sock` — control via `scripts/notch/notch_ipc.py
 ├── theme/
 │   └── Style.qml                  # Global colors, fonts, radii
 ├── assets/
-│   ├── icons/                     # Material Symbols SVGs (M3Icon table)
+│   ├── icons/                     # Apple macOS SF Symbols SVGs (M3Icon/MacIcon table)
 │   └── *.png / notch_demo.mp4     # README showcase media
 └── notch_settings.json            # Runtime notch preferences
 ```

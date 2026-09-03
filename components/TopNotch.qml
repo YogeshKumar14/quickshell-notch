@@ -198,10 +198,10 @@ FocusScope {
 
     property int autoCloseDelay: 5000
     property int compactWidthVal: 130
-    property int expandedHeightVal: 106
+    property int expandedHeightVal: 136
 
     property int pageChromeHeight: 10 + 32 + 6 + 10
-    property int pageNotchHeight: root.expandedHeightVal
+    property int pageNotchHeight: root.currentPage === 0 ? Math.max(136, root.expandedHeightVal) : root.expandedHeightVal
     property int maxPageNotchHeight: Math.max(root.expandedHeightVal, 320)
     property int notchRadiusVal: 22
     property bool drippingEarsVal: true
@@ -1101,6 +1101,7 @@ FocusScope {
             isOsdActive: root.isOsdActive
 
             onExpandRequested: {
+                root.currentPage = 0;
                 root.isExpanded = true;
                 root.isWorkspaceActive = false;
                 autoCloseTimer.stop();
@@ -1244,8 +1245,8 @@ FocusScope {
                     // PAGE 0: Media Controller (Nook Dashboard)
                     MediaController {
                         id: mediaControllerComp
-                        width: pageViewport.width > 0 ? pageViewport.width : 560
-                        height: pageViewport.height > 0 ? pageViewport.height : 72
+                        width: pageViewport.width > 0 ? pageViewport.width : 576
+                        height: pageViewport.height > 0 ? pageViewport.height : 100
                         activePlayer: root.activePlayer
                         isPlaying: root.isPlaying
                         trackTitle: root.trackTitle
@@ -1262,8 +1263,8 @@ FocusScope {
 
                     // PAGE 1: Application Launcher (Tray)
                     Item {
-                        width: pageViewport.width > 0 ? pageViewport.width : 560
-                        height: pageViewport.height > 0 ? pageViewport.height : 72
+                        width: pageViewport.width > 0 ? pageViewport.width : 576
+                        height: pageViewport.height > 0 ? pageViewport.height : 100
                         clip: true
 
                         Loader {
@@ -1289,8 +1290,8 @@ FocusScope {
 
                     // PAGE 2: Wallpaper Selector (Walls)
                     Item {
-                        width: pageViewport.width > 0 ? pageViewport.width : 560
-                        height: pageViewport.height > 0 ? pageViewport.height : 72
+                        width: pageViewport.width > 0 ? pageViewport.width : 576
+                        height: pageViewport.height > 0 ? pageViewport.height : 100
                         clip: true
 
                         Loader {
@@ -1318,8 +1319,8 @@ FocusScope {
                     // PAGE 3: Hardware Stats Dashboard (Stats)
                     HardwareStats {
                         id: hardwareStatsComp
-                        width: pageViewport.width > 0 ? pageViewport.width : 560
-                        height: pageViewport.height > 0 ? pageViewport.height : 72
+                        width: pageViewport.width > 0 ? pageViewport.width : 576
+                        height: pageViewport.height > 0 ? pageViewport.height : 100
                         cpuUsage: root.cpuUsage
                         cpuHistory: root.cpuHistory
                         ramUsage: root.ramUsage

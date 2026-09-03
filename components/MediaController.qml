@@ -1,10 +1,9 @@
 /**
  * MediaController.qml — NotchNook 3-Column Dashboard for QuickShell Notch
  *
- * Renders PAGE 0 of the expanded landscape notch:
- *   - Left Column: Squircle album art, track metadata, and inline playback controls
- *   - Middle Column: Live 7-day Calendar Timeline with month header and event/recording status badge
- *   - Right Column: Circular live user profile / camera mirror widget with glossy border
+ * Renders PAGE 0 of the expanded landscape notch matching macOS NotchNook:
+ *   - Left Column: Squircle album art with Apple Music badge, track metadata, timeline scrubber, and playback controls
+ *   - Middle/Right Column: Live 7-day Calendar Timeline with month/year header and event/recording status badge
  */
 
 import QtQuick
@@ -45,7 +44,7 @@ Item {
     property real tabSpringDamping: 0.22
 
     /** Expose content height to parent */
-    readonly property int mediaContentHeight: 84
+    readonly property int mediaContentHeight: 100
 
     /** Emitted when volume level changes */
     signal volumeChanged(int level)
@@ -143,7 +142,7 @@ Item {
         var now = root.todayDate;
         var days = [];
         var dayNames = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
-        for (var offset = -3; offset <= 3; offset++) {
+        for (var offset = -3; offset <= 4; offset++) {
             var d = new Date(now.getTime() + offset * 86400000);
             days.push({
                 offset: offset,
@@ -162,23 +161,23 @@ Item {
     }
 
     // =====================================================================
-    // 1. LEFT COLUMN: MEDIA PLAYER WIDGET (305px)
+    // 1. LEFT COLUMN: MEDIA PLAYER WIDGET (310px)
     // =====================================================================
     Item {
         id: leftColItem
         anchors.left: parent.left
         anchors.top: parent.top
         anchors.bottom: parent.bottom
-        width: 305
+        width: 310
 
         Row {
             anchors.verticalCenter: parent.verticalCenter
-            spacing: 10
+            spacing: 12
 
-            // Squircle Album Art (56x56px, radius 14px) with OpacityMask & music app badge
+            // Squircle Album Art (78x78px, radius 14px) with OpacityMask & Apple Music badge
             Item {
-                width: 56
-                height: 56
+                width: 78
+                height: 78
 
                 // 1. Source Image (hidden, offscreen texture)
                 Image {
@@ -188,8 +187,8 @@ Item {
                     fillMode: Image.PreserveAspectCrop
                     asynchronous: true
                     visible: false
-                    sourceSize.width: 112
-                    sourceSize.height: 112
+                    sourceSize.width: 156
+                    sourceSize.height: 156
                 }
 
                 // 2. Vector Mask Shape (Antialiased Squircle)
@@ -208,8 +207,8 @@ Item {
                     id: albumArtFallback
                     anchors.fill: parent
                     radius: 14
-                    color: "#2C2C2E"
-                    border.color: "#3A3A3C"
+                    color: "#1C1C1E"
+                    border.color: "#2C2C2E"
                     border.width: 1
                     visible: albumArtImg.source.toString() === "" || albumArtImg.status !== Image.Ready
                     smooth: true
@@ -219,13 +218,13 @@ Item {
                         anchors.fill: parent
                         radius: 14
                         color: Style.accent
-                        opacity: 0.20
+                        opacity: 0.12
                     }
 
                     M3Icon {
                         anchors.centerIn: parent
                         name: "music_note"
-                        size: 26
+                        size: 32
                         color: Style.accent
                     }
                 }
@@ -249,26 +248,27 @@ Item {
                     antialiasing: true
                 }
 
-                // 6. Apple Music / Media App Badge on bottom-right corner
+                // 6. Apple Music App Badge on bottom-right corner
                 Rectangle {
                     anchors.bottom: parent.bottom
                     anchors.right: parent.right
                     anchors.bottomMargin: -2
                     anchors.rightMargin: -2
-                    width: 16
-                    height: 16
-                    radius: 5
-                    color: "#FA2D48" // Apple Music Red
+                    width: 18
+                    height: 18
+                    radius: 5.5
+                    color: Style.appleMusicRed
                     border.color: "#000000"
                     border.width: 1.5
                     smooth: true
                     antialiasing: true
                     z: 5
+                    visible: (albumArtImg.source.toString() !== "" && albumArtImg.status === Image.Ready) || root.isPlaying || (root.trackTitle !== "" && root.trackTitle !== "No Media Playing")
 
                     M3Icon {
                         anchors.centerIn: parent
                         name: "music_note"
-                        size: 10
+                        size: 11
                         color: "#FFFFFF"
                     }
                 }
@@ -276,14 +276,14 @@ Item {
 
             // Track Info, Scrubber & Controls
             Column {
-                width: 235
-                spacing: 2
+                width: 220
+                spacing: 3
 
                 Text {
                     width: parent.width
                     text: root.trackTitle !== "" ? root.trackTitle : "No Media Playing"
                     font.family: Style.fontFamily
-                    font.pixelSize: 12
+                    font.pixelSize: 14
                     font.weight: Font.Bold
                     color: "#FFFFFF"
                     elide: Text.ElideRight
@@ -293,27 +293,19 @@ Item {
                     width: parent.width
                     text: root.trackArtist !== "" ? root.trackArtist : "QuickShell Notch"
                     font.family: Style.fontFamily
-                    font.pixelSize: 10
-                    color: "#8E8E93"
+                    font.pixelSize: 12
+                    color: Style.textSecondary
                     elide: Text.ElideRight
                 }
 
-                // Scrubber Seek Bar Row
-                RowLayout {
+                // Full-width Scrubber Seek Bar with timestamps directly underneath
+                Column {
                     width: parent.width
-                    spacing: 6
-
-                    Text {
-                        text: root.formatTime(root.cleanTrackPosition)
-                        font.family: Style.fontFamilyMono
-                        font.pixelSize: 8
-                        color: "#8E8E93"
-                    }
+                    spacing: 2
 
                     Item {
-                        Layout.fillWidth: true
-                        height: 12
-                        Layout.alignment: Qt.AlignVCenter
+                        width: parent.width
+                        height: 10
 
                         Rectangle {
                             anchors.left: parent.left
@@ -355,30 +347,48 @@ Item {
                         }
                     }
 
-                    Text {
-                        text: (root.trackLength > 0) ? root.formatTime(root.trackLength) : "0:00"
-                        font.family: Style.fontFamilyMono
-                        font.pixelSize: 8
-                        color: "#8E8E93"
+                    Item {
+                        width: parent.width
+                        height: 12
+
+                        Text {
+                            anchors.left: parent.left
+                            anchors.top: parent.top
+                            text: root.formatTime(root.cleanTrackPosition)
+                            font.family: Style.fontFamilyMono
+                            font.pixelSize: 10
+                            color: Style.textSecondary
+                        }
+
+                        Text {
+                            anchors.right: parent.right
+                            anchors.top: parent.top
+                            text: (root.trackLength > 0) ? root.formatTime(root.trackLength) : "0:00"
+                            font.family: Style.fontFamilyMono
+                            font.pixelSize: 10
+                            color: Style.textSecondary
+                        }
                     }
                 }
 
-                // Playback Controls Row (10s Rewind, Prev, Play/Pause, Next, Device)
-                RowLayout {
+                // Playback Controls Row (10s Rewind on left, Prev/Play/Next centered, Device on right)
+                Item {
                     width: parent.width
-                    spacing: 12
+                    height: 22
 
-                    // 10s Rewind (Replay 10)
+                    // 10s Rewind (Replay 10) on left
                     Item {
-                        width: 14; height: 14
+                        anchors.left: parent.left
+                        anchors.verticalCenter: parent.verticalCenter
+                        width: 16; height: 16
                         scale: (root.buttonAnims && rewMA.pressed) ? 0.85 : ((root.buttonAnims && rewMA.containsMouse) ? 1.15 : 1.0)
                         Behavior on scale { enabled: root.buttonAnims; SpringAnimation { spring: root.tabSpringTension; damping: root.tabSpringDamping } }
 
                         M3Icon {
                             anchors.centerIn: parent
                             name: "replay_10"
-                            size: 13
-                            color: rewMA.containsMouse ? "#FFFFFF" : "#8E8E93"
+                            size: 14
+                            color: rewMA.containsMouse ? "#FFFFFF" : Style.textSecondary
                         }
                         MouseArea {
                             id: rewMA
@@ -389,89 +399,100 @@ Item {
                         }
                     }
 
-                    // Prev Button
+                    // Prev / Play-Pause / Next Centered
+                    Row {
+                        anchors.centerIn: parent
+                        spacing: 16
+
+                        // Prev Button
+                        Item {
+                            width: 16; height: 16
+                            anchors.verticalCenter: parent.verticalCenter
+                            scale: (root.buttonAnims && prevMA.pressed) ? 0.85 : ((root.buttonAnims && prevMA.containsMouse) ? 1.15 : 1.0)
+                            Behavior on scale { enabled: root.buttonAnims; SpringAnimation { spring: root.tabSpringTension; damping: root.tabSpringDamping } }
+
+                            M3Icon {
+                                anchors.centerIn: parent
+                                name: "skip_previous"
+                                size: 15
+                                color: "#FFFFFF"
+                            }
+                            MouseArea {
+                                id: prevMA
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: {
+                                    if (root.activePlayer) root.activePlayer.previous();
+                                    else playerctlPrev.running = true;
+                                }
+                            }
+                        }
+
+                        // Play/Pause Button (Large Center Solid)
+                        Item {
+                            width: 20; height: 20
+                            anchors.verticalCenter: parent.verticalCenter
+                            scale: (root.buttonAnims && playMA.pressed) ? 0.85 : ((root.buttonAnims && playMA.containsMouse) ? 1.15 : 1.0)
+                            Behavior on scale { enabled: root.buttonAnims; SpringAnimation { spring: root.tabSpringTension; damping: root.tabSpringDamping } }
+
+                            M3Icon {
+                                anchors.centerIn: parent
+                                name: root.isPlaying ? "pause" : "play_arrow"
+                                size: 20
+                                color: "#FFFFFF"
+                            }
+                            MouseArea {
+                                id: playMA
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: {
+                                    if (root.activePlayer) root.activePlayer.togglePlaying();
+                                    else playerctlPlayPause.running = true;
+                                }
+                            }
+                        }
+
+                        // Next Button
+                        Item {
+                            width: 16; height: 16
+                            anchors.verticalCenter: parent.verticalCenter
+                            scale: (root.buttonAnims && nextMA.pressed) ? 0.85 : ((root.buttonAnims && nextMA.containsMouse) ? 1.15 : 1.0)
+                            Behavior on scale { enabled: root.buttonAnims; SpringAnimation { spring: root.tabSpringTension; damping: root.tabSpringDamping } }
+
+                            M3Icon {
+                                anchors.centerIn: parent
+                                name: "skip_next"
+                                size: 15
+                                color: "#FFFFFF"
+                            }
+                            MouseArea {
+                                id: nextMA
+                                anchors.fill: parent
+                                hoverEnabled: true
+                                cursorShape: Qt.PointingHandCursor
+                                onClicked: {
+                                    if (root.activePlayer) root.activePlayer.next();
+                                    else playerctlNext.running = true;
+                                }
+                            }
+                        }
+                    }
+
+                    // Output Device Icon (Matching Reference: macOS MacBook laptop icon) on right
                     Item {
+                        anchors.right: parent.right
+                        anchors.verticalCenter: parent.verticalCenter
                         width: 16; height: 16
-                        scale: (root.buttonAnims && prevMA.pressed) ? 0.85 : ((root.buttonAnims && prevMA.containsMouse) ? 1.15 : 1.0)
-                        Behavior on scale { enabled: root.buttonAnims; SpringAnimation { spring: root.tabSpringTension; damping: root.tabSpringDamping } }
-
-                        M3Icon {
-                            anchors.centerIn: parent
-                            name: "skip_previous"
-                            size: 13
-                            color: "#FFFFFF"
-                        }
-                        MouseArea {
-                            id: prevMA
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: {
-                                if (root.activePlayer) root.activePlayer.previous();
-                                else playerctlPrev.running = true;
-                            }
-                        }
-                    }
-
-                    // Play/Pause Button (Large Center Solid)
-                    Item {
-                        width: 18; height: 18
-                        scale: (root.buttonAnims && playMA.pressed) ? 0.85 : ((root.buttonAnims && playMA.containsMouse) ? 1.15 : 1.0)
-                        Behavior on scale { enabled: root.buttonAnims; SpringAnimation { spring: root.tabSpringTension; damping: root.tabSpringDamping } }
-
-                        M3Icon {
-                            anchors.centerIn: parent
-                            name: root.isPlaying ? "pause" : "play_arrow"
-                            size: 17
-                            color: "#FFFFFF"
-                        }
-                        MouseArea {
-                            id: playMA
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: {
-                                if (root.activePlayer) root.activePlayer.togglePlaying();
-                                else playerctlPlayPause.running = true;
-                            }
-                        }
-                    }
-
-                    // Next Button
-                    Item {
-                        width: 16; height: 16
-                        scale: (root.buttonAnims && nextMA.pressed) ? 0.85 : ((root.buttonAnims && nextMA.containsMouse) ? 1.15 : 1.0)
-                        Behavior on scale { enabled: root.buttonAnims; SpringAnimation { spring: root.tabSpringTension; damping: root.tabSpringDamping } }
-
-                        M3Icon {
-                            anchors.centerIn: parent
-                            name: "skip_next"
-                            size: 13
-                            color: "#FFFFFF"
-                        }
-                        MouseArea {
-                            id: nextMA
-                            anchors.fill: parent
-                            hoverEnabled: true
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: {
-                                if (root.activePlayer) root.activePlayer.next();
-                                else playerctlNext.running = true;
-                            }
-                        }
-                    }
-
-                    // Device / Volume Icon
-                    Item {
-                        width: 14; height: 14
                         scale: (root.buttonAnims && devMA.pressed) ? 0.85 : ((root.buttonAnims && devMA.containsMouse) ? 1.15 : 1.0)
                         Behavior on scale { enabled: root.buttonAnims; SpringAnimation { spring: root.tabSpringTension; damping: root.tabSpringDamping } }
 
                         M3Icon {
                             anchors.centerIn: parent
-                            name: "volume_up"
-                            size: 11
-                            color: "#AEAEB2"
+                            name: "laptopcomputer"
+                            size: 14
+                            color: devMA.containsMouse ? "#FFFFFF" : Style.textSecondary
                         }
                         MouseArea {
                             id: devMA
@@ -487,69 +508,72 @@ Item {
     }
 
     // =====================================================================
-    // 2. RIGHT COLUMN: CALENDAR & EVENTS DASHBOARD (245px)
+    // 2. RIGHT COLUMN: CALENDAR & EVENTS DASHBOARD (260px)
     // =====================================================================
     Item {
         anchors.right: parent.right
         anchors.top: parent.top
         anchors.bottom: parent.bottom
-        width: 245
+        width: 260
 
         Column {
             anchors.verticalCenter: parent.verticalCenter
             anchors.right: parent.right
-            spacing: 3
+            spacing: 8
 
-            // Top Row: Month/Year + 7-Day Horizontal Strip
+            // Top Row: Month/Year + 8-Day Horizontal Strip
             Row {
                 spacing: 8
+                anchors.right: parent.right
 
                 // Month / Year Stack
                 Column {
-                    spacing: 0
+                    spacing: 1
                     anchors.verticalCenter: parent.verticalCenter
 
                     Text {
                         text: root.currentMonthStr
                         font.family: Style.fontFamily
-                        font.pixelSize: 13
+                        font.pixelSize: 14
                         font.weight: Font.Bold
                         color: "#FFFFFF"
                     }
                     Text {
                         text: root.todayDate.getFullYear().toString()
                         font.family: Style.fontFamily
-                        font.pixelSize: 9
-                        color: "#8E8E93"
+                        font.pixelSize: 10
+                        color: Style.textSecondary
                     }
                 }
 
-                // 7-Day Horizontal Date Strip
+                // 8-Day Horizontal Date Strip (Matching Reference)
                 Row {
-                    spacing: 4
+                    spacing: 3
+                    anchors.verticalCenter: parent.verticalCenter
 
                     Repeater {
                         model: root.daysList
 
                         Rectangle {
-                            width: modelData.isToday ? 24 : 20
-                            height: 32
-                            radius: modelData.isToday ? 7 : 0
-                            color: modelData.isToday ? Style.accent : "transparent"
+                            width: modelData.isToday ? 26 : 22
+                            height: modelData.isToday ? 44 : 38
+                            radius: modelData.isToday ? 9 : 0
+                            anchors.verticalCenter: parent.verticalCenter
+                            color: modelData.isToday ? Style.systemBlue : "transparent"
                             Behavior on color { ColorAnimation { duration: 150 } }
 
                             Column {
                                 anchors.centerIn: parent
-                                spacing: 1
+                                spacing: 2
 
-                                // Day of Week
+                                // Day of Week (Title Case, e.g. Fri, Sat)
                                 Text {
                                     anchors.horizontalCenter: parent.horizontalCenter
-                                    text: modelData.dayName.toUpperCase()
+                                    text: modelData.dayName
                                     font.family: Style.fontFamily
-                                    font.pixelSize: 7
-                                    font.weight: modelData.isToday ? Font.Bold : Font.Normal
-                                    color: modelData.isToday ? "#FFFFFF" : "#8E8E93"
+                                    font.pixelSize: 8
+                                    font.weight: modelData.isToday ? Font.DemiBold : Font.Normal
+                                    color: modelData.isToday ? "#FFFFFF" : Style.textSecondary
                                 }
 
                                 // Day Number
@@ -557,9 +581,9 @@ Item {
                                     anchors.horizontalCenter: parent.horizontalCenter
                                     text: modelData.dayNum
                                     font.family: Style.fontFamily
-                                    font.pixelSize: 11
+                                    font.pixelSize: modelData.isToday ? 13 : 12
                                     font.weight: Font.Bold
-                                    color: modelData.isToday ? "#FFFFFF" : "#AEAEB2"
+                                    color: modelData.isToday ? "#FFFFFF" : "#C7C7CC"
                                 }
                             }
                         }
@@ -567,31 +591,27 @@ Item {
                 }
             }
 
-            // Bottom Row: Event Status Card
+            // Bottom Row: Event Status Card (Matching Reference: Calendar with Checkmark)
             Row {
-                spacing: 6
+                spacing: 8
                 anchors.left: parent.left
                 anchors.leftMargin: 2
 
-                Rectangle {
-                    width: 14; height: 14; radius: 4
-                    color: "#2C2C2E"
-
-                    M3Icon {
-                        anchors.centerIn: parent
-                        name: "calendar_today"
-                        size: 10
-                        color: "#30D158"
-                    }
+                M3Icon {
+                    name: "calendar_badge_checkmark"
+                    size: 18
+                    color: "#AEAEB2"
+                    anchors.verticalCenter: parent.verticalCenter
                 }
 
                 Column {
-                    spacing: 0
+                    spacing: 1
+                    anchors.verticalCenter: parent.verticalCenter
 
                     Text {
                         text: "No events today"
                         font.family: Style.fontFamily
-                        font.pixelSize: 9
+                        font.pixelSize: 11
                         font.weight: Font.Bold
                         color: "#FFFFFF"
                     }
@@ -599,8 +619,8 @@ Item {
                     Text {
                         text: "Enjoy your free time!"
                         font.family: Style.fontFamily
-                        font.pixelSize: 8
-                        color: "#8E8E93"
+                        font.pixelSize: 10
+                        color: Style.textSecondary
                     }
                 }
             }

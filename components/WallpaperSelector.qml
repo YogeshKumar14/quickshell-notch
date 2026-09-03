@@ -235,7 +235,7 @@ FocusScope {
                     spacing: 4
 
                     Text {
-                        text: (wallModel.count - 1) + " wallpapers"
+                        text: (wallModel.count > 1 ? (wallModel.count - 1) + " wallpapers" : (wallModel.count === 1 ? "1 wallpaper" : "Loading..."))
                         font.family: Style.fontFamily
                         font.pixelSize: 9
                         color: Style.textMuted

@@ -1,7 +1,7 @@
 /**
- * M3Icon.qml — Material Symbols Rounded Vector Icon Renderer
+ * M3Icon.qml — macOS SF Symbols Vector Icon Renderer
  *
- * Maps icon names and legacy Nerd Font glyphs to local SVG assets:
+ * Maps icon names, SF Symbol identifiers, and legacy glyphs to local SVG assets:
  *   - Automatically resolves SVG assets relative to component directory
  *   - Applies dynamic ColorOverlay with animated color transitions
  *   - Supports asynchronous SVG rasterization with custom sourceSize constraints
@@ -14,7 +14,7 @@ import "../theme"
 Item {
     id: root
 
-    /** Icon name (e.g. "volume_up", "settings") or Nerd Font Unicode glyph */
+    /** Icon name (e.g. "volume_up", "settings", "speaker.wave.3.fill") or Unicode glyph */
     property string name: ""
     /** Tint color applied via ColorOverlay */
     property color color: Style.textPrimary
@@ -24,7 +24,7 @@ Item {
     implicitWidth: size
     implicitHeight: size
 
-    /** Lookup table mapping legacy Nerd Font glyphs to SVG asset names */
+    /** Lookup table mapping legacy glyphs and aliases to SVG asset names */
     readonly property var iconMap: ({
         "󰕾": "volume_up",
         "󰖁": "volume_mute",
@@ -70,7 +70,35 @@ Item {
         "󰈈": "visibility",
         "󰈉": "visibility_off",
         "󰅖": "close",
-        "󰅙": "error"
+        "󰅙": "error",
+
+        // macOS SF Symbols Aliases
+        "play.fill": "play_arrow",
+        "pause.fill": "pause",
+        "forward.fill": "skip_next",
+        "backward.fill": "skip_previous",
+        "speaker.wave.3.fill": "volume_up",
+        "speaker.wave.1.fill": "volume_down",
+        "speaker.slash.fill": "volume_mute",
+        "microphone.fill": "mic",
+        "microphone.slash.fill": "mic_off",
+        "gearshape.fill": "settings",
+        "house.fill": "home",
+        "tray.fill": "inbox",
+        "bell.fill": "notifications",
+        "bell": "notifications_none",
+        "bell.slash.fill": "notifications_off",
+        "clock.fill": "schedule",
+        "chart.line.uptrend.xyaxis": "trending_up",
+        "10.arrow.trianglehead.counterclockwise": "replay_10",
+        "arrow.counterclockwise": "arrow.counterclockwise",
+        "clock.arrow.circlepath": "arrow.counterclockwise",
+        "arrow_counterclockwise": "arrow.counterclockwise",
+        "calendar.badge.checkmark": "calendar.badge.checkmark",
+        "calendar_badge_checkmark": "calendar.badge.checkmark",
+        "laptopcomputer": "laptopcomputer",
+        "eyedropper": "eyedropper",
+        "power": "power"
     })
 
     /** Returns resolved SVG basename for a given input glyph/name */

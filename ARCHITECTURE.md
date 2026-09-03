@@ -203,7 +203,7 @@ The shell listens on a local Unix Domain Socket for fast keybind integration:
 
 ## 4. Design System & Tokens (`theme/Style.qml`)
 
-QuickShell Notch implements the **Material 3 Expressive UI** design language:
+QuickShell Notch implements the **macOS NotchNook UI** design language with Apple SF Symbols:
 - **Surfaces**: Pure OLED black (`#000000`) root with elevated card containers (`#1C1C1E`) and subtle borders (`#2C2C2E`).
 - **Dynamic Accent**: Wallust-extracted dominant color automatically synchronized with the active wallpaper.
 - **iOS Semantic Battery**: Charging (`#30D158`), Normal (`#FFFFFF`), Low Power (`#FFD60A`), Critical (`#FF453A`).

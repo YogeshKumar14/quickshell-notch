@@ -1,5 +1,5 @@
 /**
- * SettingsWindow.qml — Material 3 Expressive Configuration Center for QuickShell Notch
+ * SettingsWindow.qml — macOS NotchNook Configuration Center for QuickShell Notch
  *
  * Provides a comprehensive, beautiful standalone GUI for managing:
  *   - Hyprland Options: Layout, Gaps, Rounding, Borders, Opacity, Blur, Shadow, Animations, Input

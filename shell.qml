@@ -124,6 +124,7 @@ Scope {
                             notchComp.toggleAudioMenu();
                         } else if (cmd === "toggle") {
                             notchComp.isExpanded = !notchComp.isExpanded;
+                            if (notchComp.isExpanded) notchComp.currentPage = 0;
                             notchComp.isNotifMenuOpen = false;
                             notchComp.isPowerMenuOpen = false;
                             notchComp.isWifiMenuOpen = false;

@@ -2,9 +2,9 @@
  * OsdOverlay.qml — Volume & Brightness On-Screen Display Overlay for QuickShell Notch
  *
  * Renders the compact OSD popup when triggered via IPC (osd:vol:<0-100> or osd:bri:<0-100>):
- *   - Rotating M3 icon with ±45° spring impulse on brightness adjustments
+ *   - Rotating macOS SF Symbol icon with ±45° spring impulse on brightness adjustments
  *   - Dynamic smooth progress fill bar with animated value interpolation
- *   - Crisp typography percentage readout
+ *   - Crisp SF typography percentage readout
  */
 
 import QtQuick
@@ -16,7 +16,7 @@ Item {
 
     /** Whether OSD popup is currently visible */
     property bool isOsdActive: false
-    /** Material Symbol icon name */
+    /** Icon name */
     property string osdIcon: "volume_up"
     /** Target OSD percentage value (0..100) */
     property int osdValue: 50
@@ -68,7 +68,7 @@ Item {
             Layout.fillWidth: true
             height: 6
             radius: 3
-            color: Style.cardBgHover
+            color: "#3A3A3C"
             Layout.alignment: Qt.AlignVCenter
 
             Rectangle {

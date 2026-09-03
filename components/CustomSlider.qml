@@ -1,7 +1,7 @@
 /**
- * CustomSlider.qml — Material 3 Expressive Pill Slider for QuickShell Notch
+ * CustomSlider.qml — macOS Fluid Slider for QuickShell Notch
  *
- * Provides a fluid, rounded pill slider control:
+ * Provides a tactile, rounded slider control matching Apple macOS design:
  *   - Continuous drag tracking with interactive spring micro-scaling
  *   - Smooth animated fill bar when synchronized programmatically
  *   - Clean two-way binding that prevents slider jitter while dragging
@@ -23,7 +23,7 @@ Item {
     /** Granularity increment for step snaps */
     property real stepSize: 1
     /** Height of the track in pixels */
-    property int trackHeight: 8
+    property int trackHeight: 4
 
     /** Emitted when slider value changes via user interaction */
     signal moved(real val)
@@ -65,7 +65,7 @@ Item {
             height: root.trackHeight
             radius: root.trackHeight / 2
             anchors.centerIn: parent
-            color: "#2C2C2E"
+            color: "#3A3A3C"
 
             Rectangle {
                 width: Math.max(height, control.visualPosition * parent.width)
@@ -87,10 +87,10 @@ Item {
             height: 14
             radius: 7
             color: "#FFFFFF"
-            border.color: "#000000"
-            border.width: 1.5
+            border.color: Qt.rgba(0, 0, 0, 0.15)
+            border.width: 1.0
 
-            scale: control.pressed ? 1.25 : (control.hovered ? 1.15 : 1.0)
+            scale: control.pressed ? 1.20 : (control.hovered ? 1.10 : 1.0)
             Behavior on scale { SpringAnimation { spring: 5.5; damping: 0.25 } }
         }
     }
