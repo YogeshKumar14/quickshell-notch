@@ -597,6 +597,17 @@ def test_module_8():
             cfg_valid = ('backend = "resized"' in cfg_text or 'backend = "fastresize"' in cfg_text) and ('palette = "kmeans"' in cfg_text or 'palette = "salience"' in cfg_text)
         record(mod, "Wallust v4 Configuration TOML Compatibility", cfg_valid, 0.001, "wallust.toml contains incompatible keys")
 
+        # 8.5 apply_wallpaper.sh Palette-First Sequencing Architecture Check
+        apply_sh = SCRIPTS_DIR / "desktop/apply_wallpaper.sh"
+        seq_valid = False
+        if apply_sh.exists():
+            sh_text = apply_sh.read_text()
+            idx_wallust = sh_text.find("wallust run")
+            idx_signal = sh_text.find('echo "PALETTE_READY"')
+            idx_awww = sh_text.find("awww img")
+            seq_valid = (idx_wallust != -1 and idx_signal != -1 and idx_awww != -1 and idx_wallust < idx_signal < idx_awww)
+        record(mod, "apply_wallpaper.sh Wallust Palette-First Sequencing", seq_valid, 0.001, "wallust must execute before awww img")
+
 
 # ==============================================================================
 # MODULE 9: APP LAUNCHER ENGINE (NEW)

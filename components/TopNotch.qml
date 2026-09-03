@@ -698,21 +698,22 @@ FocusScope {
 
     Process {
         id: applyWallpaperProc
-        stdout: StdioCollector {
-            onStreamFinished: {
-                wallustDelayTimer.restart();
+        onRunningChanged: {
+            if (!running) {
+                root.refreshAccent();
                 if (root.pendingWallpaperPath !== "") {
                     delayedWallpaperTimer.restart();
                 }
             }
         }
-    }
-
-    Timer {
-        id: wallustDelayTimer
-        interval: 400
-        repeat: false
-        onTriggered: root.refreshAccent()
+        stdout: SplitParser {
+            onRead: function(data) {
+                var line = data.trim();
+                if (line === "PALETTE_READY") {
+                    root.refreshAccent();
+                }
+            }
+        }
     }
 
     Timer {
