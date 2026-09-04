@@ -13,9 +13,19 @@ LOCK_FILE="${XDG_RUNTIME_DIR:-/tmp}/quickshell_wallpaper_${UID:-0}.lock"
 exec 200>"$LOCK_FILE"
 flock -n 200 || exit 0
 
-# 1. Run wallust FIRST to generate color palette and templates before switching wallpaper
-if command -v wallust >/dev/null 2>&1; then
-    wallust run "$TARGET_PIC" >/dev/null 2>&1 || wallust run -s "$TARGET_PIC" >/dev/null 2>&1 || true
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Auto-bootstrap Matugen configuration and templates if missing
+if [ ! -f "$HOME/.config/matugen/config.toml" ] && [ -d "$SCRIPT_DIR/../../templates/matugen" ]; then
+    mkdir -p "$HOME/.config/matugen"
+    cp -r "$SCRIPT_DIR/../../templates/matugen/"* "$HOME/.config/matugen/" 2>/dev/null || true
+fi
+
+# 1. Run color palette generator FIRST (Matugen preferred: zero cache, fast CAM16; fallback to Wallust)
+if command -v matugen >/dev/null 2>&1 && matugen image "$TARGET_PIC" -m dark --source-color-index 0 >/dev/null 2>&1; then
+    :
+elif command -v wallust >/dev/null 2>&1; then
+    wallust run -n -b thumb "$TARGET_PIC" >/dev/null 2>&1 || true
 fi
 
 # 2. Emit PALETTE_READY so listeners (like QuickShell) immediately update accent colors

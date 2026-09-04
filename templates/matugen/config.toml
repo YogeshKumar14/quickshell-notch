@@ -1,0 +1,52 @@
+# Matugen 4.2.0 Configuration
+# Material You (CAM16) & Base16 Color Generator
+
+[config]
+version_check = false
+caching = false
+prefer = "saturation"
+source_color_index = 0
+
+[templates.cava]
+input_path = '~/.config/matugen/templates/colors-cava'
+output_path = '~/.config/cava/config'
+
+[templates.hypr]
+input_path = '~/.config/matugen/templates/colors-hyprland.lua'
+output_path = '~/.config/hypr/wallust/wallust-hyprland.lua'
+
+[templates.wofi]
+input_path = '~/.config/matugen/templates/wofi.css'
+output_path = '~/.config/wofi/style.css'
+
+[templates.waybar]
+input_path = '~/.config/matugen/templates/colors-waybar.css'
+output_path = '~/.config/waybar/wallust/colors-waybar.css'
+
+[templates.kitty]
+input_path = '~/.config/matugen/templates/colors-kitty.conf'
+output_path = '~/.config/kitty/kitty-colors.conf'
+
+[templates.rofi]
+input_path = '~/.config/matugen/templates/colors-rofi.rasi'
+output_path = '~/.config/rofi/wallust/colors-rofi.rasi'
+
+[templates.swaync]
+input_path = '~/.config/matugen/templates/colors-swaync.css'
+output_path = '~/.config/swaync/wallust/colors-wallust.css'
+
+[templates.rmpc]
+input_path = '~/.config/matugen/templates/rmpc.ron'
+output_path = '~/.config/rmpc/themes/wallust.ron'
+
+[templates.shell_colors]
+input_path = '~/.config/matugen/templates/colors.sh'
+output_path = '~/.cache/wal/colors.sh'
+
+[templates.wallpaper]
+input_path = '~/.config/matugen/templates/wallpaper'
+output_path = '~/.cache/wal/wal'
+
+[templates.neopywal]
+input_path = '~/.config/matugen/templates/colors_neopywal.vim'
+output_path = '~/.cache/wallust/colors_neopywal.vim'

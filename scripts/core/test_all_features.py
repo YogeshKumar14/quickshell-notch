@@ -678,25 +678,37 @@ def test_module_8():
         is_valid_hex = (code == 0 and len(color_hex) == 7 and color_hex.startswith("#") and all(c in "0123456789abcdefABCDEF" for c in color_hex[1:]))
         record(mod, "get_wallust_colors.sh Hex Color Output Schema", is_valid_hex, dur, f"out: {color_hex}, err: {err}")
 
-        # 8.4 Wallust v4 Configuration TOML Compatibility Check
+        # 8.4 Palette Generator (Matugen / Wallust) Configuration Compatibility Check
+        matugen_cfg = Path.home() / ".config/matugen/config.toml"
+        matugen_tree = SCRIPTS_DIR.parent / "templates/matugen/config.toml"
         wallust_cfg = Path.home() / ".config/wallust/wallust.toml"
         cfg_valid = False
-        if wallust_cfg.exists():
+        target_cfg = matugen_cfg if matugen_cfg.exists() else (matugen_tree if matugen_tree.exists() else None)
+        if target_cfg and target_cfg.exists():
+            cfg_text = target_cfg.read_text()
+            required_templates = ['[config]', '[templates.cava]', '[templates.hypr]', '[templates.kitty]',
+                                  '[templates.swaync]', '[templates.waybar]', '[templates.shell_colors]']
+            cfg_valid = all(sec in cfg_text for sec in required_templates) and ('source_color_index' in cfg_text or 'prefer' in cfg_text)
+        if not cfg_valid and wallust_cfg.exists():
             cfg_text = wallust_cfg.read_text()
             # Must not contain deprecated v3 keys that crash wallust 4
             cfg_valid = ('backend = "resized"' in cfg_text or 'backend = "fastresize"' in cfg_text) and ('palette = "kmeans"' in cfg_text or 'palette = "salience"' in cfg_text)
-        record(mod, "Wallust v4 Configuration TOML Compatibility", cfg_valid, 0.001, "wallust.toml contains incompatible keys")
+        record(mod, "Palette Generator Configuration (Matugen / Wallust)", cfg_valid, 0.001, "No valid Matugen or Wallust configuration found")
 
         # 8.5 apply_wallpaper.sh Palette-First Sequencing Architecture Check
         apply_sh = SCRIPTS_DIR / "desktop/apply_wallpaper.sh"
         seq_valid = False
         if apply_sh.exists():
             sh_text = apply_sh.read_text()
+            idx_matugen = sh_text.find("matugen image")
             idx_wallust = sh_text.find("wallust run")
             idx_signal = sh_text.find('echo "PALETTE_READY"')
             idx_awww = sh_text.find("awww img")
-            seq_valid = (idx_wallust != -1 and idx_signal != -1 and idx_awww != -1 and idx_wallust < idx_signal < idx_awww)
-        record(mod, "apply_wallpaper.sh Wallust Palette-First Sequencing", seq_valid, 0.001, "wallust must execute before awww img")
+            # Matugen must be present and precede PALETTE_READY and awww img
+            seq_valid = (idx_matugen != -1 and idx_signal != -1 and idx_awww != -1 and idx_matugen < idx_signal < idx_awww)
+            if idx_wallust != -1:
+                seq_valid = seq_valid and (idx_wallust < idx_signal)
+        record(mod, "apply_wallpaper.sh Palette-First Sequencing", seq_valid, 0.001, "palette generator (matugen/wallust) must execute before awww img")
 
 
 # ==============================================================================
