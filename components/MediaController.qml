@@ -174,10 +174,13 @@ Item {
             anchors.verticalCenter: parent.verticalCenter
             spacing: 12
 
-            // Squircle Album Art (78x78px, radius 14px) with OpacityMask & Apple Music badge
+            // Squircle Album Art (78x78px) with OpacityMask & Apple Music badge
             Item {
+                id: albumArtBox
                 width: 78
                 height: 78
+
+                readonly property real albumRadius: Style.bottomRadius > 0 ? Style.bottomRadius : Style.radiusLarge
 
                 // 1. Source Image (hidden, offscreen texture)
                 Image {
@@ -189,24 +192,29 @@ Item {
                     visible: false
                     sourceSize.width: 156
                     sourceSize.height: 156
+                    smooth: true
+                    mipmap: true
+                    antialiasing: true
                 }
 
                 // 2. Vector Mask Shape (Antialiased Squircle)
                 Rectangle {
                     id: albumArtMask
                     anchors.fill: parent
-                    radius: 14
+                    radius: albumArtBox.albumRadius
                     color: "#000000"
                     visible: false
                     smooth: true
                     antialiasing: true
+
+                    Behavior on radius { NumberAnimation { duration: 180; easing.type: Easing.OutQuad } }
                 }
 
                 // 3. Fallback Placeholder if no artwork
                 Rectangle {
                     id: albumArtFallback
                     anchors.fill: parent
-                    radius: 14
+                    radius: albumArtBox.albumRadius
                     color: "#1C1C1E"
                     border.color: "#2C2C2E"
                     border.width: 1
@@ -214,11 +222,15 @@ Item {
                     smooth: true
                     antialiasing: true
 
+                    Behavior on radius { NumberAnimation { duration: 180; easing.type: Easing.OutQuad } }
+
                     Rectangle {
                         anchors.fill: parent
-                        radius: 14
+                        radius: albumArtBox.albumRadius
                         color: Style.accent
                         opacity: 0.12
+                        smooth: true
+                        antialiasing: true
                     }
 
                     M3Icon {
@@ -240,12 +252,14 @@ Item {
                 // 5. Crisp Structural Border Overlay
                 Rectangle {
                     anchors.fill: parent
-                    radius: 14
+                    radius: albumArtBox.albumRadius
                     color: "transparent"
                     border.color: Qt.rgba(255, 255, 255, 0.15)
                     border.width: 1.0
                     smooth: true
                     antialiasing: true
+
+                    Behavior on radius { NumberAnimation { duration: 180; easing.type: Easing.OutQuad } }
                 }
 
                 // 6. Apple Music App Badge on bottom-right corner

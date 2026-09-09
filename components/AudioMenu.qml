@@ -94,8 +94,10 @@ Item {
 
     function getSinkIcon(name) {
         var lower = name.toLowerCase();
-        if (lower.indexOf("bluetooth") !== -1 || lower.indexOf("thunder") !== -1 || lower.indexOf("airpod") !== -1 || lower.indexOf("buds") !== -1) return "bluetooth";
-        if (lower.indexOf("tv") !== -1 || lower.indexOf("hdmi") !== -1 || lower.indexOf("displayport") !== -1) return "desktop_windows";
+        if (lower.indexOf("airpod") !== -1) return "airpods";
+        if (lower.indexOf("headphone") !== -1 || lower.indexOf("headset") !== -1) return "headphones";
+        if (lower.indexOf("bluetooth") !== -1 || lower.indexOf("thunder") !== -1 || lower.indexOf("buds") !== -1) return "bluetooth";
+        if (lower.indexOf("tv") !== -1 || lower.indexOf("hdmi") !== -1 || lower.indexOf("displayport") !== -1) return "display";
         return "volume_up";
     }
 

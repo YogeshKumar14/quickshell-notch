@@ -103,6 +103,8 @@ QtObject {
     readonly property int radiusSmall: 6
     readonly property int radiusMedium: 10
     readonly property int radiusLarge: 14
+    /** Dynamic notch bottom corner radius synchronized with notch_settings.json */
+    property int bottomRadius: 22
 
     // === System Typography Resolution ===
     function _resolveFont(candidates, fallback) {

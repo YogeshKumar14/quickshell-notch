@@ -115,7 +115,7 @@ def write_cava_config(bar_count, monitor_source):
     clean_source = re.sub(r"[^a-zA-Z0-9._-]", "", monitor_source) or "auto"
     config_content = f"""[general]
 bars = {bar_count}
-framerate = 15
+framerate = 30
 autosens = 1
 sleep_timer = 2
 
@@ -129,6 +129,12 @@ raw_target = /dev/stdout
 data_format = ascii
 ascii_max_range = 100
 bar_delimiter = 59
+channels = mono
+mono_option = average
+
+[smoothing]
+monstercat = 0
+noise_reduction = 35
 """
     with open(CAVA_CONFIG_FILE, "w", encoding="utf-8") as fp:
         fp.write(config_content)
@@ -162,6 +168,18 @@ def main():
                 preexec_fn=set_pdeathsig
             )
 
+            # Pre-compute logarithmic EQ weights and per-bar decay rates
+            eq_weights = [
+                0.82 + 0.45 * (i / max(1, bar_count - 1)) ** 0.8
+                for i in range(bar_count)
+            ]
+            decay_rates = [
+                0.76 - 0.14 * (i / max(1, bar_count - 1))
+                for i in range(bar_count)
+            ]
+            phys_bars = [0.0] * bar_count
+            frame_count = 0
+
             while proc.poll() is None:
                 line = proc.stdout.readline()
                 if not line:
@@ -177,14 +195,17 @@ def main():
                         # Apply noise floor deadband (< 6% amplitude filtered to 0)
                         cleaned_vals = [0 if v < 6 else v for v in raw_vals]
 
-                        # Apply EMA smoothing filter (alpha=0.70)
-                        if 'ema_bars' not in locals() or len(ema_bars) != bar_count:
-                            ema_bars = [float(v) for v in cleaned_vals]
-                        else:
-                            alpha = 0.70
-                            ema_bars = [alpha * c + (1.0 - alpha) * e for c, e in zip(cleaned_vals, ema_bars)]
+                        # Apply independent per-bar physics: fast attack + organic frequency-dependent decay
+                        for i in range(bar_count):
+                            target = min(100.0, cleaned_vals[i] * eq_weights[i]) if cleaned_vals[i] > 0 else 0.0
+                            prev = phys_bars[i]
+                            if target >= prev:
+                                phys_bars[i] = 0.85 * target + 0.15 * prev
+                            else:
+                                decayed = prev * decay_rates[i]
+                                phys_bars[i] = 0.0 if decayed < 2.0 else decayed
 
-                        vals = [int(round(v)) for v in ema_bars]
+                        vals = [int(round(v)) for v in phys_bars]
                         is_act = any(v > ACTIVITY_THRESHOLD for v in vals)
 
                         if is_act:
@@ -202,6 +223,11 @@ def main():
                         if consecutive_failures > 0:
                             consecutive_failures = 0
                             backoff = 1.0
+
+                        frame_count += 1
+                        if frame_count % 10 == 0:
+                            if get_bar_count() != bar_count:
+                                break
                     except ValueError:
                         pass
         except Exception as e:

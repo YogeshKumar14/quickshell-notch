@@ -143,15 +143,15 @@ for target_name, sym_name in ICON_MAP.items():
         print(f"Failed {target_name}.svg ({sym_name}): {e}")
 
 # Apple macOS Bluetooth rune icons
-bt_svg = """<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+bt_svg = """<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
   <path d="M6.5 6.5l11 11L12 23V1l5.5 5.5-11 11"/>
 </svg>"""
 with open(os.path.join(icons_dir, "bluetooth.svg"), "w") as f:
     f.write(bt_svg)
 
-bt_dis_svg = """<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+bt_dis_svg = """<svg xmlns="http://www.w3.org/2000/svg" width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="black" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
   <path d="M6.5 6.5l11 11L12 23V1l5.5 5.5-11 11"/>
-  <line x1="2" y1="2" x2="22" y2="22" stroke="black" stroke-width="2" stroke-linecap="round"/>
+  <line x1="3.5" y1="3.5" x2="20.5" y2="20.5" stroke="black" stroke-width="2.2" stroke-linecap="round"/>
 </svg>"""
 with open(os.path.join(icons_dir, "bluetooth_disabled.svg"), "w") as f:
     f.write(bt_dis_svg)

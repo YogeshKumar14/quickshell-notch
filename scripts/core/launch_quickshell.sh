@@ -1,5 +1,8 @@
 #!/usr/bin/env bash
 
+# Close any inherited file descriptors
+exec 200>&- 2>/dev/null || true
+
 # Kill specific known helper processes (path-prefixed to avoid system-wide matches)
 pkill -9 -f "/stream_audio_visualizer\.py" >/dev/null 2>&1
 pkill -9 -x cava >/dev/null 2>&1

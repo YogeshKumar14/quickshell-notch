@@ -160,6 +160,8 @@ Scope {
                             var b = parseInt(cmd.split(":")[2]);
                             notchComp.isAudioMenuOpen = false;
                             if (!isNaN(b)) notchComp.showOsd("brightness", Math.max(0, Math.min(100, b)));
+                        } else if (cmd === "reload_settings") {
+                            notchComp.refreshNotchSettings();
                         }
                         clientSocket.connected = false;
                     }

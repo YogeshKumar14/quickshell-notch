@@ -42,6 +42,10 @@ FocusScope {
             if (root.currentPage === 1 || root.currentPage === 2) {
                 focusTabSearchTimer.restart();
             }
+        } else {
+            if (root.visualizerEnabledVal && root.isPlaying) {
+                visRestartTimer.restart();
+            }
         }
     }
 
@@ -234,7 +238,7 @@ FocusScope {
 
     property real textWidth: compactPillComp ? compactPillComp.trackTitleWidth : 0
     property real dynamicVisNotchWidth: root.showVisualizer
-        ? Math.max(root.compactWidthVal, Math.min(420, 16 + 18 + 12 + 64 + 12 + root.textWidth + 18))
+        ? Math.max(root.compactWidthVal, Math.min(460, 16 + 18 + 14 + Math.round(root.visualizerBarCountVal * 5.5) + 14 + root.textWidth + 20))
         : root.compactWidthVal
 
     property var visualizerBars: []
@@ -242,16 +246,6 @@ FocusScope {
     property bool isAudioActive: false
     property bool isVisualizerActive: false
     readonly property bool showVisualizer: root.visualizerEnabledVal && root.isVisualizerActive && !root.isExpanded && !root.isOsdActive && !root.isNotifMenuOpen && !root.isWorkspaceActive
-
-    Timer {
-        id: visFrameTimer
-        interval: 66
-        repeat: true
-        running: root.showVisualizer && !root.isOsdActive && !root.isWorkspaceActive && root.visualizerBars.length > 0
-        onTriggered: {
-            if (root.visualizerBars.length > 0) root.visualizerFrame = root.visualizerBars;
-        }
-    }
 
     function triggerVisualizerPopup() {
         if (!root.visualizerEnabledVal) return;
@@ -338,6 +332,18 @@ FocusScope {
         id: workspaceDismissTimer
         interval: root.workspaceTimeoutVal
         onTriggered: root.isWorkspaceActive = false
+    }
+
+    onIsWorkspaceActiveChanged: {
+        if (!root.isWorkspaceActive && !root.isExpanded && root.visualizerEnabledVal && root.isPlaying) {
+            visRestartTimer.restart();
+        }
+    }
+
+    onIsOsdActiveChanged: {
+        if (!root.isOsdActive && !root.isExpanded && root.visualizerEnabledVal && root.isPlaying) {
+            visRestartTimer.restart();
+        }
     }
 
     Connections {
@@ -427,7 +433,7 @@ FocusScope {
                     if (data.auto_close !== undefined) root.autoCloseDelay = data.auto_close;
                     if (data.compact_width !== undefined) root.compactWidthVal = data.compact_width;
                     if (data.expanded_height !== undefined) root.expandedHeightVal = data.expanded_height;
-                    if (data.bottom_radius !== undefined) root.notchRadiusVal = data.bottom_radius;
+                    if (data.bottom_radius !== undefined) { root.notchRadiusVal = data.bottom_radius; Style.bottomRadius = data.bottom_radius; }
                     if (data.dripping_ears !== undefined) root.drippingEarsVal = data.dripping_ears;
                     if (data.app_columns !== undefined) root.appColumnsVal = data.app_columns;
                     if (data.workspace_overlay !== undefined) root.workspaceOverlayVal = data.workspace_overlay;
@@ -509,12 +515,18 @@ FocusScope {
                 root.visualizerFrame = [];
             }
         }
+        onExited: function(exitCode, exitStatus) {
+            if (root.visualizerEnabledVal && !root.isExpanded && !root.isOsdActive && !root.isNotifMenuOpen && !root.isWorkspaceActive && root.isPlaying) {
+                visRestartTimer.restart();
+            }
+        }
         stdout: SplitParser {
             onRead: function(data) {
                 try {
                     var obj = JSON.parse(data.trim());
                     if (obj.bars) {
                         root.visualizerBars = obj.bars;
+                        root.visualizerFrame = obj.bars;
                         var isAct = obj.active === true;
                         if (isAct) {
                             root.isAudioActive = true;
@@ -526,6 +538,24 @@ FocusScope {
                     }
                 } catch (e) {}
             }
+        }
+    }
+
+    Timer {
+        id: visRestartTimer
+        interval: 150
+        repeat: false
+        onTriggered: {
+            if (root.visualizerEnabledVal && !root.isExpanded && !root.isOsdActive && !root.isNotifMenuOpen && !root.isWorkspaceActive && root.isPlaying) {
+                visualizerProc.running = true;
+            }
+        }
+    }
+
+    onVisualizerBarCountValChanged: {
+        if (visualizerProc.running) {
+            visualizerProc.running = false;
+            visRestartTimer.restart();
         }
     }
 
@@ -800,6 +830,8 @@ FocusScope {
             root.isVisualizerActive = false;
             root.visualizerBars = [];
             root.visualizerFrame = [];
+        } else if (root.visualizerEnabledVal && !root.isExpanded && !root.isOsdActive && !root.isWorkspaceActive) {
+            visRestartTimer.restart();
         }
     }
     property real trackPosition: activePlayer && activePlayer.position ? activePlayer.position : 0
@@ -1009,8 +1041,8 @@ FocusScope {
         color: "#000000"
         border.width: 0
 
-        bottomLeftRadius: (root.isPowerMenuOpen || root.isWifiMenuOpen || root.isBluetoothMenuOpen || root.isNotifMenuOpen) ? Style.radiusLarge : root.notchRadiusVal
-        bottomRightRadius: (root.isPowerMenuOpen || root.isWifiMenuOpen || root.isBluetoothMenuOpen || root.isNotifMenuOpen) ? Style.radiusLarge : root.notchRadiusVal
+        bottomLeftRadius: root.notchRadiusVal
+        bottomRightRadius: root.notchRadiusVal
         topLeftRadius: 0
         topRightRadius: 0
 
