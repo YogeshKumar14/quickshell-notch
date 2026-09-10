@@ -19,6 +19,7 @@ import subprocess
 import sys
 import tempfile
 import time
+from pathlib import Path
 
 try:
     import dbus
@@ -237,10 +238,42 @@ def test_suite():
         assert player.get_position() == 30_000_000
         print("  ✅ Passed: Rapid 3x clicks debounced into single atomic -30s Seek without race.")
 
+    print("\n=== [TEST 10] Direct D-Bus Duration Resolution via mpris_duration.py ===")
+    duration_script = Path(__file__).resolve().parent.parent / "notch/mpris_duration.py"
+    with MockPlayerContext("DurationPlayer", mode="both") as player:
+        res = subprocess.run(["python3", str(duration_script), "-p", "DurationPlayer"], capture_output=True, text=True)
+        assert res.returncode == 0, f"Failed: {res.stderr}"
+        dur_val = float(res.stdout.strip())
+        assert abs(dur_val - 300.0) < 0.1, f"Expected 300.0s, got {dur_val}"
+        print(f"  ✅ Passed: Direct D-Bus mpris:length (300,000,000 us) normalized to {dur_val}s.")
+
+    print("\n=== [TEST 11] Nonexistent Player Duration Fallback ===")
+    res = subprocess.run(["python3", str(duration_script), "-p", "NonExistentDummyPlayer"], capture_output=True, text=True)
+    assert res.returncode == 0, f"Failed: {res.stderr}"
+    dur_val = float(res.stdout.strip())
+    assert dur_val == 0.0, f"Expected 0.0 for nonexistent player, got {dur_val}"
+    print("  ✅ Passed: Nonexistent player safely returned 0.0s without error.")
+
+    print("\n=== [TEST 12] Reverse-DNS & Case-Insensitive Matching in mpris_duration.py ===")
+    with MockPlayerContext("DurationPlayer", mode="both") as player:
+        # Test case-insensitive match
+        res = subprocess.run(["python3", str(duration_script), "-p", "durationplayer"], capture_output=True, text=True)
+        assert res.returncode == 0, f"Failed: {res.stderr}"
+        dur_val = float(res.stdout.strip())
+        assert abs(dur_val - 300.0) < 0.1, f"Expected 300.0s, got {dur_val}"
+
+        # Test desktop-entry / reverse-DNS prefix match (e.g. io.github.DurationPlayer)
+        res2 = subprocess.run(["python3", str(duration_script), "-p", "org.mpris.MediaPlayer2.io.github.DurationPlayer"], capture_output=True, text=True)
+        assert res2.returncode == 0, f"Failed: {res2.stderr}"
+        dur_val2 = float(res2.stdout.strip())
+        assert abs(dur_val2 - 300.0) < 0.1, f"Expected 300.0s, got {dur_val2}"
+        print("  ✅ Passed: Case-insensitive and reverse-DNS player targets resolved seamlessly.")
+
     print("\n=======================================================")
-    print("🚀 All 9 MPRIS Seek Engine Tests Passed Successfully!")
+    print("🚀 All 12 MPRIS Seek & Duration Tests Passed Successfully!")
     print("=======================================================")
 
 
 if __name__ == "__main__":
     test_suite()
+

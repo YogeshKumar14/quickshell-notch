@@ -64,6 +64,109 @@ Item {
     /** Pending target absolute seek position in seconds (-1 if none) */
     property real pendingAbsoluteSeek: -1
 
+    /** Optional external track length passed from parent (in seconds) */
+    property real externalTrackLength: 0
+
+    /** Resolved fallback track length in seconds (from playerctl/D-Bus) */
+    property real fallbackTrackLength: 0
+
+    /** Internal reactive trigger for recalculating track length */
+    property int durationTrigger: 0
+
+    /** In-memory cache for track durations keyed by target::title::artist */
+    property var durationCache: ({})
+
+    function getTrackKey() {
+        var title = (root.activePlayer && root.activePlayer.trackTitle) ? root.activePlayer.trackTitle.trim() : (root.trackTitle ? root.trackTitle.trim() : "");
+        var artist = (root.activePlayer && root.activePlayer.trackArtist) ? root.activePlayer.trackArtist.trim() : (root.trackArtist ? root.trackArtist.trim() : "");
+        if (!title || title === "No Media Playing") return "";
+        var target = root.getPlayerTarget();
+        return target + "::" + title + "::" + artist;
+    }
+
+    function normalizeDuration(raw) {
+        if (raw === undefined || raw === null) return 0;
+        var val = parseFloat(raw);
+        if (isNaN(val) || !isFinite(val) || val <= 0) return 0;
+        // In MPRIS specification, mpris:length is in microseconds.
+        // A value > 100,000 indicates microseconds (>0.1s in us; >27.7 hrs in seconds).
+        if (val > 100000) {
+            return val / 1000000.0;
+        }
+        return val;
+    }
+
+    property int durationRetryCount: 0
+
+    Timer {
+        id: durationRetryTimer
+        interval: 600
+        repeat: true
+        running: false
+        onTriggered: {
+            if (root.trackLength > 0 || !root.activePlayer) {
+                running = false;
+                root.durationRetryCount = 0;
+                return;
+            }
+            if (root.durationRetryCount >= 8) {
+                running = false;
+                return;
+            }
+            root.durationRetryCount++;
+            root.queryTrackDuration();
+        }
+    }
+
+    function checkAndResolveDuration() {
+        var key = root.getTrackKey();
+        var dur = 0;
+        if (root.activePlayer) {
+            if (root.activePlayer.length !== undefined && root.activePlayer.length > 0) {
+                dur = root.normalizeDuration(root.activePlayer.length);
+            }
+            if (dur <= 0 && root.activePlayer.metadata && root.activePlayer.metadata["mpris:length"] !== undefined) {
+                dur = root.normalizeDuration(root.activePlayer.metadata["mpris:length"]);
+            }
+        }
+        if (dur <= 0 && root.externalTrackLength > 0) {
+            dur = root.normalizeDuration(root.externalTrackLength);
+        }
+        if (dur <= 0 && key && root.durationCache[key] && root.durationCache[key] > 0) {
+            dur = root.durationCache[key];
+        }
+
+        if (dur > 0) {
+            if (key) root.durationCache[key] = dur;
+            root.fallbackTrackLength = dur;
+            root.durationTrigger++;
+            durationRetryTimer.stop();
+            root.durationRetryCount = 0;
+        } else if (root.activePlayer && key) {
+            root.queryTrackDuration();
+            durationRetryTimer.restart();
+        }
+    }
+
+    Connections {
+        target: root.activePlayer
+        function onLengthChanged() {
+            root.checkAndResolveDuration();
+        }
+        function onMetadataChanged() {
+            root.checkAndResolveDuration();
+        }
+        function onTrackTitleChanged() {
+            root.durationRetryCount = 0;
+            root.checkAndResolveDuration();
+        }
+        function onPlaybackStateChanged() {
+            if (root.trackLength <= 0) {
+                root.checkAndResolveDuration();
+            }
+        }
+    }
+
     onActivePlayerChanged: {
         root.localTrackPosition = -1;
         root.isSeeking = false;
@@ -71,6 +174,10 @@ Item {
         root.pendingAbsoluteSeek = -1;
         seekDispatchTimer.stop();
         seekCooldownTimer.stop();
+        root.fallbackTrackLength = 0;
+        root.durationRetryCount = 0;
+        root.durationTrigger++;
+        root.checkAndResolveDuration();
     }
 
     onTrackTitleChanged: {
@@ -80,6 +187,33 @@ Item {
         root.pendingAbsoluteSeek = -1;
         seekDispatchTimer.stop();
         seekCooldownTimer.stop();
+        root.fallbackTrackLength = 0;
+        root.durationRetryCount = 0;
+        root.durationTrigger++;
+        root.checkAndResolveDuration();
+    }
+
+    onTrackArtistChanged: {
+        root.durationRetryCount = 0;
+        root.durationTrigger++;
+        root.checkAndResolveDuration();
+    }
+
+    onExternalTrackLengthChanged: {
+        if (root.externalTrackLength > 0) {
+            var key = root.getTrackKey();
+            var dur = root.normalizeDuration(root.externalTrackLength);
+            if (dur > 0 && key) {
+                root.durationCache[key] = dur;
+            }
+            root.durationTrigger++;
+        }
+    }
+
+    onIsPlayingChanged: {
+        if (root.trackLength <= 0) {
+            root.checkAndResolveDuration();
+        }
     }
 
     onTrackPositionChanged: {
@@ -118,26 +252,61 @@ Item {
         return "";
     }
 
-    /** Current track total length in seconds (auto-normalized from microseconds if needed) */
+    /** Current track total length in seconds (foolproof multi-tier resolution) */
     property real trackLength: {
-        if (!root.activePlayer || !root.activePlayer.length || root.activePlayer.length <= 0) return 0;
-        var len = root.activePlayer.length;
-        return len > 10000 ? (len / 1000000.0) : len;
+        var _trigger = root.durationTrigger;
+        var key = root.getTrackKey();
+
+        // 1. Direct activePlayer lookup (length property)
+        if (root.activePlayer && root.activePlayer.length !== undefined) {
+            var directLen = root.normalizeDuration(root.activePlayer.length);
+            if (directLen > 0) return directLen;
+        }
+
+        // 1b. Direct activePlayer metadata lookup (mpris:length)
+        if (root.activePlayer && root.activePlayer.metadata && root.activePlayer.metadata["mpris:length"] !== undefined) {
+            var metaLen = root.normalizeDuration(root.activePlayer.metadata["mpris:length"]);
+            if (metaLen > 0) return metaLen;
+        }
+
+        // 1c. External track length from parent TopNotch
+        if (root.externalTrackLength > 0) {
+            var extLen = root.normalizeDuration(root.externalTrackLength);
+            if (extLen > 0) return extLen;
+        }
+
+        // 2. Fallback resolved length from D-Bus / playerctl query
+        if (root.fallbackTrackLength > 0) {
+            var fbLen = root.normalizeDuration(root.fallbackTrackLength);
+            if (fbLen > 0) return fbLen;
+        }
+
+        // 3. Cached duration lookup for this track
+        if (key && root.durationCache[key] && root.durationCache[key] > 0) {
+            return root.durationCache[key];
+        }
+
+        return 0;
     }
 
     /** Clean track elapsed position in seconds (auto-normalized and clamped) */
     property real cleanTrackPosition: {
         var pos = (root.localTrackPosition >= 0) ? root.localTrackPosition : root.trackPosition;
-        if (!pos || pos <= 0) return 0;
-        if (pos > 10000) pos = pos / 1000000.0;
+        if (!pos || isNaN(pos) || !isFinite(pos) || pos <= 0) return 0;
+        if (pos > 100000) pos = pos / 1000000.0;
         if (root.trackLength > 0) pos = Math.min(root.trackLength, pos);
         return Math.max(0, pos);
     }
 
     function formatTime(sec) {
-        if (!sec || isNaN(sec) || sec <= 0) return "0:00";
-        var mins = Math.floor(sec / 60);
-        var secs = Math.floor(sec % 60);
+        if (!sec || isNaN(sec) || !isFinite(sec) || sec <= 0) return "0:00";
+        var totalSec = Math.floor(sec);
+        var hrs = Math.floor(totalSec / 3600);
+        var mins = Math.floor((totalSec % 3600) / 60);
+        var secs = totalSec % 60;
+        if (hrs > 0) {
+            return hrs + ":" + (mins < 10 ? "0" : "") + mins + ":" + (secs < 10 ? "0" : "") + secs;
+        }
         return mins + ":" + (secs < 10 ? "0" : "") + secs;
     }
 
@@ -169,6 +338,7 @@ Item {
     }
 
     function seekAbsolute(sec) {
+        if (sec === undefined || isNaN(sec) || !isFinite(sec)) return;
         var targetPos = Math.max(0, sec);
         if (root.trackLength > 0) {
             targetPos = Math.min(root.trackLength, targetPos);
@@ -183,6 +353,7 @@ Item {
     }
 
     function seekRelative(deltaSec) {
+        if (deltaSec === undefined || isNaN(deltaSec) || !isFinite(deltaSec)) return;
         var currentPos = root.cleanTrackPosition;
         var targetPos = Math.max(0, currentPos + deltaSec);
         if (root.trackLength > 0) {
@@ -211,21 +382,56 @@ Item {
         }
     }
 
+    // Multi-tier fallback process querying track duration via direct D-Bus & playerctl
+    Process {
+        id: mprisDurationProc
+        stdout: StdioCollector {
+            onStreamFinished: {
+                var raw = this.text.trim();
+                var dur = root.normalizeDuration(raw);
+                if (dur > 0) {
+                    var key = root.getTrackKey();
+                    if (key) {
+                        root.durationCache[key] = dur;
+                    }
+                    root.fallbackTrackLength = dur;
+                    root.durationTrigger++;
+                    durationRetryTimer.stop();
+                    root.durationRetryCount = 0;
+                }
+            }
+        }
+    }
+
+    function queryTrackDuration() {
+        var target = root.getPlayerTarget();
+        var cmd = [
+            Quickshell.env("HOME") + "/.config/quickshell/scripts/notch/mpris_duration.py"
+        ];
+        if (target !== "") {
+            cmd.push("-p", target);
+        }
+        mprisDurationProc.command = cmd;
+        mprisDurationProc.running = false;
+        mprisDurationProc.running = true;
+    }
+
     Timer {
         id: posPollingTimer
         interval: 500
         running: root.isPlaying
         repeat: true
         onTriggered: {
-            if (root.isSeeking) return;
-            var target = root.getPlayerTarget();
-            if (target !== "") {
-                playerctlPosProc.command = ["playerctl", "-p", target, "position"];
-            } else {
-                playerctlPosProc.command = ["playerctl", "position"];
-            }
-            if (!playerctlPosProc.running) {
-                playerctlPosProc.running = true;
+            if (!root.isSeeking) {
+                var target = root.getPlayerTarget();
+                if (target !== "") {
+                    playerctlPosProc.command = ["playerctl", "-p", target, "position"];
+                } else {
+                    playerctlPosProc.command = ["playerctl", "position"];
+                }
+                if (!playerctlPosProc.running) {
+                    playerctlPosProc.running = true;
+                }
             }
         }
     }
@@ -438,7 +644,7 @@ Item {
                                 anchors.left: parent.left
                                 anchors.top: parent.top
                                 anchors.bottom: parent.bottom
-                                width: (root.trackLength > 0) ? Math.min(parent.width, Math.max(0, (root.cleanTrackPosition / root.trackLength) * parent.width)) : (root.isPlaying ? 40 : 0)
+                                width: (root.trackLength > 0 && parent && parent.width > 0) ? Math.min(parent.width, Math.max(0, (root.cleanTrackPosition / root.trackLength) * parent.width)) : 0
                                 radius: height / 2
                                 color: "#FFFFFF"
                             }
@@ -448,16 +654,18 @@ Item {
                             id: scrubMouse
                             anchors.fill: parent
                             hoverEnabled: true
-                            cursorShape: Qt.PointingHandCursor
+                            cursorShape: (root.trackLength > 0) ? Qt.PointingHandCursor : Qt.ArrowCursor
                             onClicked: function(mouse) {
-                                if (root.trackLength > 0) {
-                                    var targetPos = Math.max(0, Math.min(root.trackLength, (mouse.x / width) * root.trackLength));
+                                if (root.trackLength > 0 && width > 0) {
+                                    var pct = Math.max(0, Math.min(1.0, mouse.x / width));
+                                    var targetPos = pct * root.trackLength;
                                     root.seekAbsolute(targetPos);
                                 }
                             }
                             onPositionChanged: function(mouse) {
-                                if (pressed && root.trackLength > 0) {
-                                    var targetPos = Math.max(0, Math.min(root.trackLength, (mouse.x / width) * root.trackLength));
+                                if (pressed && root.trackLength > 0 && width > 0) {
+                                    var pct = Math.max(0, Math.min(1.0, mouse.x / width));
+                                    var targetPos = pct * root.trackLength;
                                     root.seekAbsolute(targetPos);
                                 }
                             }

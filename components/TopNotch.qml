@@ -830,6 +830,12 @@ FocusScope {
             function onTrackTitleChanged() {
                 root._mprisTrigger++;
             }
+            function onLengthChanged() {
+                root._mprisTrigger++;
+            }
+            function onMetadataChanged() {
+                root._mprisTrigger++;
+            }
         }
     }
 
@@ -855,8 +861,24 @@ FocusScope {
         }
     }
     property real trackPosition: activePlayer && activePlayer.position ? activePlayer.position : 0
+    property real trackLength: {
+        var _trigger = root._mprisTrigger;
+        if (!activePlayer) return 0;
+        if (activePlayer.length !== undefined && activePlayer.length > 0) {
+            var len = activePlayer.length;
+            return (len > 100000) ? (len / 1000000.0) : len;
+        }
+        if (activePlayer.metadata && activePlayer.metadata["mpris:length"] !== undefined) {
+            var mLen = parseFloat(activePlayer.metadata["mpris:length"]);
+            if (!isNaN(mLen) && mLen > 0) {
+                return (mLen > 100000) ? (mLen / 1000000.0) : mLen;
+            }
+        }
+        return 0;
+    }
 
     onActivePlayerChanged: {
+        root._mprisTrigger++;
         if (activePlayer) {
             root.trackPosition = activePlayer.position;
         } else {
@@ -1304,6 +1326,7 @@ FocusScope {
                         trackTitle: root.trackTitle
                         trackArtist: root.trackArtist
                         trackPosition: root.trackPosition
+                        externalTrackLength: root.trackLength
                         volumeLevel: root.volumeLevel
                         micLevel: root.micLevel
                         buttonAnims: root.buttonAnimsVal

@@ -24,6 +24,8 @@ from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
+if str(BASE_DIR) not in sys.path:
+    sys.path.insert(0, str(BASE_DIR))
 SCRIPTS_DIR = BASE_DIR / "scripts"
 COMPONENTS_DIR = BASE_DIR / "components"
 THEME_DIR = BASE_DIR / "theme"
@@ -1027,11 +1029,14 @@ def test_module_14():
 # MODULE 15: MPRIS SEEKING ENGINE & DUAL FALLBACK (NEW)
 # ==============================================================================
 def test_module_15():
-    print(f"\n{Colors.BOLD}{Colors.BLUE}=== [MODULE 15] MPRIS Seeking Engine & Dual Fallback ==={Colors.RESET}")
-    mod = "Module 15: MPRIS Seek Engine"
+    print(f"\n{Colors.BOLD}{Colors.BLUE}=== [MODULE 15] MPRIS Seeking & Track Duration Engine ==={Colors.RESET}")
+    mod = "Module 15: MPRIS Engine"
 
     seek_script = SCRIPTS_DIR / "notch/mpris_seek.py"
     record(mod, "mpris_seek.py Executable Existence", seek_script.exists() and os.access(str(seek_script), os.X_OK), 0.001)
+
+    duration_script = SCRIPTS_DIR / "notch/mpris_duration.py"
+    record(mod, "mpris_duration.py Executable Existence", duration_script.exists() and os.access(str(duration_script), os.X_OK), 0.001)
 
     # 15.1 CLI Argument Schema (Relative Seek)
     code, out, err, dur = run_cmd(["python3", str(seek_script), "-10", "--relative"])
@@ -1041,11 +1046,36 @@ def test_module_15():
     code, out, err, dur = run_cmd(["python3", str(seek_script), "45.0", "--absolute", "--current-pos", "30.0"])
     record(mod, "mpris_seek.py CLI Absolute Mode & Pos Hint", code == 0, dur, err)
 
-    # 15.3 Run Full D-Bus Mock Seeking Suite
+    # 15.3 Duration CLI Query & Schema
+    code, out, err, dur = run_cmd(["python3", str(duration_script), "-p", "NonExistentDummyPlayer"])
+    valid_dur = (code == 0 and out.strip() == "0.0")
+    record(mod, "mpris_duration.py CLI Schema & Fallback", valid_dur, dur, err or out)
+
+    # 15.4 Multi-Tier Normalization Unit Tests
+    t0 = time.perf_counter()
+    from scripts.notch.mpris_duration import normalize_length
+    norm_tests = [
+        (188_173_500, 188.1735),   # Monophony microsecond integer
+        (65_021_000, 65.021),       # C418 microsecond integer
+        ("300000000", 300.0),       # String microsecond
+        (188.173, 188.173),         # Seconds float
+        ("188.173", 188.173),       # String float
+        ("603021000\n180000000\n", 603.021),  # Multiline string from playerctl / multi-player
+        ("  188173500  \n", 188.1735),        # Whitespace padded
+        ("\n\n", 0.0),              # Empty newlines
+        (0, 0.0),                   # Zero length
+        (-10, 0.0),                 # Negative length
+        (None, 0.0),                # None
+        ("invalid_str", 0.0),       # Corrupt string
+    ]
+    norm_passed = all(abs(normalize_length(raw) - exp) < 0.001 for raw, exp in norm_tests)
+    record(mod, "Multi-Tier Duration Normalization Engine (Microseconds/Seconds/Null/Multiline)", norm_passed, time.perf_counter() - t0)
+
+    # 15.5 Run Full D-Bus Mock Seeking & Duration Suite
     seek_test_suite = SCRIPTS_DIR / "core/test_mpris_seek.py"
     if seek_test_suite.exists():
-        code, out, err, dur = run_cmd(["python3", str(seek_test_suite)])
-        record(mod, "Dual D-Bus / Playerctl Fallback Suite (9 tests)", code == 0, dur, err)
+        code, out, err, dur = run_cmd(["python3", str(seek_test_suite)], timeout=30)
+        record(mod, "Dual D-Bus / Playerctl Fallback Suite (12 tests)", code == 0, dur, err)
 
 
 def main():
