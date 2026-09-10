@@ -1023,6 +1023,31 @@ def test_module_14():
         record(mod, "PipeWire wpctl Audio Status Schema", False, dur, str(e))
 
 
+# ==============================================================================
+# MODULE 15: MPRIS SEEKING ENGINE & DUAL FALLBACK (NEW)
+# ==============================================================================
+def test_module_15():
+    print(f"\n{Colors.BOLD}{Colors.BLUE}=== [MODULE 15] MPRIS Seeking Engine & Dual Fallback ==={Colors.RESET}")
+    mod = "Module 15: MPRIS Seek Engine"
+
+    seek_script = SCRIPTS_DIR / "notch/mpris_seek.py"
+    record(mod, "mpris_seek.py Executable Existence", seek_script.exists() and os.access(str(seek_script), os.X_OK), 0.001)
+
+    # 15.1 CLI Argument Schema (Relative Seek)
+    code, out, err, dur = run_cmd(["python3", str(seek_script), "-10", "--relative"])
+    record(mod, "mpris_seek.py CLI Relative Mode", code == 0, dur, err)
+
+    # 15.2 CLI Argument Schema (Absolute Seek with Current-Pos Hint)
+    code, out, err, dur = run_cmd(["python3", str(seek_script), "45.0", "--absolute", "--current-pos", "30.0"])
+    record(mod, "mpris_seek.py CLI Absolute Mode & Pos Hint", code == 0, dur, err)
+
+    # 15.3 Run Full D-Bus Mock Seeking Suite
+    seek_test_suite = SCRIPTS_DIR / "core/test_mpris_seek.py"
+    if seek_test_suite.exists():
+        code, out, err, dur = run_cmd(["python3", str(seek_test_suite)])
+        record(mod, "Dual D-Bus / Playerctl Fallback Suite (9 tests)", code == 0, dur, err)
+
+
 def main():
     print(f"{Colors.BOLD}======================================================{Colors.RESET}")
     print(f"{Colors.BOLD}🚀 Starting QuickShell Notch v2.0.0 Comprehensive Test Suite{Colors.RESET}")
@@ -1043,6 +1068,7 @@ def main():
     test_module_12()
     test_module_13()
     test_module_14()
+    test_module_15()
     total_time = time.perf_counter() - t_start
 
     generate_report()

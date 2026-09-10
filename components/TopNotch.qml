@@ -814,12 +814,32 @@ FocusScope {
     }
 
     // MPRIS Media properties
+    property int _mprisTrigger: 0
+
+    function refreshActivePlayer() {
+        root._mprisTrigger++;
+    }
+
+    Instantiator {
+        model: Mpris.players
+        delegate: Connections {
+            target: modelData
+            function onPlaybackStateChanged() {
+                root._mprisTrigger++;
+            }
+            function onTrackTitleChanged() {
+                root._mprisTrigger++;
+            }
+        }
+    }
+
     property var activePlayer: {
+        var _trigger = root._mprisTrigger;
         var players = Mpris.players.values;
         for (var i = 0; i < players.length; i++) {
-            if (players[i].playbackState === MprisPlaybackState.Playing) return players[i];
+            if (players[i] && players[i].playbackState === MprisPlaybackState.Playing) return players[i];
         }
-        return players.length > 0 ? players[0] : null;
+        return (players.length > 0 && players[0]) ? players[0] : null;
     }
     property string trackTitle: activePlayer && activePlayer.trackTitle ? activePlayer.trackTitle : "No Media Playing"
     property string trackArtist: activePlayer && activePlayer.trackArtist ? activePlayer.trackArtist : "Top Notch"

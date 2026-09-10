@@ -55,8 +55,68 @@ Item {
 
     clip: false
 
-    /** Local optimistically synced track position in seconds */
-    property real localTrackPosition: 0
+    /** Local optimistically synced track position in seconds (-1 when uninitialized) */
+    property real localTrackPosition: -1
+    /** Whether user is actively seeking (scrubbing or rewinding) to prevent polling snap-backs */
+    property bool isSeeking: false
+    /** Pending accumulated relative seek delta in seconds */
+    property real pendingRelativeSeek: 0
+    /** Pending target absolute seek position in seconds (-1 if none) */
+    property real pendingAbsoluteSeek: -1
+
+    onActivePlayerChanged: {
+        root.localTrackPosition = -1;
+        root.isSeeking = false;
+        root.pendingRelativeSeek = 0;
+        root.pendingAbsoluteSeek = -1;
+        seekDispatchTimer.stop();
+        seekCooldownTimer.stop();
+    }
+
+    onTrackTitleChanged: {
+        root.localTrackPosition = -1;
+        root.isSeeking = false;
+        root.pendingRelativeSeek = 0;
+        root.pendingAbsoluteSeek = -1;
+        seekDispatchTimer.stop();
+        seekCooldownTimer.stop();
+    }
+
+    onTrackPositionChanged: {
+        if (!root.isSeeking) {
+            root.localTrackPosition = root.trackPosition;
+        }
+    }
+
+    Timer {
+        id: seekCooldownTimer
+        interval: 1200
+        repeat: false
+        onTriggered: {
+            root.isSeeking = false;
+        }
+    }
+
+    Timer {
+        id: seekDispatchTimer
+        interval: 100
+        repeat: false
+        onTriggered: {
+            root.dispatchPendingSeek();
+        }
+    }
+
+    /** Helper to get clean MPRIS player name for playerctl / D-Bus targeting */
+    function getPlayerTarget() {
+        if (!root.activePlayer) return "";
+        if (root.activePlayer.dbusName && root.activePlayer.dbusName.length > 0) {
+            return root.activePlayer.dbusName.replace(/^org\.mpris\.MediaPlayer2\./, "");
+        }
+        if (root.activePlayer.identity && root.activePlayer.identity.length > 0) {
+            return root.activePlayer.identity;
+        }
+        return "";
+    }
 
     /** Current track total length in seconds (auto-normalized from microseconds if needed) */
     property real trackLength: {
@@ -67,7 +127,7 @@ Item {
 
     /** Clean track elapsed position in seconds (auto-normalized and clamped) */
     property real cleanTrackPosition: {
-        var pos = root.localTrackPosition > 0 ? root.localTrackPosition : root.trackPosition;
+        var pos = (root.localTrackPosition >= 0) ? root.localTrackPosition : root.trackPosition;
         if (!pos || pos <= 0) return 0;
         if (pos > 10000) pos = pos / 1000000.0;
         if (root.trackLength > 0) pos = Math.min(root.trackLength, pos);
@@ -81,32 +141,68 @@ Item {
         return mins + ":" + (secs < 10 ? "0" : "") + secs;
     }
 
-    function seekAbsolute(sec) {
-        root.localTrackPosition = sec;
-        if (root.activePlayer && root.activePlayer.canSeek) {
-            root.activePlayer.position = sec;
+    function dispatchPendingSeek() {
+        var target = root.getPlayerTarget();
+        var cmd = [
+            Quickshell.env("HOME") + "/.config/quickshell/scripts/notch/mpris_seek.py"
+        ];
+        if (target !== "") {
+            cmd.push("-p", target);
         }
-        playerctlSeek.command = ["playerctl", "position", sec.toFixed(1)];
-        playerctlSeek.running = true;
+
+        if (root.pendingAbsoluteSeek >= 0) {
+            var absPos = root.pendingAbsoluteSeek;
+            root.pendingAbsoluteSeek = -1;
+            root.pendingRelativeSeek = 0;
+            cmd.push(absPos.toFixed(2), "--absolute", "--current-pos", root.cleanTrackPosition.toFixed(2));
+        } else if (root.pendingRelativeSeek !== 0) {
+            var relDelta = root.pendingRelativeSeek;
+            root.pendingRelativeSeek = 0;
+            cmd.push(relDelta.toFixed(2), "--relative", "--current-pos", root.cleanTrackPosition.toFixed(2));
+        } else {
+            return;
+        }
+
+        mprisSeekProc.command = cmd;
+        mprisSeekProc.running = false;
+        mprisSeekProc.running = true;
+    }
+
+    function seekAbsolute(sec) {
+        var targetPos = Math.max(0, sec);
+        if (root.trackLength > 0) {
+            targetPos = Math.min(root.trackLength, targetPos);
+        }
+        root.localTrackPosition = targetPos;
+        root.isSeeking = true;
+        seekCooldownTimer.restart();
+
+        root.pendingRelativeSeek = 0;
+        root.pendingAbsoluteSeek = targetPos;
+        seekDispatchTimer.restart();
     }
 
     function seekRelative(deltaSec) {
-        var targetPos = Math.max(0, root.cleanTrackPosition + deltaSec);
-        root.localTrackPosition = targetPos;
-        if (root.activePlayer && root.activePlayer.canSeek) {
-            root.activePlayer.position = targetPos;
+        var currentPos = root.cleanTrackPosition;
+        var targetPos = Math.max(0, currentPos + deltaSec);
+        if (root.trackLength > 0) {
+            targetPos = Math.min(root.trackLength, targetPos);
         }
-        var arg = deltaSec < 0 ? (Math.abs(deltaSec) + "-") : (deltaSec + "+");
-        playerctlSeek.command = ["playerctl", "position", arg];
-        playerctlSeek.running = true;
+        root.localTrackPosition = targetPos;
+        root.isSeeking = true;
+        seekCooldownTimer.restart();
+
+        root.pendingAbsoluteSeek = -1;
+        root.pendingRelativeSeek += deltaSec;
+        seekDispatchTimer.restart();
     }
 
     // Active 500ms playerctl position polling for sub-second accurate playback timeline
     Process {
         id: playerctlPosProc
-        command: ["playerctl", "position"]
         stdout: StdioCollector {
             onStreamFinished: {
+                if (root.isSeeking) return;
                 var p = parseFloat(this.text.trim());
                 if (!isNaN(p) && p >= 0) {
                     root.localTrackPosition = p;
@@ -121,6 +217,13 @@ Item {
         running: root.isPlaying
         repeat: true
         onTriggered: {
+            if (root.isSeeking) return;
+            var target = root.getPlayerTarget();
+            if (target !== "") {
+                playerctlPosProc.command = ["playerctl", "-p", target, "position"];
+            } else {
+                playerctlPosProc.command = ["playerctl", "position"];
+            }
             if (!playerctlPosProc.running) {
                 playerctlPosProc.running = true;
             }
@@ -437,8 +540,14 @@ Item {
                                 hoverEnabled: true
                                 cursorShape: Qt.PointingHandCursor
                                 onClicked: {
-                                    if (root.activePlayer) root.activePlayer.previous();
-                                    else playerctlPrev.running = true;
+                                    if (root.activePlayer) {
+                                        root.activePlayer.previous();
+                                    } else {
+                                        var target = root.getPlayerTarget();
+                                        playerctlPrev.command = target ? ["playerctl", "-p", target, "previous"] : ["playerctl", "previous"];
+                                        playerctlPrev.running = false;
+                                        playerctlPrev.running = true;
+                                    }
                                 }
                             }
                         }
@@ -462,8 +571,14 @@ Item {
                                 hoverEnabled: true
                                 cursorShape: Qt.PointingHandCursor
                                 onClicked: {
-                                    if (root.activePlayer) root.activePlayer.togglePlaying();
-                                    else playerctlPlayPause.running = true;
+                                    if (root.activePlayer) {
+                                        root.activePlayer.togglePlaying();
+                                    } else {
+                                        var target = root.getPlayerTarget();
+                                        playerctlPlayPause.command = target ? ["playerctl", "-p", target, "play-pause"] : ["playerctl", "play-pause"];
+                                        playerctlPlayPause.running = false;
+                                        playerctlPlayPause.running = true;
+                                    }
                                 }
                             }
                         }
@@ -487,8 +602,14 @@ Item {
                                 hoverEnabled: true
                                 cursorShape: Qt.PointingHandCursor
                                 onClicked: {
-                                    if (root.activePlayer) root.activePlayer.next();
-                                    else playerctlNext.running = true;
+                                    if (root.activePlayer) {
+                                        root.activePlayer.next();
+                                    } else {
+                                        var target = root.getPlayerTarget();
+                                        playerctlNext.command = target ? ["playerctl", "-p", target, "next"] : ["playerctl", "next"];
+                                        playerctlNext.running = false;
+                                        playerctlNext.running = true;
+                                    }
                                 }
                             }
                         }
@@ -657,7 +778,6 @@ Item {
     }
 
     Process {
-        id: playerctlSeek
-        command: ["playerctl", "position", "0"]
+        id: mprisSeekProc
     }
 }
