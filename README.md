@@ -41,116 +41,131 @@ Top Notch morphs dynamically between a compact top-center status pill and an exp
 
 ---
 
-## Installation — Fresh Arch Linux + Hyprland
+## Installation on Arch Linux
 
-### 1. Base Arch Linux installation
+### Method 1: Automated Installer (Recommended)
 
-If you don't have Arch installed yet, follow the [official installation guide](https://wiki.archlinux.org/title/Installation_guide) (`archinstall` or manual pacstrap). After reboot, install a minimal base:
+QuickShell Top Notch includes an automated, idempotent installation script that resolves dependencies, registers fonts, bootstraps Matugen templates, sets up configuration links, and installs the CLI helper.
 
 ```bash
-# Base development tools (needed for AUR builds later)
-sudo pacman -S --needed base-devel git
+# 1. Clone into your config directory:
+git clone https://github.com/YogeshKumar14/quickshell-notch.git ~/.config/quickshell
+cd ~/.config/quickshell
+
+# 2. Run the interactive installer:
+./install.sh
 ```
 
-### 2. Install Hyprland and desktop essentials
-
+Or run directly via one-liner:
 ```bash
-# Hyprland + display environment
-sudo pacman -S hyprland xdg-desktop-portal-hyprland
-
-# Audio (PipeWire) — needed for the CAVA visualizer and volume/mic controls
-sudo pacman -S pipewire pipewire-pulse wireplumber
-
-# Network & Bluetooth — provides nmcli and bluetoothctl used by the notch
-sudo pacman -S networkmanager bluez bluez-utils
-
-# A terminal, notifications backend, and wallpaper/theme tooling
-sudo pacman -S kitty swaync
-
-# Enable the services
-sudo systemctl enable --now NetworkManager
-sudo systemctl enable --now bluetooth
+bash <(curl -fsSL https://raw.githubusercontent.com/YogeshKumar14/quickshell-notch/main/install.sh)
 ```
 
-> **Tip**: also install `xdg-desktop-portal-gtk` for correct file dialogs in Flatpak apps, and any GPU/display drivers your hardware needs before launching Hyprland for the first time.
+#### Installer Flags & Options
+| Flag | Description |
+|------|-------------|
+| `-y`, `--yes` | Non-interactive mode (auto-confirms package installation and setup) |
+| `--dry-run` | Inspect actions without modifying files or system packages |
+| `--hyprland` | Automatically append autostart and persistence imports to `hyprland.conf` / `hyprland.lua` |
+| `--no-deps` | Skip dependency checks and package installation |
+| `--no-fonts` | Skip Apple SF Pro / SF Mono font installation |
+| `--copy` | Copy repository files to `~/.config/quickshell` instead of symlinking |
+| `-h`, `--help` | Display full help and options |
 
-### 3. Install an AUR helper
+---
 
-QuickShell, Wallust, and `awww` are not in the official repos, so you need an AUR helper. Install `paru`:
+### Method 2: Arch Linux PKGBUILD / AUR
 
+A standard Arch Linux compliant `PKGBUILD` is included in the repository root and `packaging/` directory.
+
+#### Using an AUR Helper (e.g. `yay` or `paru`):
 ```bash
-git clone https://aur.archlinux.org/paru.git /tmp/paru
-cd /tmp/paru
+# Release package:
+yay -S quickshell-notch
+
+# Or latest development branch:
+yay -S quickshell-notch-git
+```
+
+#### Manual Build with `makepkg`:
+```bash
+git clone https://github.com/YogeshKumar14/quickshell-notch.git
+cd quickshell-notch
 makepkg -si
+
+# Initialize user configuration and templates:
+quickshell-notch init
 ```
 
-### 4. Install the notch dependencies
+---
+
+### Method 3: Manual Installation & Dependency Reference
+
+If you prefer to install dependencies manually:
 
 ```bash
-# Official repositories
+# Official repositories (Arch [extra])
 sudo pacman -S --needed \
+  quickshell \
   hyprland \
   swaync \
   cava \
+  matugen \
+  awww \
+  pipewire \
+  pipewire-pulse \
+  wireplumber \
+  playerctl \
+  socat \
+  grim \
+  ffmpeg \
+  libnotify \
+  brightnessctl \
+  networkmanager \
+  bluez \
+  bluez-utils \
+  python \
   python-pillow \
-  ttf-jetbrains-mono-nerd \
-  ttf-ubuntu-font-family \
-  ttf-inter
-
-# AUR packages (via paru)
-paru -S quickshell-git wallust-bin awww
+  python-dbus \
+  python-gobject \
+  python-requests \
+  qt6-5compat \
+  qt6-svg \
+  fontconfig \
+  ttf-jetbrains-mono-nerd
 ```
 
 | Package | Why it's needed |
 |---------|-----------------|
-| `hyprland` | The notch integrates with Hyprland's IPC socket and window-mapping protocol |
-| `quickshell-git` | The QML runtime/engine the notch is built on (Hyprland-enabled build) |
-| `swaync` | Notification backend. **Do not autostart it yourself** — the notch's launcher manages it and QuickShell hosts the notification interface |
-| `cava` | Audio visualizer stream (now in the official `extra` repo) |
-| `awww` | Wallpaper daemon; the wallpaper selector applies images through it |
-| `wallust-bin` | Generates the accent color palette from your wallpaper |
+| `quickshell` | QML runtime and desktop shell engine |
+| `hyprland` | Window manager; notch integrates with Hyprland IPC and layer-shell |
+| `matugen` | Material You (CAM16) dynamic accent color generator |
+| `awww` | High-performance Wayland wallpaper daemon |
+| `cava` | Audio visualizer stream backend |
+| `pipewire` + `wireplumber` | Audio routing drawer and volume/mic control |
+| `playerctl` + `python-dbus` | MPRIS media controller and duration/seek resolvers |
 | `python-pillow` | Parallel wallpaper thumbnail generation |
-| `networkmanager` + `bluez-utils` | `nmcli` / `bluetoothctl` backends for the Wi-Fi and Bluetooth panels |
-| Nerd Fonts | Glyph icons used throughout the UI (JetBrains Mono Nerd Font ships the glyph set) |
+| `networkmanager` + `bluez-utils` | `nmcli` / `bluetoothctl` network and bluetooth drawers |
+| `swaync` | Notification backend (QuickShell hosts notification server directly) |
+| `qt6-5compat` | Provides `Qt5Compat.GraphicalEffects` for image blending |
+| SF Pro & SF Mono Fonts | macOS system typography (automatically registered by `install.sh`) |
 
-### 5. Clone the configuration
-
+#### Fonts Setup
 ```bash
-git clone https://github.com/YogeshKumar14/quickshell-notch.git ~/.config/quickshell
+bash ~/.config/quickshell/scripts/core/download_macos_fonts.sh
 ```
 
-### 6. Configure Wallust (accent colors)
-
-The notch reads its accent color from the Wallust shell template. Set up Wallust so it writes `~/.cache/wal/colors.sh`:
-
+#### Matugen Accent Colors Setup
+The notch uses Matugen (or Wallust) to generate colors dynamically from your wallpaper. Bootstrapping templates:
 ```bash
-mkdir -p ~/.config/wallust
+mkdir -p ~/.config/matugen
+cp -r ~/.config/quickshell/templates/matugen/* ~/.config/matugen/
 ```
-
-Create `~/.config/wallust/wallust.toml` (Wallust v4 syntax):
-
-```toml
-backend = "resized"
-palette = "salience"
-style = "dark"
-
-[templates]
-shell-colors = { template = "colors.sh", target = "~/.cache/wal/colors.sh" }
-```
-
-Then generate the palette once:
-
+Generate your initial palette:
 ```bash
-wallust run ~/Pictures/wallpapers/your-wallpaper.jpg
+matugen image ~/Pictures/wallpapers/your-wallpaper.jpg -m dark --source-color-index 0
 ```
-
-Verify it worked:
-
-```bash
-cat ~/.cache/wal/colors.sh | head   # should contain color0..color15 hex values
-```
-
-> The notch falls back to a default blue accent (`#0A84FF`) when the file is missing, so a wrong Wallust setup only breaks theming, not the notch itself.
+*(The notch falls back to system blue `#0A84FF` if no palette is found).*
 
 ### 7. Integrate with Hyprland
 
@@ -176,33 +191,61 @@ import("quickshell_hypr.lua")
 
 The launcher script (`launch_quickshell.sh`) kills any stale `quickshell`, `cava`, visualizer, and `swaync` processes, then starts QuickShell against `shell.qml`. Use the same script whenever you want a clean restart.
 
-### 8. First run
+### 8. First run & Management
 
-Log out and back into Hyprland (or run the launcher manually once):
-
-```bash
-bash ~/.config/quickshell/scripts/core/launch_quickshell.sh
-```
-
-You should see the compact pill at the top-center of the screen. Hover/click it to expand the dashboard. To reload after changing anything:
+Use the `quickshell-notch` CLI helper (installed in `~/.local/bin` or `/usr/bin`):
 
 ```bash
-pkill -9 -x quickshell; bash ~/.config/quickshell/scripts/core/launch_quickshell.sh
+# Launch or cleanly restart
+quickshell-notch launch
+
+# Check status & IPC socket
+quickshell-notch status
+
+# Stop daemon
+quickshell-notch stop
 ```
 
 Runtime logs live at `/run/user/$UID/quickshell/by-id/*/log.qslog` — check there if something looks broken.
 
-### 9. Optional: keybind the notch
+### 9. Hyprland Keybinds
 
-The notch exposes a local IPC socket at `/tmp/quickshell-notch.sock`. Add Hyprland keybinds like:
+Control the notch dynamically using the `quickshell-notch` command or raw IPC:
 
 ```ini
-bind = SUPER, N, exec, python3 ~/.config/quickshell/scripts/notch/notch_ipc.py toggle
-bind = SUPER, V, exec, python3 ~/.config/quickshell/scripts/notch/notch_ipc.py osd:vol:50
-bind = SUPER, B, exec, python3 ~/.config/quickshell/scripts/notch/notch_ipc.py osd:bri:80
+# Toggle expand/collapse
+bind = SUPER, N, exec, quickshell-notch toggle
+
+# Quick tab switches
+bind = SUPER, M, exec, quickshell-notch nook
+bind = SUPER, SPACE, exec, quickshell-notch apps
+bind = SUPER, W, exec, quickshell-notch walls
+
+# Volume & Brightness OSD
+bind = , XF86AudioRaiseVolume, exec, quickshell-notch osd volume up
+bind = , XF86AudioLowerVolume, exec, quickshell-notch osd volume down
+bind = , XF86MonBrightnessUp, exec, quickshell-notch osd brightness up
+bind = , XF86MonBrightnessDown, exec, quickshell-notch osd brightness down
 ```
 
-See the [IPC reference](#ipc-reference) below for all commands.
+---
+
+## Uninstallation
+
+To cleanly remove QuickShell Top Notch, installed font assets, and runtime caches:
+
+```bash
+# Clean uninstall (preserves your custom notch_settings.json):
+./uninstall.sh
+
+# Complete purge (removes configs, settings, and hyprland persistence):
+./uninstall.sh --purge
+```
+
+Or if installed via pacman / AUR:
+```bash
+sudo pacman -R quickshell-notch
+```
 
 ---
 

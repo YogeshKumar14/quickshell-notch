@@ -2,7 +2,7 @@
 # Quickshell Notch Codebase Validation Pipeline
 # Run this script to catch syntax errors before reloading the live daemon.
 
-DIR="$HOME/.config/quickshell"
+DIR="${QUICKSHELL_DIR:-$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)}"
 EXIT_CODE=0
 
 echo "======================================"
@@ -49,7 +49,7 @@ while IFS= read -r file; do
         bash -n "$file"
         SH_FAILS=$((SH_FAILS + 1))
     fi
-done < <(find "$DIR/scripts" -name "*.sh")
+done < <(find "$DIR" -maxdepth 1 -name "*.sh"; find "$DIR/scripts" -name "*.sh"; [ -f "$DIR/bin/quickshell-notch" ] && echo "$DIR/bin/quickshell-notch"; [ -f "$DIR/packaging/quickshell-notch.install" ] && echo "$DIR/packaging/quickshell-notch.install")
 
 if [ $SH_FAILS -eq 0 ]; then
     echo "✅ Passed"

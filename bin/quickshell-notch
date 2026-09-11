@@ -1,0 +1,282 @@
+#!/usr/bin/env bash
+# quickshell-notch — Command Line Interface and Manager for QuickShell Top Notch
+#
+# Usage:
+#   quickshell-notch <command> [arguments...]
+#
+# Commands:
+#   launch, start       Launch or relaunch QuickShell Notch
+#   kill, stop          Stop running QuickShell Notch processes
+#   restart, reload     Restart QuickShell Notch
+#   status              Show running status and process information
+#   init [--symlink]    Initialize or link ~/.config/quickshell and templates
+#   validate            Run codebase validation pipeline (QML, Python, Bash)
+#   ipc <command>       Send raw command to notch IPC socket
+#   toggle              Toggle notch expand/collapse state
+#   close               Collapse notch
+#   nook                Toggle MPRIS Media Controller (Tab 0)
+#   apps                Toggle Application Launcher (Tab 1)
+#   walls               Toggle Wallpaper Selector (Tab 2)
+#   audio               Toggle Audio routing drawer
+#   notifs              Toggle Notification drawer
+#   notifs:clear        Clear active notifications with staggered animation
+#   settings            Open Notch Settings window
+#   osd <kind> <val>    Trigger Volume or Brightness OSD
+#   help, --help, -h    Display this help message
+
+set -euo pipefail
+
+# Determine the installation base directory
+USER_CONFIG_DIR="${HOME}/.config/quickshell"
+SYS_SHARE_DIR="/usr/share/quickshell-notch"
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+find_base_dir() {
+    if [ -d "$USER_CONFIG_DIR" ] && [ -f "$USER_CONFIG_DIR/shell.qml" ]; then
+        echo "$USER_CONFIG_DIR"
+    elif [ -f "$SCRIPT_DIR/../shell.qml" ]; then
+        cd "$SCRIPT_DIR/.." && pwd
+    elif [ -d "$SYS_SHARE_DIR" ] && [ -f "$SYS_SHARE_DIR/shell.qml" ]; then
+        echo "$SYS_SHARE_DIR"
+    else
+        echo "$USER_CONFIG_DIR"
+    fi
+}
+
+BASE_DIR="$(find_base_dir)"
+LAUNCH_SCRIPT="${BASE_DIR}/scripts/core/launch_quickshell.sh"
+IPC_SCRIPT="${BASE_DIR}/scripts/notch/notch_ipc.py"
+OSD_SCRIPT="${BASE_DIR}/scripts/core/osd.sh"
+VALIDATE_SCRIPT="${BASE_DIR}/scripts/core/validate_codebase.sh"
+
+show_help() {
+    cat <<'EOF'
+QuickShell Top Notch — Desktop Status Bar & Control Center Manager
+
+Usage:
+  quickshell-notch <command> [options]
+
+Core Commands:
+  launch, start         Launch or cleanly relaunch the Notch daemon
+  kill, stop            Stop the running QuickShell Notch daemon and helpers
+  restart, reload       Restart QuickShell Notch
+  status                Check daemon status, PID, and socket connectivity
+  init [--symlink|--copy]
+                        Initialize ~/.config/quickshell and Matugen templates
+  validate              Run codebase validation pipeline (qmllint, py_compile, bash -n)
+
+Notch Controls:
+  toggle                Expand or collapse the Notch
+  close                 Collapse the Notch
+  nook                  Toggle Media Controller tab (Tab 0)
+  apps                  Toggle App Launcher tab (Tab 1)
+  walls                 Toggle Wallpaper Selector tab (Tab 2)
+  audio                 Toggle Audio routing drawer
+  notifs                Toggle Notification center drawer
+  notifs:clear          Clear notifications with staggered animation
+  settings              Open Notch Settings window
+
+OSD Controls:
+  osd volume <up|down>     Step volume up/down by 5% and show OSD
+  osd brightness <up|down> Step brightness up/down by 5% and show OSD
+  osd vol <0-100>          Set/display specific volume level
+  osd bri <0-100>          Set/display specific brightness level
+
+Advanced:
+  ipc <command>         Send arbitrary raw command to /tmp/quickshell-notch.sock
+
+Hyprland Keybind Example (~/.config/hypr/hyprland.conf):
+  bind = SUPER, N, exec, quickshell-notch toggle
+  bind = SUPER, V, exec, quickshell-notch osd volume up
+  bind = SUPER, B, exec, quickshell-notch osd brightness up
+EOF
+}
+
+cmd_launch() {
+    if [ ! -f "$USER_CONFIG_DIR/shell.qml" ]; then
+        echo "User configuration not found at $USER_CONFIG_DIR. Initializing..."
+        cmd_init
+    fi
+    if [ ! -f "$LAUNCH_SCRIPT" ]; then
+        echo "Error: Launcher script not found at '$LAUNCH_SCRIPT'" >&2
+        echo "Run 'quickshell-notch init' to set up ~/.config/quickshell" >&2
+        exit 1
+    fi
+    echo "Starting QuickShell Notch..."
+    bash "$LAUNCH_SCRIPT" "$@"
+}
+
+cmd_kill() {
+    echo "Stopping QuickShell Notch..."
+    pkill -9 -f "/stream_audio_visualizer\.py" >/dev/null 2>&1 || true
+    pkill -9 -x cava >/dev/null 2>&1 || true
+    pkill -9 -x quickshell >/dev/null 2>&1 || true
+    rm -f /tmp/quickshell-notch.sock
+    echo "QuickShell Notch stopped."
+}
+
+cmd_status() {
+    local qs_pids
+    qs_pids=$(pgrep -x quickshell || true)
+    if [ -n "$qs_pids" ]; then
+        echo "● QuickShell Notch: RUNNING (PID: $qs_pids)"
+    else
+        echo "○ QuickShell Notch: NOT RUNNING"
+    fi
+
+    if [ -S "/tmp/quickshell-notch.sock" ]; then
+        echo "● IPC Socket: /tmp/quickshell-notch.sock (Active)"
+    else
+        echo "○ IPC Socket: /tmp/quickshell-notch.sock (Not found)"
+    fi
+
+    echo "Base Directory: $BASE_DIR"
+}
+
+cmd_init() {
+    local src_dir=""
+    if [ -d "$SYS_SHARE_DIR" ] && [ -f "$SYS_SHARE_DIR/shell.qml" ]; then
+        src_dir="$SYS_SHARE_DIR"
+    elif [ -f "$SCRIPT_DIR/../shell.qml" ]; then
+        src_dir="$(cd "$SCRIPT_DIR/.." && pwd)"
+    fi
+
+    if [ -z "$src_dir" ]; then
+        echo "Error: Could not locate source QuickShell Notch files." >&2
+        exit 1
+    fi
+
+    local mode="symlink"
+    # When initializing from root-owned /usr/share, default to copy mode so user owns and can edit settings
+    if [ "$src_dir" = "$SYS_SHARE_DIR" ]; then
+        mode="copy"
+    fi
+    if [[ "${1:-}" == "--copy" ]]; then
+        mode="copy"
+    elif [[ "${1:-}" == "--symlink" ]]; then
+        mode="symlink"
+    fi
+
+    mkdir -p "${HOME}/.config"
+    if [ "$USER_CONFIG_DIR" = "$src_dir" ]; then
+        echo "Target ~/.config/quickshell is already the current repository."
+    elif [ -L "$USER_CONFIG_DIR" ]; then
+        echo "Updating symlink ~/.config/quickshell -> $src_dir"
+        rm -f "$USER_CONFIG_DIR"
+        ln -s "$src_dir" "$USER_CONFIG_DIR"
+    elif [ -d "$USER_CONFIG_DIR" ]; then
+        local backup_dir="${USER_CONFIG_DIR}.bak.$(date +%Y%m%d_%H%M%S)"
+        echo "Backing up existing ~/.config/quickshell to $backup_dir"
+        mv "$USER_CONFIG_DIR" "$backup_dir"
+        if [ "$mode" = "copy" ]; then
+            echo "Copying files to ~/.config/quickshell..."
+            cp -r "$src_dir" "$USER_CONFIG_DIR"
+        else
+            echo "Creating symlink ~/.config/quickshell -> $src_dir"
+            ln -s "$src_dir" "$USER_CONFIG_DIR"
+        fi
+    else
+        if [ "$mode" = "copy" ]; then
+            echo "Copying files to ~/.config/quickshell..."
+            cp -r "$src_dir" "$USER_CONFIG_DIR"
+        else
+            echo "Creating symlink ~/.config/quickshell -> $src_dir"
+            ln -s "$src_dir" "$USER_CONFIG_DIR"
+        fi
+    fi
+
+    # Bootstrap Matugen config if available
+    if [ -d "${src_dir}/templates/matugen" ]; then
+        mkdir -p "${HOME}/.config/matugen"
+        if [ ! -f "${HOME}/.config/matugen/config.toml" ]; then
+            echo "Setting up Matugen templates in ~/.config/matugen..."
+            cp -rn "${src_dir}/templates/matugen/"* "${HOME}/.config/matugen/" 2>/dev/null || true
+        fi
+    fi
+
+    mkdir -p "${HOME}/.cache/quickshell/thumbs"
+    mkdir -p "${HOME}/.cache/wal"
+    mkdir -p "${HOME}/.config/hypr"
+
+    echo "Initialization complete."
+}
+
+cmd_ipc() {
+    if [ $# -eq 0 ]; then
+        echo "Error: ipc command requires an argument (e.g. 'toggle', 'nook')" >&2
+        exit 1
+    fi
+    python3 "$IPC_SCRIPT" "$1"
+}
+
+cmd_osd() {
+    if [ $# -lt 2 ]; then
+        echo "Usage: quickshell-notch osd <volume|brightness> <up|down>" >&2
+        echo "   or: quickshell-notch osd <vol|bri> <0-100>" >&2
+        exit 1
+    fi
+
+    local target="$1"
+    local action="$2"
+
+    if [[ "$target" =~ ^(volume|brightness)$ ]] && [[ "$action" =~ ^(up|down)$ ]]; then
+        bash "$OSD_SCRIPT" "$target" "$action"
+    elif [[ "$target" =~ ^(vol|bri)$ ]] && [[ "$action" =~ ^[0-9]+$ ]]; then
+        python3 "$IPC_SCRIPT" "osd:${target}:${action}"
+    else
+        echo "Invalid osd arguments: '$target $action'" >&2
+        exit 1
+    fi
+}
+
+cmd_validate() {
+    if [ -f "$VALIDATE_SCRIPT" ]; then
+        QUICKSHELL_DIR="$BASE_DIR" bash "$VALIDATE_SCRIPT"
+    else
+        echo "Error: validate script not found at '$VALIDATE_SCRIPT'" >&2
+        exit 1
+    fi
+}
+
+# Main command dispatch
+CMD="${1:-help}"
+shift || true
+
+case "$CMD" in
+    launch|start)
+        cmd_launch "$@"
+        ;;
+    kill|stop)
+        cmd_kill
+        ;;
+    restart|reload)
+        cmd_kill
+        cmd_launch "$@"
+        ;;
+    status)
+        cmd_status
+        ;;
+    init)
+        cmd_init "$@"
+        ;;
+    validate)
+        cmd_validate
+        ;;
+    ipc)
+        cmd_ipc "$@"
+        ;;
+    toggle|close|nook|apps|walls|audio|notifs|notifs:clear|settings)
+        cmd_ipc "$CMD"
+        ;;
+    osd)
+        cmd_osd "$@"
+        ;;
+    help|--help|-h)
+        show_help
+        ;;
+    *)
+        echo "Unknown command: '$CMD'" >&2
+        echo "Run 'quickshell-notch help' for a list of available commands." >&2
+        exit 1
+        ;;
+esac
