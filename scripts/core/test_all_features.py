@@ -1075,7 +1075,7 @@ def test_module_15():
     seek_test_suite = SCRIPTS_DIR / "core/test_mpris_seek.py"
     if seek_test_suite.exists():
         code, out, err, dur = run_cmd(["python3", str(seek_test_suite)], timeout=30)
-        record(mod, "Dual D-Bus / Playerctl Fallback Suite (12 tests)", code == 0, dur, err)
+        record(mod, "Dual D-Bus / Playerctl Fallback Suite (13 tests)", code == 0, dur, err)
 
 
 def main():

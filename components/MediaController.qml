@@ -55,6 +55,15 @@ Item {
 
     clip: false
 
+    /** Whether the active media player explicitly supports seeking operations */
+    readonly property bool canSeek: {
+        if (!root.activePlayer) return false;
+        if (root.activePlayer.canSeek !== undefined) {
+            return Boolean(root.activePlayer.canSeek);
+        }
+        return true;
+    }
+
     /** Local optimistically synced track position in seconds (-1 when uninitialized) */
     property real localTrackPosition: -1
     /** Whether user is actively seeking (scrubbing or rewinding) to prevent polling snap-backs */
@@ -217,7 +226,7 @@ Item {
     }
 
     onTrackPositionChanged: {
-        if (!root.isSeeking) {
+        if (!root.isSeeking && root.localTrackPosition < 0) {
             root.localTrackPosition = root.trackPosition;
         }
     }
@@ -311,25 +320,35 @@ Item {
     }
 
     function dispatchPendingSeek() {
+        if (!root.canSeek) {
+            root.pendingAbsoluteSeek = -1;
+            root.pendingRelativeSeek = 0;
+            root.isSeeking = false;
+            return;
+        }
+
         var target = root.getPlayerTarget();
+        var absPos = root.pendingAbsoluteSeek;
+        var relDelta = root.pendingRelativeSeek;
+        root.pendingAbsoluteSeek = -1;
+        root.pendingRelativeSeek = 0;
+
+        if (absPos < 0 && relDelta === 0) {
+            return;
+        }
+
         var cmd = [
-            Quickshell.env("HOME") + "/.config/quickshell/scripts/notch/mpris_seek.py"
+            "python3",
+            Quickshell.shellDir + "/scripts/notch/mpris_seek.py"
         ];
         if (target !== "") {
             cmd.push("-p", target);
         }
 
-        if (root.pendingAbsoluteSeek >= 0) {
-            var absPos = root.pendingAbsoluteSeek;
-            root.pendingAbsoluteSeek = -1;
-            root.pendingRelativeSeek = 0;
+        if (absPos >= 0) {
             cmd.push(absPos.toFixed(2), "--absolute", "--current-pos", root.cleanTrackPosition.toFixed(2));
-        } else if (root.pendingRelativeSeek !== 0) {
-            var relDelta = root.pendingRelativeSeek;
-            root.pendingRelativeSeek = 0;
+        } else if (relDelta !== 0) {
             cmd.push(relDelta.toFixed(2), "--relative", "--current-pos", root.cleanTrackPosition.toFixed(2));
-        } else {
-            return;
         }
 
         mprisSeekProc.command = cmd;
@@ -338,6 +357,7 @@ Item {
     }
 
     function seekAbsolute(sec) {
+        if (!root.canSeek) return;
         if (sec === undefined || isNaN(sec) || !isFinite(sec)) return;
         var targetPos = Math.max(0, sec);
         if (root.trackLength > 0) {
@@ -353,6 +373,7 @@ Item {
     }
 
     function seekRelative(deltaSec) {
+        if (!root.canSeek) return;
         if (deltaSec === undefined || isNaN(deltaSec) || !isFinite(deltaSec)) return;
         var currentPos = root.cleanTrackPosition;
         var targetPos = Math.max(0, currentPos + deltaSec);
@@ -406,7 +427,8 @@ Item {
     function queryTrackDuration() {
         var target = root.getPlayerTarget();
         var cmd = [
-            Quickshell.env("HOME") + "/.config/quickshell/scripts/notch/mpris_duration.py"
+            "python3",
+            Quickshell.shellDir + "/scripts/notch/mpris_duration.py"
         ];
         if (target !== "") {
             cmd.push("-p", target);
@@ -416,23 +438,36 @@ Item {
         mprisDurationProc.running = true;
     }
 
+    function pollPlayerctlPosition(force) {
+        if (!force && root.isSeeking) return;
+        var target = root.getPlayerTarget();
+        if (target !== "") {
+            playerctlPosProc.command = ["playerctl", "-p", target, "position"];
+        } else {
+            playerctlPosProc.command = ["playerctl", "position"];
+        }
+        playerctlPosProc.running = false;
+        playerctlPosProc.running = true;
+    }
+
+    Timer {
+        id: seekSyncTimer
+        interval: 150
+        repeat: false
+        onTriggered: {
+            root.isSeeking = false;
+            seekCooldownTimer.stop();
+            root.pollPlayerctlPosition(true);
+        }
+    }
+
     Timer {
         id: posPollingTimer
         interval: 500
         running: root.isPlaying
         repeat: true
         onTriggered: {
-            if (!root.isSeeking) {
-                var target = root.getPlayerTarget();
-                if (target !== "") {
-                    playerctlPosProc.command = ["playerctl", "-p", target, "position"];
-                } else {
-                    playerctlPosProc.command = ["playerctl", "position"];
-                }
-                if (!playerctlPosProc.running) {
-                    playerctlPosProc.running = true;
-                }
-            }
+            root.pollPlayerctlPosition(false);
         }
     }
 
@@ -634,7 +669,7 @@ Item {
                             anchors.left: parent.left
                             anchors.right: parent.right
                             anchors.verticalCenter: parent.verticalCenter
-                            height: scrubMouse.containsMouse ? 4 : 3
+                            height: (root.canSeek && scrubMouse.containsMouse) ? 4 : 3
                             radius: height / 2
                             color: "#3A3A3C"
 
@@ -647,23 +682,25 @@ Item {
                                 width: (root.trackLength > 0 && parent && parent.width > 0) ? Math.min(parent.width, Math.max(0, (root.cleanTrackPosition / root.trackLength) * parent.width)) : 0
                                 radius: height / 2
                                 color: "#FFFFFF"
+                                opacity: root.canSeek ? 1.0 : 0.6
                             }
                         }
 
                         MouseArea {
                             id: scrubMouse
                             anchors.fill: parent
-                            hoverEnabled: true
-                            cursorShape: (root.trackLength > 0) ? Qt.PointingHandCursor : Qt.ArrowCursor
+                            enabled: root.canSeek && (root.trackLength > 0)
+                            hoverEnabled: root.canSeek && (root.trackLength > 0)
+                            cursorShape: (root.canSeek && root.trackLength > 0) ? Qt.PointingHandCursor : Qt.ArrowCursor
                             onClicked: function(mouse) {
-                                if (root.trackLength > 0 && width > 0) {
+                                if (root.canSeek && root.trackLength > 0 && width > 0) {
                                     var pct = Math.max(0, Math.min(1.0, mouse.x / width));
                                     var targetPos = pct * root.trackLength;
                                     root.seekAbsolute(targetPos);
                                 }
                             }
                             onPositionChanged: function(mouse) {
-                                if (pressed && root.trackLength > 0 && width > 0) {
+                                if (pressed && root.canSeek && root.trackLength > 0 && width > 0) {
                                     var pct = Math.max(0, Math.min(1.0, mouse.x / width));
                                     var targetPos = pct * root.trackLength;
                                     root.seekAbsolute(targetPos);
@@ -705,22 +742,29 @@ Item {
                     Item {
                         anchors.left: parent.left
                         anchors.verticalCenter: parent.verticalCenter
-                        width: 16; height: 16
-                        scale: (root.buttonAnims && rewMA.pressed) ? 0.85 : ((root.buttonAnims && rewMA.containsMouse) ? 1.15 : 1.0)
+                        width: 22; height: 22
+                        opacity: root.canSeek ? 1.0 : 0.35
+                        scale: (root.canSeek && root.buttonAnims && rewMA.pressed) ? 0.85 : ((root.canSeek && root.buttonAnims && rewMA.containsMouse) ? 1.15 : 1.0)
+                        Behavior on opacity { NumberAnimation { duration: 150 } }
                         Behavior on scale { enabled: root.buttonAnims; SpringAnimation { spring: root.tabSpringTension; damping: root.tabSpringDamping } }
 
                         M3Icon {
                             anchors.centerIn: parent
                             name: "replay_10"
                             size: 14
-                            color: rewMA.containsMouse ? "#FFFFFF" : Style.textSecondary
+                            color: (root.canSeek && rewMA.containsMouse) ? "#FFFFFF" : Style.textSecondary
                         }
                         MouseArea {
                             id: rewMA
                             anchors.fill: parent
-                            hoverEnabled: true
-                            cursorShape: Qt.PointingHandCursor
-                            onClicked: root.seekRelative(-10)
+                            enabled: root.canSeek
+                            hoverEnabled: root.canSeek
+                            cursorShape: root.canSeek ? Qt.PointingHandCursor : Qt.ArrowCursor
+                            onClicked: {
+                                if (root.canSeek) {
+                                    root.seekRelative(-10);
+                                }
+                            }
                         }
                     }
 
@@ -987,5 +1031,17 @@ Item {
 
     Process {
         id: mprisSeekProc
+        stdout: StdioCollector {
+            onStreamFinished: {
+                seekSyncTimer.restart();
+            }
+        }
+        stderr: StdioCollector {
+            onStreamFinished: {
+                if (this.text.trim().length > 0) {
+                    console.warn("[MediaController] mpris_seek error:", this.text.trim());
+                }
+            }
+        }
     }
 }

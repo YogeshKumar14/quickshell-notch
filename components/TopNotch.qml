@@ -893,6 +893,7 @@ FocusScope {
         running: root.isPlaying && root.isExpanded && root.currentPage === 0
         repeat: true
         onTriggered: {
+            if (mediaControllerComp && mediaControllerComp.isSeeking) return;
             if (root.activePlayer && root.activePlayer.position !== undefined) {
                 root.trackPosition = root.activePlayer.position;
             }

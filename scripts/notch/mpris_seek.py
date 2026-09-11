@@ -40,6 +40,11 @@ def find_mpris_player(bus, target_name=None):
     if not names:
         return None
 
+    # Exclude daemon proxy services that do not implement actual media playback
+    names = [n for n in names if not n.endswith(".playerctld")]
+    if not names:
+        return None
+
     if target_name:
         clean_target = target_name.replace("org.mpris.MediaPlayer2.", "").strip().lower()
         # Exact suffix match
@@ -74,6 +79,14 @@ def seek_via_dbus(bus, bus_name, value, is_relative=True, current_pos_hint=None)
         player = dbus.Interface(obj, "org.mpris.MediaPlayer2.Player")
     except Exception:
         return False
+
+    # Verify if player explicitly declares seeking unsupported (CanSeek == False / 0)
+    try:
+        can_seek = props.Get("org.mpris.MediaPlayer2.Player", "CanSeek")
+        if can_seek in (False, 0, "false", "0") or (isinstance(can_seek, (bool, dbus.Boolean)) and not can_seek):
+            return False
+    except Exception:
+        pass
 
     curr_pos_us = None
     try:
@@ -157,7 +170,8 @@ def seek_via_playerctl(target_player, value, is_relative=True, current_pos_hint=
         if curr_sec is not None:
             target_sec = max(0.0, curr_sec + value)
             res2 = subprocess.run(cmd_prefix + ["position", f"{target_sec:.2f}"], capture_output=True)
-            return res2.returncode == 0
+            if res2.returncode == 0:
+                return True
         return False
     else:
         res = subprocess.run(cmd_prefix + ["position", f"{value:.2f}"], capture_output=True, text=True)
@@ -176,7 +190,8 @@ def seek_via_playerctl(target_player, value, is_relative=True, current_pos_hint=
             delta = value - curr_sec
             arg = f"{abs(delta):.2f}-" if delta < 0 else f"{delta:.2f}+"
             res2 = subprocess.run(cmd_prefix + ["position", arg], capture_output=True)
-            return res2.returncode == 0
+            if res2.returncode == 0:
+                return True
         return False
 
 

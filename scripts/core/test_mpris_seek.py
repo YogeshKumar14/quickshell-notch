@@ -69,6 +69,8 @@ class MockPlayer(dbus.service.Object):
 
     @dbus.service.method("org.freedesktop.DBus.Properties", in_signature="ss", out_signature="v")
     def Get(self, interface, prop):
+        if prop == "CanSeek":
+            return dbus.Boolean(False if mode == "cannot_seek" else True)
         if prop == "Position":
             return dbus.Int64(self.position)
         if prop == "PlaybackStatus":
@@ -269,8 +271,15 @@ def test_suite():
         assert abs(dur_val2 - 300.0) < 0.1, f"Expected 300.0s, got {dur_val2}"
         print("  ✅ Passed: Case-insensitive and reverse-DNS player targets resolved seamlessly.")
 
+    print("\n=== [TEST 13] Player Reporting CanSeek=False (e.g. Monophony) Rejection ===")
+    with MockPlayerContext("NoSeekPlayer", mode="cannot_seek") as player:
+        res = subprocess.run(["python3", seek_script, "-10", "--relative", "-p", "NoSeekPlayer", "--current-pos", "50"], capture_output=True, text=True)
+        assert len(player.get_seek_calls()) == 0, f"Expected 0 seek calls, got {len(player.get_seek_calls())}"
+        assert len(player.get_setpos_calls()) == 0, f"Expected 0 setpos calls, got {len(player.get_setpos_calls())}"
+        print("  ✅ Passed: CanSeek=False cleanly suppressed with 0 seek calls.")
+
     print("\n=======================================================")
-    print("🚀 All 12 MPRIS Seek & Duration Tests Passed Successfully!")
+    print("🚀 All 13 MPRIS Seek & Duration Tests Passed Successfully!")
     print("=======================================================")
 
 
