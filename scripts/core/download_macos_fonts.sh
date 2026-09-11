@@ -67,9 +67,16 @@ mkdir -p "${USER_FONTS_DIR}/SF-Pro" "${USER_FONTS_DIR}/SF-Mono"
 cp -f "${FONTS_DIR}"/SF-Pro* "${USER_FONTS_DIR}/SF-Pro/" 2>/dev/null || true
 cp -f "${FONTS_DIR}"/SFMono* "${USER_FONTS_DIR}/SF-Mono/" 2>/dev/null || true
 
+MANIFEST_FILE="${USER_FONTS_DIR}/.quickshell_notch_fonts_manifest"
+: > "$MANIFEST_FILE"
+for f in "${USER_FONTS_DIR}/SF-Pro"/* "${USER_FONTS_DIR}/SF-Mono"/*; do
+    [ -f "$f" ] && echo "$f" >> "$MANIFEST_FILE"
+done
+
 if command -v fc-cache >/dev/null 2>&1; then
     echo "Updating fontconfig cache..."
     fc-cache -f "${USER_FONTS_DIR}" >/dev/null 2>&1 || true
 fi
 
 echo "macOS SF Pro and SF Mono fonts installed successfully."
+

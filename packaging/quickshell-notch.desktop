@@ -1,0 +1,9 @@
+[Desktop Entry]
+Name=QuickShell Top Notch
+Comment=Apple-inspired dynamic top notch status bar and control center for Hyprland
+Exec=quickshell-notch launch
+Icon=preferences-system-windows
+Terminal=false
+Type=Application
+Categories=Utility;DesktopSettings;
+StartupNotify=false
