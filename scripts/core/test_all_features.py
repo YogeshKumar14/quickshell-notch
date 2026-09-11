@@ -445,7 +445,7 @@ def test_module_4():
         return False, time.perf_counter() - t0, err_msg
 
     # 4.1 Valid IPC commands
-    valid_cmds = ["toggle", "toggle", "close", "walls", "apps", "osd:vol:50", "osd:bri:75"]
+    valid_cmds = ["toggle", "toggle", "close", "nook", "apps", "walls", "audio", "notifs", "notifs:clear", "close", "osd:vol:50", "osd:bri:75"]
     for cmd in valid_cmds:
         ok, dur, err = send_ipc(cmd)
         record(mod, f"IPC Command: '{cmd}'", ok, dur, err)

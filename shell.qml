@@ -137,7 +137,12 @@ Scope {
                             }
                         } else if (cmd === "audio") {
                             notchComp.toggleAudioMenu();
+                        } else if (cmd === "notifs") {
+                            notchComp.toggleNotifMenu();
+                        } else if (cmd === "notifs:clear") {
+                            notchComp.clearNotifications();
                         } else if (cmd === "toggle") {
+                            notchComp.dismissOsd();
                             notchComp.isExpanded = !notchComp.isExpanded;
                             if (notchComp.isExpanded) notchComp.currentPage = 0;
                             notchComp.isNotifMenuOpen = false;
@@ -146,6 +151,7 @@ Scope {
                             notchComp.isBluetoothMenuOpen = false;
                             notchComp.isAudioMenuOpen = false;
                         } else if (cmd === "close") {
+                            notchComp.dismissOsd();
                             notchComp.isExpanded = false;
                             notchComp.isNotifMenuOpen = false;
                             notchComp.isPowerMenuOpen = false;

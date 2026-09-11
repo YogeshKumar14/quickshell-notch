@@ -8,13 +8,22 @@ Transmits control commands to the running QuickShell notch daemon via
 Supported Commands:
     toggle          - Toggle expanded/collapsed state
     close           - Collapse expanded notch
-    walls           - Toggle Wallpaper selector tab (PAGE 1)
-    apps            - Toggle Application launcher tab (PAGE 2)
+    nook            - Toggle Media Controller / NotchNook tab (PAGE 0)
+    apps            - Toggle Application launcher tab (PAGE 1)
+    walls           - Toggle Wallpaper selector tab (PAGE 2)
+    audio           - Toggle Audio routing drawer
+    notifs          - Toggle Notification history drawer
+    notifs:clear    - Clear all active notifications with staggered animation
     osd:vol:<0-100> - Display Volume OSD with percentage
     osd:bri:<0-100> - Display Brightness OSD with percentage
 
 Usage:
     python3 notch_ipc.py toggle
+    python3 notch_ipc.py nook
+    python3 notch_ipc.py apps
+    python3 notch_ipc.py walls
+    python3 notch_ipc.py notifs
+    python3 notch_ipc.py notifs:clear
     python3 notch_ipc.py osd:vol:75
 """
 

@@ -227,9 +227,12 @@ Socket: `/tmp/quickshell-notch.sock` — control via `scripts/notch/notch_ipc.py
 |---------|--------|
 | `toggle` | Expand/collapse notch |
 | `close` | Collapse notch |
+| `nook` | Toggle media controller tab (Tab 0) |
 | `apps` | Toggle app launcher tab (Tab 1) |
 | `walls` | Toggle wallpaper selector tab (Tab 2) |
 | `audio` | Toggle audio routing drawer |
+| `notifs` | Toggle notification history drawer |
+| `notifs:clear` | Clear all notifications with staggered animation |
 | `settings` | Toggle settings window |
 | `osd:vol:{0-100}` | Show volume OSD |
 | `osd:bri:{0-100}` | Show brightness OSD |

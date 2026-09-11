@@ -69,6 +69,9 @@ Item {
         if (!isOpen) {
             expandedIndex = -1;
             currentExpandedExtraHeight = 0;
+            isClearing = false;
+            clearTimer.stop();
+            finishClearTimer.stop();
         }
     }
 
@@ -77,8 +80,13 @@ Item {
         interval: 180
         repeat: true
         onTriggered: {
-            if (root.notifModel.count > 0) {
+            if (root.notifModel && root.notifModel.count > 0) {
                 root.notifModel.remove(0);
+                if (root.notifModel.count === 0) {
+                    // Allow last card's 150ms removal animation to finish smoothly
+                    finishClearTimer.start();
+                    stop();
+                }
             } else {
                 root.isClearing = false;
                 stop();
@@ -86,17 +94,25 @@ Item {
         }
     }
 
+    Timer {
+        id: finishClearTimer
+        interval: 160
+        onTriggered: {
+            root.isClearing = false;
+            root.closeRequested();
+        }
+    }
+
     function dismissNotification(index) {
+        if (!notifModel || index < 0 || index >= notifModel.count) return;
         if (root.expandedIndex === index) {
             root.expandedIndex = -1;
             root.currentExpandedExtraHeight = 0;
         } else if (root.expandedIndex > index) {
             root.expandedIndex--;
         }
-        if (notifModel) {
-            notifModel.remove(index);
-        }
-        if (!notifModel || notifModel.count === 0) {
+        notifModel.remove(index);
+        if (notifModel.count === 0) {
             root.expandedIndex = -1;
             root.currentExpandedExtraHeight = 0;
         }

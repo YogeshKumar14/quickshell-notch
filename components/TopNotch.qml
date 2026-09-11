@@ -132,8 +132,19 @@ FocusScope {
         }
     }
 
+    /** Immediately dismisses active OSD and cancels recovery timer */
+    function dismissOsd() {
+        osdTimer.stop();
+        root.isOsdActive = false;
+        root.osdIconRotation = 0;
+        root.wasExpandedBeforeOsd = false;
+    }
+
     /** Expose notchBox to shell.qml for input region masking */
     property alias notchBoxItem: notchBox
+
+    /** Expose notification history component for external control and IPC */
+    property alias notifHistoryComp: notifHistoryComp
 
     /** Navigation tab index: 0=Media, 1=Apps, 2=Walls, 3=Stats */
     property int currentPage: 0
@@ -141,7 +152,8 @@ FocusScope {
 
     /** Switch active tab by index */
     function toggleTab(page) {
-        if (root.isExpanded && root.currentPage === page) {
+        dismissOsd();
+        if (root.isExpanded && root.currentPage === page && !root.isNotifMenuOpen && !root.isPowerMenuOpen && !root.isWifiMenuOpen && !root.isBluetoothMenuOpen && !root.isAudioMenuOpen) {
             root.isExpanded = false;
             root.currentPage = 0;
             return;
@@ -161,6 +173,7 @@ FocusScope {
 
     /** Dispatches audio drawer toggle */
     function toggleAudioMenu() {
+        dismissOsd();
         root.isAudioMenuOpen = !root.isAudioMenuOpen;
         if (root.isAudioMenuOpen) {
             root.isWifiMenuOpen = false;
@@ -168,6 +181,28 @@ FocusScope {
             root.isPowerMenuOpen = false;
             root.isNotifMenuOpen = false;
             root.isExpanded = true;
+        }
+    }
+
+    /** Toggles notification history drawer and manages sub-menu exclusivity */
+    function toggleNotifMenu() {
+        dismissOsd();
+        root.notifMenuAutoOpened = false;
+        root.isNotifMenuOpen = !root.isNotifMenuOpen;
+        if (root.isNotifMenuOpen) {
+            root.isWifiMenuOpen = false;
+            root.isBluetoothMenuOpen = false;
+            root.isPowerMenuOpen = false;
+            root.isAudioMenuOpen = false;
+            root.isWifiPasswordPromptOpen = false;
+            root.isPowerConfirming = false;
+        }
+    }
+
+    /** Clears all notifications with staggered card dismiss */
+    function clearNotifications() {
+        if (notifHistoryComp) {
+            notifHistoryComp.clearAll();
         }
     }
 
@@ -1271,14 +1306,7 @@ FocusScope {
                     root.isNotifMenuOpen = false;
                     root.isAudioMenuOpen = false;
                 }
-                onNotifToggled: {
-                    root.notifMenuAutoOpened = false;
-                    root.isNotifMenuOpen = !root.isNotifMenuOpen;
-                    root.isWifiMenuOpen = false;
-                    root.isBluetoothMenuOpen = false;
-                    root.isPowerMenuOpen = false;
-                    root.isAudioMenuOpen = false;
-                }
+                onNotifToggled: root.toggleNotifMenu()
                 onPowerToggled: {
                     root.isPowerMenuOpen = !root.isPowerMenuOpen;
                     root.isPowerConfirming = false;
@@ -1497,7 +1525,7 @@ FocusScope {
             }
             onNotifCountChanged: {
                 root.notifCount = notifHistoryComp.notifCount;
-                if (root.isNotifMenuOpen && notifHistoryComp.notifCount === 0) {
+                if (root.isNotifMenuOpen && notifHistoryComp.notifCount === 0 && !notifHistoryComp.isClearing) {
                     root.isNotifMenuOpen = false;
                 }
             }

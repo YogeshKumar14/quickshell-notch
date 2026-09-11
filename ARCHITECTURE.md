@@ -192,9 +192,12 @@ The shell listens on a local Unix Domain Socket for fast keybind integration:
 |---|---|
 | `toggle` | Toggle between compact pill and expanded island |
 | `close` | Immediately collapse notch and close all open sub-menus |
+| `nook` | Toggle directly to the Media Controller / NotchNook tab (PAGE 0) |
 | `apps` | Toggle directly to the App Launcher tab (PAGE 1) |
 | `walls` | Toggle directly to the Wallpaper Selector tab (PAGE 2) |
 | `audio` | Toggle Audio Routing Drawer |
+| `notifs` | Toggle Notification History Drawer |
+| `notifs:clear` | Clear all active notifications with staggered animation |
 | `settings` | Toggle Settings Window |
 | `osd:vol:<0-100>` | Display Volume OSD with percentage and icon animation |
 | `osd:bri:<0-100>` | Display Brightness OSD with ±45° rotating sun/moon impulse |
