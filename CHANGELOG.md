@@ -4,6 +4,16 @@ All notable changes to QuickShell Top Notch are documented here.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.3.0] - 2026-09-11
+
+### Added
+- **Automated Idempotent Arch Linux Installer (`install.sh`)**: Interactive and unattended installation script supporting all official and AUR dependencies, font installation, Matugen template bootstrapping, runtime path setup, and optional Hyprland autostart integration.
+- **Dry-Run & Sandbox Safety Modes**: Supported `--dry-run` inspection and sandbox overrides for testing installations with zero risk to existing user files.
+- **Arch Linux PKGBUILD & AUR Packaging**: Full Arch packaging definitions (`PKGBUILD`, `packaging/PKGBUILD-git`, `.install` hook, and `.desktop` entry) for seamless pacman and AUR manager integration.
+- **Unified CLI Management Utility (`bin/quickshell-notch`)**: Comprehensive command-line interface installed to `~/.local/bin/quickshell-notch` supporting daemon lifecycle (`launch`, `kill`, `restart`, `status`), IPC navigation (`nook`, `apps`, `walls`, `notifs`), and hardware OSD volume/brightness stepping.
+- **Clean Uninstaller Script (`uninstall.sh`)**: Complete rollback and removal script supporting standard uninstallation and `--purge` mode with font manifest tracking.
+- **Installation Documentation**: Added comprehensive Arch Linux installation guides (installer script, AUR helpers, manual makepkg, and complete dependency breakdown) in `README.md`.
+
 ## [2.2.0] - 2026-09-11
 
 ### Added
