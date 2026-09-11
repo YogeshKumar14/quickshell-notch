@@ -10,9 +10,12 @@ Canonical color format: bare 8-hex AARRGGBB (matches `hyprctl getoption`
 swapped to RRGGBBAA before being emitted as `rgba(...)` strings.
 """
 import json
+import math
 import re
 import subprocess
 import sys
+
+_UNSET = object()
 
 COLOR_KEYS = ("active_border", "inactive_border")
 
@@ -38,17 +41,35 @@ def is_color_key(key):
     return "col." in key or key in COLOR_KEYS
 
 
-def _lua_value(key, v):
+def _lua_value(key_or_v, v=_UNSET):
+    if v is _UNSET:
+        key, v = "", key_or_v
+    else:
+        key = key_or_v
     if is_color_key(key):
         return '"rgba(%s)"' % swap_color(normalize_color(v))
     if isinstance(v, bool):
         return "true" if v else "false"
+    if isinstance(v, (int, float)):
+        if isinstance(v, float) and not math.isfinite(v):
+            return json.dumps(str(v))
+        return str(v)
     if isinstance(v, str):
         low = v.strip().lower()
         if low == "true":
             return "true"
         if low == "false":
             return "false"
+        try:
+            return str(int(low))
+        except ValueError:
+            pass
+        try:
+            f = float(low)
+            if math.isfinite(f):
+                return str(f)
+        except ValueError:
+            pass
         return json.dumps(v)
     return str(v)
 

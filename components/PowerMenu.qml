@@ -208,7 +208,7 @@ Item {
                 Text {
                     Layout.alignment: Qt.AlignHCenter
                     text: root.pendingTitle + "?"
-                    font.family: Style.fontFamily
+                    font.family: Style.fontFamilyDisplay
                     font.pixelSize: Style.fontSizeTitle
                     font.weight: Font.Bold
                     color: Style.textPrimary

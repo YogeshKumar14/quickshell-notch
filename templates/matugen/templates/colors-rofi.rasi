@@ -1,0 +1,29 @@
+ /* ---- 💫 Matugen M3 colors-rofi 💫 ---- */
+
+* {
+active-background: {{base16.base08.default.hex}};
+active-foreground: {{colors.on_surface.default.hex}};
+normal-background: {{colors.surface.default.hex}};
+normal-foreground: {{colors.on_surface.default.hex}};
+urgent-background: {{colors.primary.default.hex}};
+urgent-foreground: {{colors.on_surface.default.hex}};
+
+alternate-active-background: {{base16.base0e.default.hex}};
+alternate-active-foreground: {{colors.on_surface.default.hex}};
+alternate-normal-background: {{colors.surface.default.hex}};
+alternate-normal-foreground: {{colors.on_surface.default.hex}};
+alternate-urgent-background: {{colors.surface.default.hex}};
+alternate-urgent-foreground: {{colors.on_surface.default.hex}};
+
+selected-active-background: {{base16.base08.default.hex}};
+selected-active-foreground: {{colors.on_surface.default.hex}};
+selected-normal-background: {{base16.base05.default.hex}};
+selected-normal-foreground: {{colors.on_surface.default.hex}};
+selected-urgent-background: {{colors.primary.default.hex}};
+selected-urgent-foreground: {{colors.on_surface.default.hex}};
+
+background-color: {{colors.surface.default.hex}};
+background: rgba(0,0,0,0.7);
+foreground: {{base16.base07.default.hex}};
+border-color: {{base16.base08.default.hex}};
+}

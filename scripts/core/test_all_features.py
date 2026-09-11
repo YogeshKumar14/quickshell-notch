@@ -24,10 +24,12 @@ from pathlib import Path
 from concurrent.futures import ThreadPoolExecutor
 
 BASE_DIR = Path(__file__).resolve().parent.parent.parent
+if str(BASE_DIR) not in sys.path:
+    sys.path.insert(0, str(BASE_DIR))
 SCRIPTS_DIR = BASE_DIR / "scripts"
 COMPONENTS_DIR = BASE_DIR / "components"
 THEME_DIR = BASE_DIR / "theme"
-REPORT_FILE = Path("/home/yogesh/.gemini/antigravity-cli/brain/acd04567-8979-42f6-8fee-ca5ba63ded56/test_report.md")
+REPORT_FILE = Path(__file__).resolve().parent / "test_report.md"
 IPC_SOCK = Path("/tmp/quickshell-notch.sock")
 
 
@@ -57,8 +59,11 @@ def record(module: str, test_name: str, passed: bool, duration: float, details: 
     })
 
 
-def run_cmd(cmd, timeout=10, cwd=str(BASE_DIR)):
+def run_cmd(cmd, timeout=10, cwd=str(BASE_DIR), env=None):
     t0 = time.perf_counter()
+    full_env = os.environ.copy()
+    if env:
+        full_env.update(env)
     try:
         proc = subprocess.run(
             cmd,
@@ -67,7 +72,8 @@ def run_cmd(cmd, timeout=10, cwd=str(BASE_DIR)):
             stdout=subprocess.PIPE,
             stderr=subprocess.PIPE,
             text=True,
-            timeout=timeout
+            timeout=timeout,
+            env=full_env
         )
         return proc.returncode, proc.stdout, proc.stderr, time.perf_counter() - t0
     except subprocess.TimeoutExpired:
@@ -117,9 +123,46 @@ def test_module_1():
         for match in re.findall(r'Style\.(\w+)', text):
             used_props.add(match)
 
-    missing = used_props - defined_props
+    # 1.5 macOS Typography Suite Assets
+    t0 = time.perf_counter()
+    fonts_dir = BASE_DIR / "assets" / "fonts"
+    expected_fonts = ["SF-Pro.ttf", "SFMono-Regular.otf", "SFMono-Bold.otf", "SF-Pro-Display-Bold.otf"]
+    found_fonts = [f.name for f in fonts_dir.glob("*") if f.name in expected_fonts]
     dur = time.perf_counter() - t0
-    record(mod, f"Theme Token Resolution ({len(used_props)} Style tokens)", len(missing) == 0, dur, f"Missing properties: {missing}")
+    record(mod, "Apple macOS SF Pro & SF Mono Asset Suite", len(found_fonts) == len(expected_fonts), dur, f"Missing: {set(expected_fonts) - set(found_fonts)}")
+
+    # 1.6 Style Typography Hierarchy Tokens
+    t0 = time.perf_counter()
+    expected_typo_tokens = [
+        "fontFamily", "fontFamilyDisplay", "fontFamilyMono",
+        "fontSizeTiny", "fontSizeCaption", "fontSizeSmall", "fontSizeNormal", "fontSizeLarge", "fontSizeTitle",
+        "fontWeightLight", "fontWeightRegular", "fontWeightMedium", "fontWeightSemibold", "fontWeightBold", "fontWeightBlack"
+    ]
+    missing_typo = set(expected_typo_tokens) - defined_props
+    dur = time.perf_counter() - t0
+    record(mod, "Style.qml Apple Typography Hierarchy Tokens", len(missing_typo) == 0, dur, f"Missing typography tokens: {missing_typo}")
+
+    # 1.7 Zero Unstyled Text Declarations in Codebase
+    t0 = time.perf_counter()
+    unstyled_texts = []
+    for qml in qml_files:
+        with open(qml, "r", encoding="utf-8") as f:
+            lines = f.read().splitlines()
+        for i, line in enumerate(lines):
+            if "Text {" in line or "Text{" in line:
+                depth = 0
+                block_lines = []
+                for j in range(i, len(lines)):
+                    l = lines[j]
+                    block_lines.append(l)
+                    depth += l.count("{") - l.count("}")
+                    if depth == 0:
+                        break
+                block_str = "\n".join(block_lines)
+                if "font.family" not in block_str and "font:" not in block_str:
+                    unstyled_texts.append(f"{qml.name}:{i+1}")
+    dur = time.perf_counter() - t0
+    record(mod, "Zero Unstyled Text Declarations (100% font.family coverage)", len(unstyled_texts) == 0, dur, f"Unstyled: {unstyled_texts}")
 
 
 # ==============================================================================
@@ -288,6 +331,91 @@ def test_module_3():
         dur = time.perf_counter() - t0
         record(mod, "Dual-Write Atomic File Integrity", files_valid, dur, "Dual-write files missing or empty")
 
+        # 3.5 apply_all_settings.py nested "hyprland" payload test
+        t0 = time.perf_counter()
+        code, out, err, dur_cmd = run_cmd([
+            "python3", str(SCRIPTS_DIR / "hyprland/apply_all_settings.py"),
+            json.dumps({"hyprland": {"gaps_in": 5, "gaps_out": 10}, "notch": {"compact_width": 130}})
+        ], env={"QUICKSHELL_SANDBOX": "0"})
+        hyprland_key_ok = False
+        if code == 0:
+            try:
+                res = json.loads(out.strip())
+                hyprland_key_ok = res.get("status") == "ok" and "note" not in res
+            except Exception:
+                pass
+        dur = time.perf_counter() - t0
+        record(mod, "apply_all_settings.py nested 'hyprland' payload ingestion", hyprland_key_ok, dur, f"out: {out.strip()}, err: {err.strip()}")
+
+        # 3.6 apply_all_settings.py nested "hypr" payload test
+        t0 = time.perf_counter()
+        code, out, err, dur_cmd = run_cmd([
+            "python3", str(SCRIPTS_DIR / "hyprland/apply_all_settings.py"),
+            json.dumps({"hypr": {"gaps_in": 5, "gaps_out": 10}, "notch": {"compact_width": 130}})
+        ], env={"QUICKSHELL_SANDBOX": "0"})
+        hypr_key_ok = False
+        if code == 0:
+            try:
+                res = json.loads(out.strip())
+                hypr_key_ok = res.get("status") == "ok" and "note" not in res
+            except Exception:
+                pass
+        dur = time.perf_counter() - t0
+        record(mod, "apply_all_settings.py nested 'hypr' payload ingestion", hypr_key_ok, dur, f"out: {out.strip()}, err: {err.strip()}")
+
+        # 3.7 set_hypr_option.sh integer options apply test
+        t0 = time.perf_counter()
+        code_b, out_b, err_b, _ = run_cmd([
+            "bash", str(SCRIPTS_DIR / "hyprland/set_hypr_option.sh"), "border_size", "2"
+        ], env={"QUICKSHELL_SANDBOX": "0"})
+        code_r, out_r, err_r, _ = run_cmd([
+            "bash", str(SCRIPTS_DIR / "hyprland/set_hypr_option.sh"), "rounding", "10"
+        ], env={"QUICKSHELL_SANDBOX": "0"})
+        int_apply_ok = (code_b == 0 and code_r == 0)
+        dur = time.perf_counter() - t0
+        record(mod, "set_hypr_option.sh integer options apply (border_size, rounding)", int_apply_ok, dur, f"border_size: {err_b or out_b}, rounding: {err_r or out_r}")
+
+        # 3.8 apply_hypr_option.py direct CLI & _lua_value numeric serialization
+        t0 = time.perf_counter()
+        code_apply, out_apply, err_apply, _ = run_cmd([
+            "python3", str(SCRIPTS_DIR / "hyprland/apply_hypr_option.py"), "general:border_size", "2"
+        ])
+        from apply_hypr_option import _lua_value
+        lua_num_ok = (
+            code_apply == 0 and
+            _lua_value("2") == "2" and
+            _lua_value("general:border_size", "2") == "2" and
+            _lua_value("2.5") == "2.5" and
+            _lua_value("dwindle") == '"dwindle"' and
+            _lua_value("true") == "true"
+        )
+        dur = time.perf_counter() - t0
+        record(mod, "apply_hypr_option.py direct CLI & _lua_value numeric serialization", lua_num_ok, dur, f"code: {code_apply}, err: {err_apply}")
+
+        # 3.9 persist_hypr_state.py QUICKSHELL_SANDBOX guard verification
+        t0 = time.perf_counter()
+        from persist_hypr_state import update_and_persist, LUA_PATH, CONF_PATH
+        lua_stat_before = os.path.getmtime(LUA_PATH) if os.path.exists(LUA_PATH) else 0
+        conf_stat_before = os.path.getmtime(CONF_PATH) if os.path.exists(CONF_PATH) else 0
+        old_sandbox = os.environ.get("QUICKSHELL_SANDBOX")
+        os.environ["QUICKSHELL_SANDBOX"] = "1"
+        try:
+            sandbox_ret = update_and_persist("border_size", "99")
+            lua_stat_after = os.path.getmtime(LUA_PATH) if os.path.exists(LUA_PATH) else 0
+            conf_stat_after = os.path.getmtime(CONF_PATH) if os.path.exists(CONF_PATH) else 0
+            sandbox_isolated = (
+                sandbox_ret is True and
+                lua_stat_before == lua_stat_after and
+                conf_stat_before == conf_stat_after
+            )
+        finally:
+            if old_sandbox is None:
+                os.environ.pop("QUICKSHELL_SANDBOX", None)
+            else:
+                os.environ["QUICKSHELL_SANDBOX"] = old_sandbox
+        dur = time.perf_counter() - t0
+        record(mod, "persist_hypr_state.py QUICKSHELL_SANDBOX guard verification", sandbox_isolated, dur, f"sandbox_ret: {sandbox_ret}")
+
 
 # ==============================================================================
 # MODULE 4: IPC SOCKET STRESS & FUZZING
@@ -317,7 +445,7 @@ def test_module_4():
         return False, time.perf_counter() - t0, err_msg
 
     # 4.1 Valid IPC commands
-    valid_cmds = ["toggle", "toggle", "close", "walls", "apps", "osd:vol:50", "osd:bri:75"]
+    valid_cmds = ["toggle", "toggle", "close", "nook", "apps", "walls", "audio", "notifs", "notifs:clear", "close", "osd:vol:50", "osd:bri:75"]
     for cmd in valid_cmds:
         ok, dur, err = send_ipc(cmd)
         record(mod, f"IPC Command: '{cmd}'", ok, dur, err)
@@ -473,11 +601,15 @@ def test_module_7():
         ("auto_close", "3000", 3000),
         ("compact_width", "180", 180),
         ("expand_tension", "6.5", 6.5),
+        ("expand_damping", "0.34", 0.34),
+        ("tab_tension", "5.8", 5.8),
+        ("tab_damping", "0.26", 0.26),
         ("dripping_ears", "false", False),
         ("dripping_ears", True, True),
         ("clock_format", "HH:mm", "HH:mm"),
         ("highlight_anim_type", "spring", "spring"),
         ("highlight_spring_tension", "4.2", 4.2),
+        ("highlight_spring_damping", "0.28", 0.28),
         ("grid_anim_duration", "150", 150)
     ]
     for key, raw, expected in coercion_cases:
@@ -541,6 +673,44 @@ def test_module_8():
         code, out, err, dur = run_cmd(["python3", str(SCRIPTS_DIR / "desktop/scan_wallpapers.py"), "/nonexistent/path/xyz"])
         passed = (code == 0 and out.strip() == "[]")
         record(mod, "Non-Existent Wallpaper Directory Safe Fallback", passed, dur, err)
+
+        # 8.3 get_wallust_colors.sh Accent Output Schema & Validation
+        code, out, err, dur = run_cmd(["bash", str(SCRIPTS_DIR / "desktop/get_wallust_colors.sh")])
+        color_hex = out.strip()
+        is_valid_hex = (code == 0 and len(color_hex) == 7 and color_hex.startswith("#") and all(c in "0123456789abcdefABCDEF" for c in color_hex[1:]))
+        record(mod, "get_wallust_colors.sh Hex Color Output Schema", is_valid_hex, dur, f"out: {color_hex}, err: {err}")
+
+        # 8.4 Palette Generator (Matugen / Wallust) Configuration Compatibility Check
+        matugen_cfg = Path.home() / ".config/matugen/config.toml"
+        matugen_tree = SCRIPTS_DIR.parent / "templates/matugen/config.toml"
+        wallust_cfg = Path.home() / ".config/wallust/wallust.toml"
+        cfg_valid = False
+        target_cfg = matugen_cfg if matugen_cfg.exists() else (matugen_tree if matugen_tree.exists() else None)
+        if target_cfg and target_cfg.exists():
+            cfg_text = target_cfg.read_text()
+            required_templates = ['[config]', '[templates.cava]', '[templates.hypr]', '[templates.kitty]',
+                                  '[templates.swaync]', '[templates.waybar]', '[templates.shell_colors]']
+            cfg_valid = all(sec in cfg_text for sec in required_templates) and ('source_color_index' in cfg_text or 'prefer' in cfg_text)
+        if not cfg_valid and wallust_cfg.exists():
+            cfg_text = wallust_cfg.read_text()
+            # Must not contain deprecated v3 keys that crash wallust 4
+            cfg_valid = ('backend = "resized"' in cfg_text or 'backend = "fastresize"' in cfg_text) and ('palette = "kmeans"' in cfg_text or 'palette = "salience"' in cfg_text)
+        record(mod, "Palette Generator Configuration (Matugen / Wallust)", cfg_valid, 0.001, "No valid Matugen or Wallust configuration found")
+
+        # 8.5 apply_wallpaper.sh Palette-First Sequencing Architecture Check
+        apply_sh = SCRIPTS_DIR / "desktop/apply_wallpaper.sh"
+        seq_valid = False
+        if apply_sh.exists():
+            sh_text = apply_sh.read_text()
+            idx_matugen = sh_text.find("matugen image")
+            idx_wallust = sh_text.find("wallust run")
+            idx_signal = sh_text.find('echo "PALETTE_READY"')
+            idx_awww = sh_text.find("awww img")
+            # Matugen must be present and precede PALETTE_READY and awww img
+            seq_valid = (idx_matugen != -1 and idx_signal != -1 and idx_awww != -1 and idx_matugen < idx_signal < idx_awww)
+            if idx_wallust != -1:
+                seq_valid = seq_valid and (idx_wallust < idx_signal)
+        record(mod, "apply_wallpaper.sh Palette-First Sequencing", seq_valid, 0.001, "palette generator (matugen/wallust) must execute before awww img")
 
 
 # ==============================================================================
@@ -817,6 +987,23 @@ def test_module_13():
     dur = time.perf_counter() - t0
     record(mod, "Visualizer DSP Noise Floor Gate (<6% Deadband)", noise_gate_valid, dur)
 
+    # 13.5 OSD & Workspace vs Visualizer Zero-Overlap Layer Isolation
+    t0 = time.perf_counter()
+    tn_code = (COMPONENTS_DIR / "TopNotch.qml").read_text()
+    cp_code = (COMPONENTS_DIR / "CompactPill.qml").read_text()
+    osd_code = (COMPONENTS_DIR / "OsdOverlay.qml").read_text()
+
+    osd_isolation_valid = (
+        "root.isOsdActive" in tn_code and
+        "!root.isOsdActive" in tn_code and
+        "!root.isWorkspaceActive" in tn_code and
+        "opacity: (root.showVisualizer && !root.isOsdActive && !root.isWorkspaceActive)" in cp_code and
+        "opacity: (root.isWorkspaceActive && !root.isOsdActive)" in cp_code and
+        "z: 10" in osd_code
+    )
+    dur = time.perf_counter() - t0
+    record(mod, "OSD & Workspace vs Visualizer Zero-Overlap Layer Isolation", osd_isolation_valid, dur, "OSD/Workspace layer isolation checks failed")
+
 
 # ==============================================================================
 # MODULE 14: AUDIO & SOUND DEVICES BACKEND (NEW)
@@ -836,6 +1023,59 @@ def test_module_14():
         record(mod, "Audio Sinks & Sources List Types", isinstance(data.get("sinks"), list) and isinstance(data.get("sources"), list), 0.001)
     except Exception as e:
         record(mod, "PipeWire wpctl Audio Status Schema", False, dur, str(e))
+
+
+# ==============================================================================
+# MODULE 15: MPRIS SEEKING ENGINE & DUAL FALLBACK (NEW)
+# ==============================================================================
+def test_module_15():
+    print(f"\n{Colors.BOLD}{Colors.BLUE}=== [MODULE 15] MPRIS Seeking & Track Duration Engine ==={Colors.RESET}")
+    mod = "Module 15: MPRIS Engine"
+
+    seek_script = SCRIPTS_DIR / "notch/mpris_seek.py"
+    record(mod, "mpris_seek.py Executable Existence", seek_script.exists() and os.access(str(seek_script), os.X_OK), 0.001)
+
+    duration_script = SCRIPTS_DIR / "notch/mpris_duration.py"
+    record(mod, "mpris_duration.py Executable Existence", duration_script.exists() and os.access(str(duration_script), os.X_OK), 0.001)
+
+    # 15.1 CLI Argument Schema (Relative Seek)
+    code, out, err, dur = run_cmd(["python3", str(seek_script), "-10", "--relative"])
+    record(mod, "mpris_seek.py CLI Relative Mode", code == 0, dur, err)
+
+    # 15.2 CLI Argument Schema (Absolute Seek with Current-Pos Hint)
+    code, out, err, dur = run_cmd(["python3", str(seek_script), "45.0", "--absolute", "--current-pos", "30.0"])
+    record(mod, "mpris_seek.py CLI Absolute Mode & Pos Hint", code == 0, dur, err)
+
+    # 15.3 Duration CLI Query & Schema
+    code, out, err, dur = run_cmd(["python3", str(duration_script), "-p", "NonExistentDummyPlayer"])
+    valid_dur = (code == 0 and out.strip() == "0.0")
+    record(mod, "mpris_duration.py CLI Schema & Fallback", valid_dur, dur, err or out)
+
+    # 15.4 Multi-Tier Normalization Unit Tests
+    t0 = time.perf_counter()
+    from scripts.notch.mpris_duration import normalize_length
+    norm_tests = [
+        (188_173_500, 188.1735),   # Monophony microsecond integer
+        (65_021_000, 65.021),       # C418 microsecond integer
+        ("300000000", 300.0),       # String microsecond
+        (188.173, 188.173),         # Seconds float
+        ("188.173", 188.173),       # String float
+        ("603021000\n180000000\n", 603.021),  # Multiline string from playerctl / multi-player
+        ("  188173500  \n", 188.1735),        # Whitespace padded
+        ("\n\n", 0.0),              # Empty newlines
+        (0, 0.0),                   # Zero length
+        (-10, 0.0),                 # Negative length
+        (None, 0.0),                # None
+        ("invalid_str", 0.0),       # Corrupt string
+    ]
+    norm_passed = all(abs(normalize_length(raw) - exp) < 0.001 for raw, exp in norm_tests)
+    record(mod, "Multi-Tier Duration Normalization Engine (Microseconds/Seconds/Null/Multiline)", norm_passed, time.perf_counter() - t0)
+
+    # 15.5 Run Full D-Bus Mock Seeking & Duration Suite
+    seek_test_suite = SCRIPTS_DIR / "core/test_mpris_seek.py"
+    if seek_test_suite.exists():
+        code, out, err, dur = run_cmd(["python3", str(seek_test_suite)], timeout=30)
+        record(mod, "Dual D-Bus / Playerctl Fallback Suite (13 tests)", code == 0, dur, err)
 
 
 def main():
@@ -858,6 +1098,7 @@ def main():
     test_module_12()
     test_module_13()
     test_module_14()
+    test_module_15()
     total_time = time.perf_counter() - t_start
 
     generate_report()

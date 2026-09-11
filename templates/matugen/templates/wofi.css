@@ -1,0 +1,53 @@
+/* Matugen Template for Wofi */
+* {
+    border: none;
+    outline: none;
+    font-family: "JetBrainsMono";
+    font-weight: 500;
+    color: {{base16.base0e.default.hex}};
+    overflow: hidden;
+}
+
+#window {
+    border: 2px solid {{colors.primary.default.hex}};
+    background-repeat: no-repeat;
+    background-position: center;
+    background-size: cover;
+    background-color: rgba(0, 0, 0, 0.4);
+    border-radius: 10px;
+    overflow: hidden;
+}
+
+#inner-box {
+    overflow: hidden;
+}
+
+#outer-box {
+    border-radius: 10px;
+    padding: 10px;
+    margin: 2px;
+    background: rgba(0, 0, 0, 0.2);
+}
+
+#text {
+    padding-left: 10px;
+}
+
+#input {
+    color: {{base16.base0e.default.hex}};
+    background: rgba(0, 0, 0, 0.2);
+    overflow: hidden;
+    padding-left: 10px;
+}
+
+#input:focus {
+    box-shadow: none;
+}
+
+#entry:selected {
+    background: {{colors.surface.default.hex}};
+}
+
+#text:selected {
+    color: {{base16.base0e.default.hex}};
+}

@@ -20,7 +20,22 @@ import "theme"
 
 Scope {
     id: root
-    
+
+    // === Apple macOS San Francisco (SF Pro) & SF Mono Font Loaders ===
+    FontLoader { id: fontSfPro; source: Qt.resolvedUrl("assets/fonts/SF-Pro.ttf") }
+    FontLoader { id: fontSfProTextReg; source: Qt.resolvedUrl("assets/fonts/SF-Pro-Text-Regular.otf") }
+    FontLoader { id: fontSfProTextMed; source: Qt.resolvedUrl("assets/fonts/SF-Pro-Text-Medium.otf") }
+    FontLoader { id: fontSfProTextSemi; source: Qt.resolvedUrl("assets/fonts/SF-Pro-Text-Semibold.otf") }
+    FontLoader { id: fontSfProTextBold; source: Qt.resolvedUrl("assets/fonts/SF-Pro-Text-Bold.otf") }
+    FontLoader { id: fontSfProDispReg; source: Qt.resolvedUrl("assets/fonts/SF-Pro-Display-Regular.otf") }
+    FontLoader { id: fontSfProDispMed; source: Qt.resolvedUrl("assets/fonts/SF-Pro-Display-Medium.otf") }
+    FontLoader { id: fontSfProDispSemi; source: Qt.resolvedUrl("assets/fonts/SF-Pro-Display-Semibold.otf") }
+    FontLoader { id: fontSfProDispBold; source: Qt.resolvedUrl("assets/fonts/SF-Pro-Display-Bold.otf") }
+    FontLoader { id: fontSfMonoReg; source: Qt.resolvedUrl("assets/fonts/SFMono-Regular.otf") }
+    FontLoader { id: fontSfMonoMed; source: Qt.resolvedUrl("assets/fonts/SFMono-Medium.otf") }
+    FontLoader { id: fontSfMonoSemi; source: Qt.resolvedUrl("assets/fonts/SFMono-Semibold.otf") }
+    FontLoader { id: fontSfMonoBold; source: Qt.resolvedUrl("assets/fonts/SFMono-Bold.otf") }
+
     // Global Notification Engine
     ListModel {
         id: notifHistoryModel
@@ -107,18 +122,36 @@ Scope {
                             notchComp.toggleTab(1);
                         } else if (cmd === "walls") {
                             notchComp.toggleTab(2);
-                        } else if (cmd === "stats") {
-                            notchComp.toggleTab(3);
+                        } else if (cmd.startsWith("settings:tab:")) {
+                            var tabIdx = parseInt(cmd.split(":")[2]);
+                            if (!settingsLoader.active) settingsLoader.active = true;
+                            if (settingsLoader.item) {
+                                settingsLoader.item.isOpen = true;
+                                settingsLoader.item.currentTab = tabIdx;
+                            }
+                        } else if (cmd === "settings") {
+                            if (!settingsLoader.active) {
+                                settingsLoader.active = true;
+                            } else if (settingsLoader.item) {
+                                settingsLoader.item.toggle();
+                            }
                         } else if (cmd === "audio") {
                             notchComp.toggleAudioMenu();
+                        } else if (cmd === "notifs") {
+                            notchComp.toggleNotifMenu();
+                        } else if (cmd === "notifs:clear") {
+                            notchComp.clearNotifications();
                         } else if (cmd === "toggle") {
+                            notchComp.dismissOsd();
                             notchComp.isExpanded = !notchComp.isExpanded;
+                            if (notchComp.isExpanded) notchComp.currentPage = 0;
                             notchComp.isNotifMenuOpen = false;
                             notchComp.isPowerMenuOpen = false;
                             notchComp.isWifiMenuOpen = false;
                             notchComp.isBluetoothMenuOpen = false;
                             notchComp.isAudioMenuOpen = false;
                         } else if (cmd === "close") {
+                            notchComp.dismissOsd();
                             notchComp.isExpanded = false;
                             notchComp.isNotifMenuOpen = false;
                             notchComp.isPowerMenuOpen = false;
@@ -133,6 +166,8 @@ Scope {
                             var b = parseInt(cmd.split(":")[2]);
                             notchComp.isAudioMenuOpen = false;
                             if (!isNaN(b)) notchComp.showOsd("brightness", Math.max(0, Math.min(100, b)));
+                        } else if (cmd === "reload_settings") {
+                            notchComp.refreshNotchSettings();
                         }
                         clientSocket.connected = false;
                     }

@@ -1,10 +1,10 @@
 /**
- * AppLauncher.qml — Application Grid & Fuzzy Launcher for QuickShell Notch
+ * AppLauncher.qml — Application Carousel & Fuzzy Launcher for QuickShell Notch
  *
- * Renders PAGE 2 of the expanded notch:
+ * Renders PAGE 1 of the expanded notch:
  *   - Parses system .desktop entries with intelligent icon resolution
  *   - Real-time search query filtering and name matching
- *   - Dynamic grid layout with configurable columns
+ *   - Dynamic horizontal card carousel with search filtering
  *   - Full keyboard navigation (Arrow keys + Enter) and quick application execution
  */
 
@@ -18,8 +18,6 @@ import "../theme"
 FocusScope {
     id: root
 
-    /** Number of grid columns for application cards */
-    property int appColumns: 4
     /** Highlight animation mode ("spring", "smooth", "linear", "none") */
     property string highlightAnimType: "spring"
     /** Physics spring tension for highlight movement */
@@ -107,8 +105,8 @@ FocusScope {
             Layout.preferredHeight: 60
             Layout.alignment: Qt.AlignVCenter
             radius: 12
-            color: "#1C1C1E"
-            border.color: searchAppInput.activeFocus ? Style.accent : "#2C2C2E"
+            color: Style.cardBg
+            border.color: searchAppInput.activeFocus ? Style.accent : Style.cardBorder
             border.width: searchAppInput.activeFocus ? 1.5 : 1.0
 
             Behavior on border.color { ColorAnimation { duration: 120 } }
@@ -230,8 +228,8 @@ FocusScope {
                         anchors.verticalCenter: parent.verticalCenter
                         height: 60
                         radius: 12
-                        color: isSelected ? "#2C2C2E" : (isHovered ? "#242426" : "#1C1C1E")
-                        border.color: isSelected ? Style.accent : (isHovered ? "#5A5A5E" : Qt.rgba(255, 255, 255, 0.12))
+                        color: isSelected ? Style.cardBgHover : (isHovered ? "#242426" : Style.cardBg)
+                        border.color: isSelected ? Style.accent : (isHovered ? Style.cardBorder : Qt.rgba(255, 255, 255, 0.12))
                         border.width: isSelected ? 2.0 : 1.0
                         smooth: true
                         antialiasing: true
@@ -280,7 +278,7 @@ FocusScope {
                                 font.family: Style.fontFamily
                                 font.pixelSize: 9
                                 font.weight: isSelected ? Font.Bold : Font.Normal
-                                color: isSelected ? "#FFFFFF" : Style.textSecondary
+                                color: isSelected ? Style.textPrimary : Style.textSecondary
                                 elide: Text.ElideRight
                                 horizontalAlignment: Text.AlignHCenter
                                 Layout.maximumWidth: 50

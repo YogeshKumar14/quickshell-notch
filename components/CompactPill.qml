@@ -112,7 +112,7 @@ Item {
     // 2. REALTIME WORKSPACE OVERLAY
     Item {
         anchors.fill: parent
-        opacity: root.isWorkspaceActive ? 1.0 : 0.0
+        opacity: (root.isWorkspaceActive && !root.isOsdActive) ? 1.0 : 0.0
         visible: opacity > 0.01
 
         Behavior on opacity {
@@ -180,7 +180,7 @@ Item {
     // 3. REALTIME CAVA MUSIC VISUALIZER OVERLAY
     Item {
         anchors.fill: parent
-        opacity: root.showVisualizer ? 1.0 : 0.0
+        opacity: (root.showVisualizer && !root.isOsdActive && !root.isWorkspaceActive) ? 1.0 : 0.0
         visible: opacity > 0.01
 
         Behavior on opacity {
@@ -189,16 +189,19 @@ Item {
 
         RowLayout {
             anchors.fill: parent
-            anchors.leftMargin: 12
-            anchors.rightMargin: 14
+            anchors.leftMargin: Math.max(12, Style.bottomRadius - 8)
+            anchors.rightMargin: Math.max(14, Style.bottomRadius - 2)
             height: Style.notchHeightCompact
             spacing: 8
 
-            // Mini Squircle Album Art Thumbnail (16x16px, radius 4px) with OpacityMask
+            // Mini Squircle Album Art Thumbnail (18x18px) with OpacityMask
             Item {
-                width: 16
-                height: 16
+                id: compactArtBox
+                width: 18
+                height: 18
                 Layout.alignment: Qt.AlignVCenter
+
+                readonly property real albumRadius: Math.max(4, Math.round(width * ((Style.bottomRadius > 0 ? Style.bottomRadius : Style.radiusLarge) / 78.0)))
 
                 // 1. Source Image (hidden offscreen)
                 Image {
@@ -208,32 +211,39 @@ Item {
                     fillMode: Image.PreserveAspectCrop
                     asynchronous: true
                     visible: false
-                    sourceSize.width: 32
-                    sourceSize.height: 32
+                    sourceSize.width: 64
+                    sourceSize.height: 64
+                    smooth: true
+                    mipmap: true
+                    antialiasing: true
                 }
 
                 // 2. Vector Mask Shape (Antialiased Squircle)
                 Rectangle {
                     id: compactArtMask
                     anchors.fill: parent
-                    radius: 4
+                    radius: compactArtBox.albumRadius
                     color: "#000000"
                     visible: false
                     smooth: true
                     antialiasing: true
+
+                    Behavior on radius { NumberAnimation { duration: 180; easing.type: Easing.OutQuad } }
                 }
 
                 // 3. Fallback Placeholder Icon
                 Rectangle {
                     id: compactArtFallback
                     anchors.fill: parent
-                    radius: 4
+                    radius: compactArtBox.albumRadius
                     color: "#2C2C2E"
                     border.color: "#3A3A3C"
                     border.width: 0.5
                     visible: compactArtImg.source.toString() === "" || compactArtImg.status !== Image.Ready
                     smooth: true
                     antialiasing: true
+
+                    Behavior on radius { NumberAnimation { duration: 180; easing.type: Easing.OutQuad } }
 
                     M3Icon {
                         anchors.centerIn: parent
@@ -254,28 +264,31 @@ Item {
                 // 5. Crisp Structural Border Overlay
                 Rectangle {
                     anchors.fill: parent
-                    radius: 4
+                    radius: compactArtBox.albumRadius
                     color: "transparent"
                     border.color: Qt.rgba(255, 255, 255, 0.15)
                     border.width: 0.5
                     smooth: true
                     antialiasing: true
+
+                    Behavior on radius { NumberAnimation { duration: 180; easing.type: Easing.OutQuad } }
                 }
             }
 
             Item { Layout.fillWidth: true } // Dynamic Left Spacer
 
-            // Style 1: BARS (Spring Damped with Epsilon Deadband)
+            // Style 1: BARS (Clean Baseline Anchored + Independent Organic Physics)
             Item {
                 id: barContainer
-                implicitWidth: 64
-                implicitHeight: Style.notchHeightCompact
                 Layout.alignment: Qt.AlignVCenter
                 visible: root.visualizerStyle === "bars"
 
                 property int barCount: Math.max(8, root.visualizerBarCount)
-                property real barSpacing: Math.max(1, 4 - Math.floor((barCount - 8) / 4))
-                property real barW: Math.max(2, Math.floor((64 - (barCount - 1) * barSpacing) / barCount))
+                property real barSpacing: barCount > 16 ? 1.5 : (barCount > 12 ? 2.0 : 2.5)
+                property real barW: barCount > 16 ? 2.5 : (barCount > 12 ? 3.0 : 3.5)
+
+                implicitWidth: Math.round(barCount * barW + (barCount - 1) * barSpacing)
+                implicitHeight: root.visualizerHeight
 
                 Repeater {
                     model: barContainer.barCount
@@ -283,36 +296,39 @@ Item {
                     Rectangle {
                         id: visBar
                         width: barContainer.barW
-                        x: index * (barContainer.barW + barContainer.barSpacing)
-                        y: Math.round((parent.height - height) / 2)
+                        x: Math.round(index * (barContainer.barW + barContainer.barSpacing))
+                        anchors.bottom: parent.bottom
 
                         property real rawVal: (root.visualizerFrame && index < root.visualizerFrame.length) ? root.visualizerFrame[index] : 0
                         // Apply epsilon deadband (< 6% treated as 0 to eliminate floor noise)
                         property real cleanVal: rawVal < 6 ? 0 : rawVal
-                        property real targetH: Math.max(2, Math.min(root.visualizerHeight, Math.round((cleanVal / 100.0) * root.visualizerHeight)))
+                        property real minH: Math.max(2.5, root.visualizerHeight * 0.12)
+                        property real targetH: Math.max(minH, Math.min(root.visualizerHeight, Math.round(minH + (cleanVal / 100.0) * (root.visualizerHeight - minH))))
 
                         height: targetH
-                        radius: 1
+                        radius: width / 2
                         color: Style.accent
                         smooth: true
                         antialiasing: true
 
+                        // Independent organic physics per bar:
+                        // Bass has more acoustic inertia and damping; treble has snappier bounce
                         Behavior on height {
                             SpringAnimation {
-                                spring: 5.5
-                                damping: 0.60
-                                epsilon: 0.25
+                                spring: 5.2 + (index / Math.max(1, barContainer.barCount - 1)) * 2.2
+                                damping: 0.64 - (index / Math.max(1, barContainer.barCount - 1)) * 0.16
+                                epsilon: 0.15
                             }
                         }
                     }
                 }
             }
 
-            // Style 2: WAVE (2D Canvas Frequency Sine Soundwave)
+            // Style 2: WAVE (Smooth Frequency Sine Soundwave)
             Canvas {
                 id: waveCanvas
-                implicitWidth: 100
-                implicitHeight: Style.notchHeightCompact
+                implicitWidth: Math.max(70, Math.min(120, root.visualizerBarCount * 6))
+                implicitHeight: root.visualizerHeight
                 Layout.alignment: Qt.AlignVCenter
                 visible: root.visualizerStyle === "wave"
 
@@ -320,16 +336,20 @@ Item {
                     var ctx = getContext("2d");
                     ctx.clearRect(0, 0, width, height);
                     ctx.strokeStyle = Style.accent;
-                    ctx.lineWidth = root.visualizerWaveWidth;
+                    ctx.lineWidth = Math.max(1.5, root.visualizerWaveWidth);
+                    ctx.lineCap = "round";
+                    ctx.lineJoin = "round";
                     ctx.beginPath();
 
-                    var count = root.visualizerFrame ? root.visualizerFrame.length : 10;
+                    var count = (root.visualizerFrame && root.visualizerFrame.length > 0) ? root.visualizerFrame.length : 12;
                     var step = width / Math.max(1, count - 1);
+                    var midY = height / 2;
                     for (var i = 0; i < count; i++) {
                         var x = i * step;
-                        var val = root.visualizerFrame[i] || 0;
-                        var amp = (val / 100.0) * (root.visualizerHeight / 2);
-                        var y = (height / 2) + (i % 2 === 0 ? -amp : amp);
+                        var val = (root.visualizerFrame && i < root.visualizerFrame.length) ? root.visualizerFrame[i] : 0;
+                        var cleanVal = val < 6 ? 0 : val;
+                        var amp = (cleanVal / 100.0) * (height / 2 - 1);
+                        var y = midY + (i % 2 === 0 ? -amp : amp);
                         if (i === 0) ctx.moveTo(x, y);
                         else ctx.lineTo(x, y);
                     }

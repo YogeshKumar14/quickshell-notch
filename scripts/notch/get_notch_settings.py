@@ -31,7 +31,7 @@ DEFAULTS = {
     "dripping_ears": True,
     "wall_duration": 0.5,
     "wall_type": "outer",
-    "expanded_height": 106,
+    "expanded_height": 136,
     "bottom_radius": 22,
     "app_columns": 4,
     "workspace_overlay": True,

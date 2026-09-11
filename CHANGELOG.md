@@ -4,6 +4,21 @@ All notable changes to QuickShell Top Notch are documented here.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.2.0] - 2026-09-11
+
+### Added
+- **Official Apple macOS SF Symbols Vector Icons**: Integrated official sharp Apple SF Symbols SVG icons (`components/M3Icon.qml` vector rendering) across the entire notch, header bar, media controls, drawers, and settings.
+- **Apple SF Pro & SF Mono Typography Hierarchy**: Configured typography across all components to match authentic macOS system styling (`SF Pro Display`, `SF Pro Text`, and `SF Pro / JetBrains Mono`).
+- **Matugen 4.2.0 High-Speed Zero-Cache Palette Pipeline**: Replaced Wallust with Matugen as primary color extractor with 11 custom Material You templates, eliminating multi-gigabyte cache bloat across large wallpaper collections while preserving palette-first atomic wallpaper switching.
+- **Multi-Tier Robust MPRIS Track Duration & Scrubber Engine**: Implemented foolproof multi-tier song duration resolution (microsecond/second metadata detection, fallback D-Bus/playerctl CLI query, and persistent per-track duration caching) eliminating stuck scrubbers and `0:00` display glitches.
+- **Robust Atomic MPRIS Rewind & Seeking Engine**: Dedicated seek backend script (`scripts/media/mpris_seek.py`) supporting relative `-10s` rewind, debounce accumulation, absolute position seeking, and graceful fallback for non-seekable streams.
+- **Per-Frequency Multi-Band Organic Visualizer**: Complete redesign of visualizer bars with frequency-differentiated dynamics, per-bar physics, clean baseline anchoring, and live synchronization with Settings App styles (bars, wave, pulsar).
+- **Notification Drawer IPC & Staggered Dismissal**: Added `notifs` and `notifs:clear` socket commands, with smooth 180ms staggered card dismissal animation and auto-collapse upon clearing.
+- **Instant OSD Dismissal**: Added `dismissOsd()` ensuring volume and brightness OSD popups and timers immediately dismiss upon `close`, `toggle`, or tab switching commands with zero lingering artifacts.
+- **Settings App Comprehensive Overhaul**: Modernized Settings App into 4 balanced card-grouped tabs with Wallust/Matugen accent gliding pills, real-time spring physics sliders, and stale option pruning.
+- **Ultra-Strict Battery Saver Architecture**: Visualizer and CAVA streaming cleanly suspended when notch is collapsed, OSD is active, or workspace overlay is shown; throttled hardware stats polling when idle.
+- **Expanded 186-Test Verification Suite**: Comprehensive verification covering MPRIS seeking, multi-tier duration resolution, notification IPC flooding, and SceneGraph squircle clipping.
+
 ## [2.1.0] - 2026-09-01
 
 ### Added

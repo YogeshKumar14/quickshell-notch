@@ -42,6 +42,10 @@ FocusScope {
             if (root.currentPage === 1 || root.currentPage === 2) {
                 focusTabSearchTimer.restart();
             }
+        } else {
+            if (root.visualizerEnabledVal && root.isPlaying) {
+                visRestartTimer.restart();
+            }
         }
     }
 
@@ -128,16 +132,28 @@ FocusScope {
         }
     }
 
+    /** Immediately dismisses active OSD and cancels recovery timer */
+    function dismissOsd() {
+        osdTimer.stop();
+        root.isOsdActive = false;
+        root.osdIconRotation = 0;
+        root.wasExpandedBeforeOsd = false;
+    }
+
     /** Expose notchBox to shell.qml for input region masking */
     property alias notchBoxItem: notchBox
 
-    /** Navigation tab index: 0=Media, 1=Walls, 2=Apps, 3=Stats */
+    /** Expose notification history component for external control and IPC */
+    property alias notifHistoryComp: notifHistoryComp
+
+    /** Navigation tab index: 0=Media, 1=Apps, 2=Walls, 3=Stats */
     property int currentPage: 0
     property int totalPages: 4
 
     /** Switch active tab by index */
     function toggleTab(page) {
-        if (root.isExpanded && root.currentPage === page) {
+        dismissOsd();
+        if (root.isExpanded && root.currentPage === page && !root.isNotifMenuOpen && !root.isPowerMenuOpen && !root.isWifiMenuOpen && !root.isBluetoothMenuOpen && !root.isAudioMenuOpen) {
             root.isExpanded = false;
             root.currentPage = 0;
             return;
@@ -157,6 +173,7 @@ FocusScope {
 
     /** Dispatches audio drawer toggle */
     function toggleAudioMenu() {
+        dismissOsd();
         root.isAudioMenuOpen = !root.isAudioMenuOpen;
         if (root.isAudioMenuOpen) {
             root.isWifiMenuOpen = false;
@@ -164,6 +181,28 @@ FocusScope {
             root.isPowerMenuOpen = false;
             root.isNotifMenuOpen = false;
             root.isExpanded = true;
+        }
+    }
+
+    /** Toggles notification history drawer and manages sub-menu exclusivity */
+    function toggleNotifMenu() {
+        dismissOsd();
+        root.notifMenuAutoOpened = false;
+        root.isNotifMenuOpen = !root.isNotifMenuOpen;
+        if (root.isNotifMenuOpen) {
+            root.isWifiMenuOpen = false;
+            root.isBluetoothMenuOpen = false;
+            root.isPowerMenuOpen = false;
+            root.isAudioMenuOpen = false;
+            root.isWifiPasswordPromptOpen = false;
+            root.isPowerConfirming = false;
+        }
+    }
+
+    /** Clears all notifications with staggered card dismiss */
+    function clearNotifications() {
+        if (notifHistoryComp) {
+            notifHistoryComp.clearAll();
         }
     }
 
@@ -198,10 +237,10 @@ FocusScope {
 
     property int autoCloseDelay: 5000
     property int compactWidthVal: 130
-    property int expandedHeightVal: 106
+    property int expandedHeightVal: 136
 
     property int pageChromeHeight: 10 + 32 + 6 + 10
-    property int pageNotchHeight: root.expandedHeightVal
+    property int pageNotchHeight: root.currentPage === 0 ? Math.max(136, root.expandedHeightVal) : root.expandedHeightVal
     property int maxPageNotchHeight: Math.max(root.expandedHeightVal, 320)
     property int notchRadiusVal: 22
     property bool drippingEarsVal: true
@@ -234,24 +273,14 @@ FocusScope {
 
     property real textWidth: compactPillComp ? compactPillComp.trackTitleWidth : 0
     property real dynamicVisNotchWidth: root.showVisualizer
-        ? Math.max(root.compactWidthVal, Math.min(420, 16 + 18 + 12 + 64 + 12 + root.textWidth + 18))
+        ? Math.max(root.compactWidthVal, Math.min(460, 16 + 18 + 14 + Math.round(root.visualizerBarCountVal * 5.5) + 14 + root.textWidth + 20))
         : root.compactWidthVal
 
     property var visualizerBars: []
     property var visualizerFrame: []
     property bool isAudioActive: false
     property bool isVisualizerActive: false
-    readonly property bool showVisualizer: root.visualizerEnabledVal && root.isVisualizerActive && !root.isExpanded && !root.isOsdActive && !root.isNotifMenuOpen
-
-    Timer {
-        id: visFrameTimer
-        interval: 66
-        repeat: true
-        running: (root.showVisualizer || (root.isExpanded && root.currentPage === 0)) && root.visualizerBars.length > 0
-        onTriggered: {
-            if (root.visualizerBars.length > 0) root.visualizerFrame = root.visualizerBars;
-        }
-    }
+    readonly property bool showVisualizer: root.visualizerEnabledVal && root.isVisualizerActive && !root.isExpanded && !root.isOsdActive && !root.isNotifMenuOpen && !root.isWorkspaceActive
 
     function triggerVisualizerPopup() {
         if (!root.visualizerEnabledVal) return;
@@ -302,24 +331,36 @@ FocusScope {
     property real singleHandleX: 0
 
     Behavior on targetHandleX {
-        SpringAnimation { spring: 5.5; damping: 0.22; epsilon: 0.1 }
+        SpringAnimation { spring: root.tabSpringTension; damping: root.tabSpringDamping; epsilon: 0.1 }
     }
     Behavior on singleHandleX {
-        SpringAnimation { spring: 5.5; damping: 0.22; epsilon: 0.1 }
+        SpringAnimation { spring: root.tabSpringTension; damping: root.tabSpringDamping; epsilon: 0.1 }
     }
     Behavior on handleLeft {
-        SpringAnimation { spring: 4.8; damping: 0.24; epsilon: 0.1 }
+        SpringAnimation { spring: root.tabSpringTension * 0.9; damping: root.tabSpringDamping * 1.05; epsilon: 0.1 }
     }
     Behavior on handleRight {
-        SpringAnimation { spring: 6.2; damping: 0.20; epsilon: 0.1 }
+        SpringAnimation { spring: root.tabSpringTension * 1.1; damping: root.tabSpringDamping * 0.95; epsilon: 0.1 }
     }
 
     function updateHandlePosition(wsNum) {
-        var dotCenter = (wsNum - 1) * 14;
-        root.targetHandleX = dotCenter;
-        root.singleHandleX = dotCenter;
-        root.handleLeft = dotCenter - 1;
-        root.handleRight = dotCenter + 7;
+        var targetX = 2 + (wsNum - 1) * 22;
+        root.targetHandleX = targetX;
+        root.singleHandleX = targetX;
+        root.handleLeft = targetX;
+        root.handleRight = targetX + 16;
+    }
+
+    function handleWorkspaceChange(wsNum) {
+        if (!isNaN(wsNum) && wsNum > 0 && wsNum <= 10) {
+            root.activeWorkspace = wsNum;
+            root.updateHandlePosition(wsNum);
+            root.refreshOccupied();
+            if (root.workspaceOverlayVal && !root.isExpanded && !root.isOsdActive && !root.isNotifMenuOpen) {
+                root.isWorkspaceActive = true;
+                workspaceDismissTimer.restart();
+            }
+        }
     }
 
     Timer {
@@ -328,20 +369,42 @@ FocusScope {
         onTriggered: root.isWorkspaceActive = false
     }
 
+    onIsWorkspaceActiveChanged: {
+        if (!root.isWorkspaceActive && !root.isExpanded && root.visualizerEnabledVal && root.isPlaying) {
+            visRestartTimer.restart();
+        }
+    }
+
+    onIsOsdActiveChanged: {
+        if (!root.isOsdActive && !root.isExpanded && root.visualizerEnabledVal && root.isPlaying) {
+            visRestartTimer.restart();
+        }
+    }
+
     Connections {
         target: Hyprland
-        function onRawEvent(name, data) {
+
+        function onFocusedWorkspaceChanged() {
+            if (Hyprland.focusedWorkspace) {
+                root.handleWorkspaceChange(Hyprland.focusedWorkspace.id);
+            }
+        }
+
+        function onRawEvent(event) {
+            if (!event) return;
+            var name = event.name;
+            var data = event.data;
             if (name === "workspace" || name === "focusedmon" || name === "workspacev2") {
                 var wsNum = parseInt(data);
-                if (!isNaN(wsNum) && wsNum > 0 && wsNum <= 10) {
-                    root.activeWorkspace = wsNum;
-                    root.updateHandlePosition(wsNum);
-                    if (root.workspaceOverlayVal && !root.isExpanded && !root.isOsdActive && !root.isNotifMenuOpen) {
-                        root.isWorkspaceActive = true;
-                        workspaceDismissTimer.restart();
-                    }
+                if (isNaN(wsNum) && typeof data === "string" && data.indexOf(",") !== -1) {
+                    var parts = data.split(",");
+                    wsNum = parseInt(parts[0]);
+                    if (isNaN(wsNum) && parts.length > 1) wsNum = parseInt(parts[1]);
                 }
-            } else if (name === "createworkspace" || name === "destroyworkspace" || name === "movewindow" || name === "openwindow" || name === "closewindow") {
+                if (!isNaN(wsNum) && wsNum > 0 && wsNum <= 10) {
+                    root.handleWorkspaceChange(wsNum);
+                }
+            } else if (name === "createworkspace" || name === "destroyworkspace" || name === "movewindow" || name === "openwindow" || name === "closewindow" || name === "createworkspacev2" || name === "destroyworkspacev2") {
                 root.refreshOccupied();
             }
         }
@@ -363,6 +426,11 @@ FocusScope {
                 } catch (e) {}
             }
         }
+    }
+
+    Process {
+        id: wsSwitchProc
+        command: []
     }
 
     function refreshOccupied() {
@@ -400,7 +468,7 @@ FocusScope {
                     if (data.auto_close !== undefined) root.autoCloseDelay = data.auto_close;
                     if (data.compact_width !== undefined) root.compactWidthVal = data.compact_width;
                     if (data.expanded_height !== undefined) root.expandedHeightVal = data.expanded_height;
-                    if (data.bottom_radius !== undefined) root.notchRadiusVal = data.bottom_radius;
+                    if (data.bottom_radius !== undefined) { root.notchRadiusVal = data.bottom_radius; Style.bottomRadius = data.bottom_radius; }
                     if (data.dripping_ears !== undefined) root.drippingEarsVal = data.dripping_ears;
                     if (data.app_columns !== undefined) root.appColumnsVal = data.app_columns;
                     if (data.workspace_overlay !== undefined) root.workspaceOverlayVal = data.workspace_overlay;
@@ -473,13 +541,27 @@ FocusScope {
     Process {
         id: visualizerProc
         command: ["python3", Quickshell.shellDir + "/scripts/notch/stream_audio_visualizer.py"]
-        running: root.visualizerEnabledVal
+        running: root.visualizerEnabledVal && !root.isExpanded && !root.isOsdActive && !root.isNotifMenuOpen && !root.isWorkspaceActive && root.isPlaying
+        onRunningChanged: {
+            if (!running) {
+                root.isAudioActive = false;
+                root.isVisualizerActive = false;
+                root.visualizerBars = [];
+                root.visualizerFrame = [];
+            }
+        }
+        onExited: function(exitCode, exitStatus) {
+            if (root.visualizerEnabledVal && !root.isExpanded && !root.isOsdActive && !root.isNotifMenuOpen && !root.isWorkspaceActive && root.isPlaying) {
+                visRestartTimer.restart();
+            }
+        }
         stdout: SplitParser {
             onRead: function(data) {
                 try {
                     var obj = JSON.parse(data.trim());
                     if (obj.bars) {
                         root.visualizerBars = obj.bars;
+                        root.visualizerFrame = obj.bars;
                         var isAct = obj.active === true;
                         if (isAct) {
                             root.isAudioActive = true;
@@ -491,6 +573,24 @@ FocusScope {
                     }
                 } catch (e) {}
             }
+        }
+    }
+
+    Timer {
+        id: visRestartTimer
+        interval: 150
+        repeat: false
+        onTriggered: {
+            if (root.visualizerEnabledVal && !root.isExpanded && !root.isOsdActive && !root.isNotifMenuOpen && !root.isWorkspaceActive && root.isPlaying) {
+                visualizerProc.running = true;
+            }
+        }
+    }
+
+    onVisualizerBarCountValChanged: {
+        if (visualizerProc.running) {
+            visualizerProc.running = false;
+            visRestartTimer.restart();
         }
     }
 
@@ -615,7 +715,7 @@ FocusScope {
 
     Timer {
         id: devicePollTimer
-        interval: 2000
+        interval: (root.isExpanded || root.isOsdActive || root.isAudioMenuOpen) ? 2000 : 12000
         repeat: true
         running: true
         onTriggered: root.refreshDeviceLevels()
@@ -671,21 +771,22 @@ FocusScope {
 
     Process {
         id: applyWallpaperProc
-        stdout: StdioCollector {
-            onStreamFinished: {
-                wallustDelayTimer.restart();
+        onRunningChanged: {
+            if (!running) {
+                root.refreshAccent();
                 if (root.pendingWallpaperPath !== "") {
                     delayedWallpaperTimer.restart();
                 }
             }
         }
-    }
-
-    Timer {
-        id: wallustDelayTimer
-        interval: 400
-        repeat: false
-        onTriggered: root.refreshAccent()
+        stdout: SplitParser {
+            onRead: function(data) {
+                var line = data.trim();
+                if (line === "PALETTE_READY") {
+                    root.refreshAccent();
+                }
+            }
+        }
     }
 
     Timer {
@@ -743,23 +844,76 @@ FocusScope {
     }
 
     function refreshAccent() {
+        wallustAccentProc.running = false;
         wallustAccentProc.running = true;
     }
 
     // MPRIS Media properties
+    property int _mprisTrigger: 0
+
+    function refreshActivePlayer() {
+        root._mprisTrigger++;
+    }
+
+    Instantiator {
+        model: Mpris.players
+        delegate: Connections {
+            target: modelData
+            function onPlaybackStateChanged() {
+                root._mprisTrigger++;
+            }
+            function onTrackTitleChanged() {
+                root._mprisTrigger++;
+            }
+            function onLengthChanged() {
+                root._mprisTrigger++;
+            }
+            function onMetadataChanged() {
+                root._mprisTrigger++;
+            }
+        }
+    }
+
     property var activePlayer: {
+        var _trigger = root._mprisTrigger;
         var players = Mpris.players.values;
         for (var i = 0; i < players.length; i++) {
-            if (players[i].playbackState === MprisPlaybackState.Playing) return players[i];
+            if (players[i] && players[i].playbackState === MprisPlaybackState.Playing) return players[i];
         }
-        return players.length > 0 ? players[0] : null;
+        return (players.length > 0 && players[0]) ? players[0] : null;
     }
     property string trackTitle: activePlayer && activePlayer.trackTitle ? activePlayer.trackTitle : "No Media Playing"
     property string trackArtist: activePlayer && activePlayer.trackArtist ? activePlayer.trackArtist : "Top Notch"
     property bool isPlaying: activePlayer ? (activePlayer.playbackState === MprisPlaybackState.Playing) : false
+    onIsPlayingChanged: {
+        if (!root.isPlaying) {
+            root.isAudioActive = false;
+            root.isVisualizerActive = false;
+            root.visualizerBars = [];
+            root.visualizerFrame = [];
+        } else if (root.visualizerEnabledVal && !root.isExpanded && !root.isOsdActive && !root.isWorkspaceActive) {
+            visRestartTimer.restart();
+        }
+    }
     property real trackPosition: activePlayer && activePlayer.position ? activePlayer.position : 0
+    property real trackLength: {
+        var _trigger = root._mprisTrigger;
+        if (!activePlayer) return 0;
+        if (activePlayer.length !== undefined && activePlayer.length > 0) {
+            var len = activePlayer.length;
+            return (len > 100000) ? (len / 1000000.0) : len;
+        }
+        if (activePlayer.metadata && activePlayer.metadata["mpris:length"] !== undefined) {
+            var mLen = parseFloat(activePlayer.metadata["mpris:length"]);
+            if (!isNaN(mLen) && mLen > 0) {
+                return (mLen > 100000) ? (mLen / 1000000.0) : mLen;
+            }
+        }
+        return 0;
+    }
 
     onActivePlayerChanged: {
+        root._mprisTrigger++;
         if (activePlayer) {
             root.trackPosition = activePlayer.position;
         } else {
@@ -774,6 +928,7 @@ FocusScope {
         running: root.isPlaying && root.isExpanded && root.currentPage === 0
         repeat: true
         onTriggered: {
+            if (mediaControllerComp && mediaControllerComp.isSeeking) return;
             if (root.activePlayer && root.activePlayer.position !== undefined) {
                 root.trackPosition = root.activePlayer.position;
             }
@@ -789,6 +944,10 @@ FocusScope {
     Component.onCompleted: {
         refreshNotchSettings();
         updateClock();
+        if (Hyprland.focusedWorkspace) {
+            root.activeWorkspace = Hyprland.focusedWorkspace.id;
+            root.updateHandlePosition(root.activeWorkspace);
+        }
         root.refreshOccupied();
         root.refreshDeviceLevels();
         root.refreshAccent();
@@ -960,8 +1119,8 @@ FocusScope {
         color: "#000000"
         border.width: 0
 
-        bottomLeftRadius: (root.isPowerMenuOpen || root.isWifiMenuOpen || root.isBluetoothMenuOpen || root.isNotifMenuOpen) ? Style.radiusLarge : root.notchRadiusVal
-        bottomRightRadius: (root.isPowerMenuOpen || root.isWifiMenuOpen || root.isBluetoothMenuOpen || root.isNotifMenuOpen) ? Style.radiusLarge : root.notchRadiusVal
+        bottomLeftRadius: root.notchRadiusVal
+        bottomRightRadius: root.notchRadiusVal
         topLeftRadius: 0
         topRightRadius: 0
 
@@ -975,6 +1134,7 @@ FocusScope {
         }
 
         Behavior on width {
+            enabled: notchBox.width > 0
             SpringAnimation {
                 spring: root.expandSpringTension
                 damping: root.expandSpringDamping
@@ -983,6 +1143,7 @@ FocusScope {
             }
         }
         Behavior on height {
+            enabled: notchBox.height > 0
             SpringAnimation {
                 spring: root.expandSpringTension
                 damping: root.expandSpringDamping
@@ -1023,7 +1184,7 @@ FocusScope {
         CompactPill {
             id: compactPillComp
             anchors.fill: parent
-            opacity: (root.isExpanded || root.isNotifMenuOpen || root.isPowerMenuOpen || root.isWifiMenuOpen || root.isBluetoothMenuOpen || root.isAudioMenuOpen) ? 0.0 : 1.0
+            opacity: (root.isExpanded || root.isOsdActive || root.isNotifMenuOpen || root.isPowerMenuOpen || root.isWifiMenuOpen || root.isBluetoothMenuOpen || root.isAudioMenuOpen) ? 0.0 : 1.0
             visible: opacity > 0.01
 
             timeStr: root.timeStr
@@ -1050,13 +1211,19 @@ FocusScope {
             isOsdActive: root.isOsdActive
 
             onExpandRequested: {
+                root.currentPage = 0;
                 root.isExpanded = true;
                 root.isWorkspaceActive = false;
                 autoCloseTimer.stop();
             }
             onWorkspaceSwitchRequested: function(wsNum) {
-                Hyprland.dispatch("workspace " + wsNum.toString());
-                workspaceDismissTimer.restart();
+                if (Hyprland.usingLua) {
+                    wsSwitchProc.command = ["hyprctl", "eval", "return hl.dispatch(hl.dsp.focus({ workspace = " + wsNum + " }))"];
+                    wsSwitchProc.running = true;
+                } else {
+                    Hyprland.dispatch("workspace " + wsNum.toString());
+                }
+                root.handleWorkspaceChange(wsNum);
             }
         }
 
@@ -1139,14 +1306,7 @@ FocusScope {
                     root.isNotifMenuOpen = false;
                     root.isAudioMenuOpen = false;
                 }
-                onNotifToggled: {
-                    root.notifMenuAutoOpened = false;
-                    root.isNotifMenuOpen = !root.isNotifMenuOpen;
-                    root.isWifiMenuOpen = false;
-                    root.isBluetoothMenuOpen = false;
-                    root.isPowerMenuOpen = false;
-                    root.isAudioMenuOpen = false;
-                }
+                onNotifToggled: root.toggleNotifMenu()
                 onPowerToggled: {
                     root.isPowerMenuOpen = !root.isPowerMenuOpen;
                     root.isPowerConfirming = false;
@@ -1188,27 +1348,27 @@ FocusScope {
                     // PAGE 0: Media Controller (Nook Dashboard)
                     MediaController {
                         id: mediaControllerComp
-                        width: pageViewport.width > 0 ? pageViewport.width : 560
-                        height: pageViewport.height > 0 ? pageViewport.height : 72
+                        width: pageViewport.width > 0 ? pageViewport.width : 576
+                        height: pageViewport.height > 0 ? pageViewport.height : 100
                         activePlayer: root.activePlayer
                         isPlaying: root.isPlaying
                         trackTitle: root.trackTitle
                         trackArtist: root.trackArtist
                         trackPosition: root.trackPosition
+                        externalTrackLength: root.trackLength
                         volumeLevel: root.volumeLevel
                         micLevel: root.micLevel
                         buttonAnims: root.buttonAnimsVal
                         buttonSpeed: root.buttonSpeedVal
                         tabSpringTension: root.tabSpringTension
                         tabSpringDamping: root.tabSpringDamping
-                        visualizerFrame: root.visualizerFrame
                         onAudioMenuRequested: root.toggleAudioMenu()
                     }
 
                     // PAGE 1: Application Launcher (Tray)
                     Item {
-                        width: pageViewport.width > 0 ? pageViewport.width : 560
-                        height: pageViewport.height > 0 ? pageViewport.height : 72
+                        width: pageViewport.width > 0 ? pageViewport.width : 576
+                        height: pageViewport.height > 0 ? pageViewport.height : 100
                         clip: true
 
                         Loader {
@@ -1216,7 +1376,6 @@ FocusScope {
                             anchors.fill: parent
                             active: root.appsTabAlive
                             sourceComponent: AppLauncher {
-                                appColumns: root.appColumnsVal
                                 highlightAnimType: root.highlightAnimTypeVal
                                 highlightSpringTension: root.highlightSpringTensionVal
                                 highlightSpringDamping: root.highlightSpringDampingVal
@@ -1235,8 +1394,8 @@ FocusScope {
 
                     // PAGE 2: Wallpaper Selector (Walls)
                     Item {
-                        width: pageViewport.width > 0 ? pageViewport.width : 560
-                        height: pageViewport.height > 0 ? pageViewport.height : 72
+                        width: pageViewport.width > 0 ? pageViewport.width : 576
+                        height: pageViewport.height > 0 ? pageViewport.height : 100
                         clip: true
 
                         Loader {
@@ -1264,8 +1423,8 @@ FocusScope {
                     // PAGE 3: Hardware Stats Dashboard (Stats)
                     HardwareStats {
                         id: hardwareStatsComp
-                        width: pageViewport.width > 0 ? pageViewport.width : 560
-                        height: pageViewport.height > 0 ? pageViewport.height : 72
+                        width: pageViewport.width > 0 ? pageViewport.width : 576
+                        height: pageViewport.height > 0 ? pageViewport.height : 100
                         cpuUsage: root.cpuUsage
                         cpuHistory: root.cpuHistory
                         ramUsage: root.ramUsage
@@ -1366,7 +1525,7 @@ FocusScope {
             }
             onNotifCountChanged: {
                 root.notifCount = notifHistoryComp.notifCount;
-                if (root.isNotifMenuOpen && notifHistoryComp.notifCount === 0) {
+                if (root.isNotifMenuOpen && notifHistoryComp.notifCount === 0 && !notifHistoryComp.isClearing) {
                     root.isNotifMenuOpen = false;
                 }
             }

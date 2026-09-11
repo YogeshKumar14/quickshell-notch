@@ -16,6 +16,7 @@ CLI Usage:
 import os
 import sys
 import json
+import socket
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "core"))
 from atomic_write import atomic_write
@@ -46,11 +47,11 @@ def main():
         sys.exit(1)
 
     notch_data = payload.get("notch", {})
-    hypr_data = payload.get("hypr", {})
+    hypr_data = payload.get("hyprland") or payload.get("hypr") or {}
 
     # 0. Validate and convert ALL hypr values BEFORE writing anything,
     #    so a bad value can never corrupt the persisted configs.
-    #    Accept both nested {"hypr": {...}} and flat payloads.
+    #    Accept both nested {"hyprland": {...}} / {"hypr": {...}} and flat payloads.
     if not hypr_data:
         hypr_data = {k: payload[k] for k in KEYWORD_MAP if k in payload}
 
@@ -79,6 +80,17 @@ def main():
 
     existing_notch.update(notch_data)
     atomic_write(NOTCH_CONFIG_FILE, json.dumps(existing_notch, indent=2))
+
+    if notch_data:
+        ipc_sock = "/tmp/quickshell-notch.sock"
+        if os.path.exists(ipc_sock):
+            try:
+                with socket.socket(socket.AF_UNIX, socket.SOCK_STREAM) as s:
+                    s.settimeout(0.2)
+                    s.connect(ipc_sock)
+                    s.sendall(b"reload_settings\n")
+            except Exception:
+                pass
 
     # 2. WRITE HYPRLAND LUA CONFIG & CONF (persistence) + sync state cache.
     #    Merge into existing state: a partial payload must never reset the

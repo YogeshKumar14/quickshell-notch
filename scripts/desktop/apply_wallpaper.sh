@@ -13,7 +13,25 @@ LOCK_FILE="${XDG_RUNTIME_DIR:-/tmp}/quickshell_wallpaper_${UID:-0}.lock"
 exec 200>"$LOCK_FILE"
 flock -n 200 || exit 0
 
-# Read transition duration and type from permanent config
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# Auto-bootstrap Matugen configuration and templates if missing
+if [ ! -f "$HOME/.config/matugen/config.toml" ] && [ -d "$SCRIPT_DIR/../../templates/matugen" ]; then
+    mkdir -p "$HOME/.config/matugen"
+    cp -r "$SCRIPT_DIR/../../templates/matugen/"* "$HOME/.config/matugen/" 2>/dev/null || true
+fi
+
+# 1. Run color palette generator FIRST (Matugen preferred: zero cache, fast CAM16; fallback to Wallust)
+if command -v matugen >/dev/null 2>&1 && matugen image "$TARGET_PIC" -m dark --source-color-index 0 >/dev/null 2>&1; then
+    :
+elif command -v wallust >/dev/null 2>&1; then
+    wallust run -n -b thumb "$TARGET_PIC" >/dev/null 2>&1 || true
+fi
+
+# 2. Emit PALETTE_READY so listeners (like QuickShell) immediately update accent colors
+echo "PALETTE_READY"
+
+# 3. Read transition duration and type from permanent config
 SETTINGS_FILE="$HOME/.config/quickshell/notch_settings.json"
 DURATION=0.5
 TYPE="outer"
@@ -31,7 +49,7 @@ fi
 DURATION="${DURATION:-0.5}"
 TYPE="${TYPE:-outer}"
 
-# 1. Ensure awww-daemon is running (wait for it to be ready)
+# 4. Ensure awww-daemon is running (wait for it to be ready)
 if ! awww query >/dev/null 2>&1; then
     awww-daemon --format xrgb &
     for _ in $(seq 1 50); do
@@ -40,10 +58,10 @@ if ! awww query >/dev/null 2>&1; then
     done
 fi
 
-# 2. Get focused monitor
+# 5. Get focused monitor
 FOCUSED_MONITOR=$(hyprctl monitors 2>/dev/null | awk '/^Monitor/{name=$2} /focused: yes/{print name}')
 
-# 3. Apply wallpaper (only persist the path on success)
+# 6. Apply wallpaper (transition starts ONLY AFTER palette is generated)
 if [ "$TYPE" = "none" ]; then
     if [ -n "$FOCUSED_MONITOR" ]; then
         awww img -o "$FOCUSED_MONITOR" "$TARGET_PIC" --transition-type none
@@ -64,14 +82,9 @@ if [ "$APPLY_STATUS" -ne 0 ]; then
     exit 1
 fi
 
-# 4. Save current wallpaper path (atomically)
+# 7. Save current wallpaper path (atomically)
 mkdir -p "$HOME/.config/quickshell"
 CURRENT_FILE="$HOME/.config/quickshell/current_wallpaper"
 TMP_FILE="$CURRENT_FILE.tmp"
 echo "$TARGET_PIC" > "$TMP_FILE"
 mv "$TMP_FILE" "$CURRENT_FILE"
-
-# 5. Run wallust quietly without hyprctl reload to ensure layer-shell stability
-if command -v wallust >/dev/null 2>&1; then
-    wallust run "$TARGET_PIC" >/dev/null 2>&1
-fi

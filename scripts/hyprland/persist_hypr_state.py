@@ -176,6 +176,8 @@ def ensure_includes(data, script_include, conf_source):
                 fp.write("\n\n# Include Top Notch Bar Permanent Config\n" + conf_source + "\n")
 
 def update_and_persist(typ, val):
+    if os.environ.get("QUICKSHELL_SANDBOX") == "1":
+        return True
     data = load_state()
     data[typ] = convert_type(typ, val)
     save_state(data)

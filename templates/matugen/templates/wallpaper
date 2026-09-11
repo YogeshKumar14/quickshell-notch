@@ -1,0 +1,34 @@
+{{image}}
+
+
+
+
+windowrule {
+    name = transparency-for-terminal
+    match:class = ^($terminal)$
+    opacity = 0.7 override 0.7 override
+    
+}
+
+windowrule {
+    name = transparency-for-fileMgr
+    match:class = ^($fileManager)$
+    opacity = 0.7 override 0.7 override
+    
+}
+
+windowrule {
+	name = transparency-for-discord
+	match:class = ^(discord)$
+	opacity = 0.7 override 0.7 override
+}
+windowrule {
+        name = transparency-for-lutris
+        match:class = ^(net.lutris.Lutris)$
+        opacity = 0.7 override 0.7 override
+}
+windowrule {
+        name = transparency-for-VsCode
+        match:class = ^(code)$
+        opacity = 0.7 override 0.7 override
+}
