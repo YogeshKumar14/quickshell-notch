@@ -23,6 +23,13 @@ Item {
     /** Unread notification badge count */
     property int notifCount: 0
 
+    /** Realtime container dimensions from notch pill for spring bounce synchronization */
+    property real containerWidth: width
+    property real containerHeight: height
+    property real targetWidth: width
+    property real targetHeight: height
+    property bool isExpanded: false
+
     /** Active Hyprland workspace ID (1..10) */
     property int activeWorkspace: 1
     /** Array of occupied workspace IDs */
@@ -69,17 +76,51 @@ Item {
 
     // 1. COMPACT CLOCK DISPLAY
     Item {
+        id: clockDisplay
         anchors.fill: parent
-        opacity: (!root.isWorkspaceActive && !root.showVisualizer && !root.isOsdActive) ? 1.0 : 0.0
+        opacity: (!root.isWorkspaceActive && !root.showVisualizer && !root.isOsdActive && !root.isExpanded) ? 1.0 : 0.0
         visible: opacity > 0.01
 
         Behavior on opacity {
-            NumberAnimation { duration: 180; easing.type: Easing.OutQuad }
+            NumberAnimation {
+                duration: root.isExpanded ? 80 : 160
+                easing.type: Easing.OutQuad
+            }
+        }
+
+        // Realtime deviation factors driven by SpringAnimation on notchBox
+        readonly property real hDelta: root.targetHeight > 0
+            ? (root.containerHeight - root.targetHeight) / root.targetHeight
+            : 0
+        readonly property real wDelta: root.targetWidth > 0
+            ? (root.containerWidth - root.targetWidth) / root.targetWidth
+            : 0
+
+        // Synchronized spring bounce scale:
+        // Dynamically tracks vertical compression/rebound and horizontal settling
+        readonly property real clockSpringScale: {
+            if (root.isExpanded) return 0.85;
+
+            var scaleVal = 1.0 + (hDelta * 0.40) + (wDelta * 0.35);
+            return Math.max(0.75, Math.min(1.20, scaleVal));
+        }
+
+        // Vertical center follow-through clamped to physical notch bounds
+        readonly property real bounceCenterY: {
+            if (root.isExpanded) return 0;
+            var diff = (root.containerHeight - root.targetHeight) * 0.5;
+            return Math.max(-3.0, Math.min(3.0, diff));
         }
 
         RowLayout {
-            anchors.centerIn: parent
+            id: clockRow
+            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.verticalCenter: parent.verticalCenter
+            anchors.verticalCenterOffset: clockDisplay.bounceCenterY
             spacing: 6
+
+            transformOrigin: Item.Center
+            scale: clockDisplay.clockSpringScale
 
             Text {
                 text: root.timeStr
@@ -90,12 +131,20 @@ Item {
                 style: Text.Raised
                 styleColor: "#000000"
                 color: Style.textPrimary
+                smooth: true
             }
 
             Rectangle {
                 width: 14; height: 14; radius: 7
                 color: Style.accent
                 visible: root.notifCount > 0
+                smooth: true
+                antialiasing: true
+
+                scale: root.notifCount > 0 ? 1.0 : 0.0
+                Behavior on scale {
+                    SpringAnimation { spring: 5.5; damping: 0.3 }
+                }
 
                 Text {
                     anchors.centerIn: parent

@@ -1191,12 +1191,17 @@ FocusScope {
             visible: opacity > 0.01
 
             Behavior on opacity {
-                enabled: !root.isExpanded
                 NumberAnimation {
-                    duration: 120
+                    duration: root.isExpanded ? 80 : 140
                     easing.type: Easing.OutQuad
                 }
             }
+
+            containerWidth: notchBox.width
+            containerHeight: notchBox.height
+            targetWidth: width
+            targetHeight: height
+            isExpanded: root.isExpanded
 
             timeStr: root.timeStr
             clockFontSize: root.clockFontSizeVal
