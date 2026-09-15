@@ -1183,9 +1183,20 @@ FocusScope {
         // --- SUB-COMPONENT 1: COMPACT PILL ---
         CompactPill {
             id: compactPillComp
-            anchors.fill: parent
+            anchors.top: parent.top
+            anchors.horizontalCenter: parent.horizontalCenter
+            width: (root.isWorkspaceActive ? 240 : (root.showVisualizer ? root.dynamicVisNotchWidth : root.compactWidthVal))
+            height: Style.notchHeightCompact
             opacity: (root.isExpanded || root.isOsdActive || root.isNotifMenuOpen || root.isPowerMenuOpen || root.isWifiMenuOpen || root.isBluetoothMenuOpen || root.isAudioMenuOpen) ? 0.0 : 1.0
             visible: opacity > 0.01
+
+            Behavior on opacity {
+                enabled: !root.isExpanded
+                NumberAnimation {
+                    duration: 120
+                    easing.type: Easing.OutQuad
+                }
+            }
 
             timeStr: root.timeStr
             clockFontSize: root.clockFontSizeVal
@@ -1248,8 +1259,16 @@ FocusScope {
             opacity: (root.isExpanded && !root.isOsdActive && !root.isNotifMenuOpen && !root.isPowerMenuOpen && !root.isWifiMenuOpen && !root.isBluetoothMenuOpen && !root.isAudioMenuOpen) ? 1.0 : 0.0
             visible: opacity > 0.01
 
+            transformOrigin: Item.Top
+            scale: (root.isExpanded && root.pageNotchHeight > 0)
+                ? Math.max(0.60, notchBox.height / root.pageNotchHeight)
+                : 1.0
+
             Behavior on opacity {
-                NumberAnimation { duration: 160; easing.type: Easing.OutQuad }
+                NumberAnimation {
+                    duration: root.isExpanded ? 160 : 70
+                    easing.type: Easing.OutQuad
+                }
             }
 
             // --- SUB-COMPONENT 3: STATUS BAR (HEADER ROW) ---
@@ -1258,9 +1277,9 @@ FocusScope {
                 anchors.top: parent.top
                 anchors.topMargin: 4
                 anchors.left: parent.left
-                anchors.leftMargin: 12
+                anchors.leftMargin: 14
                 anchors.right: parent.right
-                anchors.rightMargin: 12
+                anchors.rightMargin: 14
                 height: 20
 
                 currentPage: root.currentPage
@@ -1325,11 +1344,11 @@ FocusScope {
                 anchors.top: parent.top
                 anchors.topMargin: 28
                 anchors.left: parent.left
-                anchors.leftMargin: 12
+                anchors.leftMargin: 14
                 anchors.right: parent.right
-                anchors.rightMargin: 12
+                anchors.rightMargin: 14
                 anchors.bottom: parent.bottom
-                anchors.bottomMargin: 6
+                anchors.bottomMargin: 14
                 clip: true
 
                 Row {
