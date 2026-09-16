@@ -10,6 +10,7 @@ Supported Commands:
     close           - Collapse expanded notch
     nook            - Toggle Media Controller / NotchNook tab (PAGE 0)
     apps            - Toggle Application launcher tab (PAGE 1)
+    tray            - Alias for apps (PAGE 1)
     walls           - Toggle Wallpaper selector tab (PAGE 2)
     stats           - Toggle Hardware Stats tab (PAGE 3)
     tab:<0-3>       - Direct switch to specific tab index (0..3)
@@ -18,7 +19,11 @@ Supported Commands:
     notifs:clear    - Clear all active notifications with staggered animation
     wifi            - Toggle Wi-Fi network selector drawer
     bluetooth       - Toggle Bluetooth device drawer
-    osd:vol:<0-100> - Display Volume OSD with percentage
+    bt              - Alias for bluetooth
+    settings        - Toggle Settings window
+    settings:tab:<0-3> - Open Settings window directly to tab index (0..3)
+    reload_settings - Reload notch preferences from disk
+    osd:vol:<0-150> - Display Volume OSD with percentage
     osd:bri:<0-100> - Display Brightness OSD with percentage
 
 Usage:
@@ -26,8 +31,12 @@ Usage:
     python3 notch_ipc.py nook
     python3 notch_ipc.py apps
     python3 notch_ipc.py walls
+    python3 notch_ipc.py stats
+    python3 notch_ipc.py tab:3
     python3 notch_ipc.py notifs
     python3 notch_ipc.py notifs:clear
+    python3 notch_ipc.py settings
+    python3 notch_ipc.py settings:tab:1
     python3 notch_ipc.py osd:vol:75
 """
 
@@ -54,6 +63,9 @@ def send_command(cmd: str) -> None:
 
 if __name__ == "__main__":
     if len(sys.argv) > 1:
+        if sys.argv[1] in ("-h", "--help", "help"):
+            print(__doc__.strip())
+            sys.exit(0)
         send_command(sys.argv[1])
     else:
         send_command("toggle")

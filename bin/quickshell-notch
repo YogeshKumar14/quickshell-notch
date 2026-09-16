@@ -52,6 +52,7 @@ LAUNCH_SCRIPT="${BASE_DIR}/scripts/core/launch_quickshell.sh"
 IPC_SCRIPT="${BASE_DIR}/scripts/notch/notch_ipc.py"
 OSD_SCRIPT="${BASE_DIR}/scripts/core/osd.sh"
 VALIDATE_SCRIPT="${BASE_DIR}/scripts/core/validate_codebase.sh"
+TEST_SCRIPT="${BASE_DIR}/scripts/core/test_all_features.py"
 
 show_help() {
     cat <<'EOF'
@@ -68,12 +69,13 @@ Core Commands:
   init [--symlink|--copy]
                         Initialize ~/.config/quickshell and Matugen templates
   validate              Run codebase validation pipeline (qmllint, py_compile, bash -n)
+  test                  Run full 195-test automated verification suite
 
 Notch Controls:
   toggle                Expand or collapse the Notch
   close                 Collapse the Notch
   nook                  Toggle Media Controller tab (Tab 0)
-  apps                  Toggle App Launcher tab (Tab 1)
+  apps, tray            Toggle App Launcher tab (Tab 1)
   walls                 Toggle Wallpaper Selector tab (Tab 2)
   stats                 Toggle Hardware Stats tab (Tab 3)
   tab <0-3>             Switch directly to tab index (0..3)
@@ -81,13 +83,14 @@ Notch Controls:
   notifs                Toggle Notification center drawer
   notifs:clear          Clear notifications with staggered animation
   wifi                  Toggle Wi-Fi drawer
-  bluetooth             Toggle Bluetooth drawer
-  settings              Open Notch Settings window
+  bluetooth, bt         Toggle Bluetooth drawer
+  settings [0-3]        Open Notch Settings window (optionally to tab index)
+  reload_settings       Reload notch preferences from disk without restart
 
 OSD Controls:
   osd volume <up|down>     Step volume up/down by 5% and show OSD
   osd brightness <up|down> Step brightness up/down by 5% and show OSD
-  osd vol <0-100>          Set/display specific volume level
+  osd vol <0-150>          Set/display specific volume level
   osd bri <0-100>          Set/display specific brightness level
 
 Advanced:
@@ -220,7 +223,8 @@ cmd_ipc() {
 cmd_osd() {
     if [ $# -lt 2 ]; then
         echo "Usage: quickshell-notch osd <volume|brightness> <up|down>" >&2
-        echo "   or: quickshell-notch osd <vol|bri> <0-100>" >&2
+        echo "   or: quickshell-notch osd <vol|volume> <0-150>" >&2
+        echo "   or: quickshell-notch osd <bri|brightness> <0-100>" >&2
         exit 1
     fi
 
@@ -229,10 +233,21 @@ cmd_osd() {
 
     if [[ "$target" =~ ^(volume|brightness)$ ]] && [[ "$action" =~ ^(up|down)$ ]]; then
         bash "$OSD_SCRIPT" "$target" "$action"
-    elif [[ "$target" =~ ^(vol|bri)$ ]] && [[ "$action" =~ ^[0-9]+$ ]]; then
-        python3 "$IPC_SCRIPT" "osd:${target}:${action}"
+    elif [[ "$target" =~ ^(vol|volume)$ ]] && [[ "$action" =~ ^[0-9]+$ ]]; then
+        python3 "$IPC_SCRIPT" "osd:vol:${action}"
+    elif [[ "$target" =~ ^(bri|brightness)$ ]] && [[ "$action" =~ ^[0-9]+$ ]]; then
+        python3 "$IPC_SCRIPT" "osd:bri:${action}"
     else
         echo "Invalid osd arguments: '$target $action'" >&2
+        exit 1
+    fi
+}
+
+cmd_test() {
+    if [ -f "$TEST_SCRIPT" ]; then
+        python3 "$TEST_SCRIPT" "$@"
+    else
+        echo "Error: test suite script not found at '$TEST_SCRIPT'" >&2
         exit 1
     fi
 }
@@ -270,18 +285,53 @@ case "$CMD" in
     validate)
         cmd_validate
         ;;
+    test)
+        cmd_test "$@"
+        ;;
     ipc)
         cmd_ipc "$@"
         ;;
-    toggle|close|nook|apps|walls|stats|audio|notifs|notifs:clear|wifi|bluetooth|settings)
+    toggle|close|nook|apps|tray|walls|stats|audio|notifs|notifs:clear|wifi|bluetooth|bt)
         cmd_ipc "$CMD"
         ;;
+    reload_settings|reload-settings)
+        cmd_ipc "reload_settings"
+        ;;
+    settings:tab:*)
+        idx="${CMD#settings:tab:}"
+        if [[ ! "$idx" =~ ^[0-3]$ ]]; then
+            echo "Error: invalid settings tab index '$idx'. Valid indices: 0 (Hyprland), 1 (Notch Island), 2 (Visualizer), 3 (System & Apps)" >&2
+            exit 1
+        fi
+        cmd_ipc "$CMD"
+        ;;
+    settings)
+        if [ $# -gt 0 ]; then
+            if [[ "$1" =~ ^[0-3]$ ]]; then
+                cmd_ipc "settings:tab:$1"
+            else
+                echo "Error: invalid settings tab index '$1'. Valid indices: 0 (Hyprland), 1 (Notch Island), 2 (Visualizer), 3 (System & Apps)" >&2
+                exit 1
+            fi
+        else
+            cmd_ipc "settings"
+        fi
+        ;;
     tab:*)
+        idx="${CMD#tab:}"
+        if [[ ! "$idx" =~ ^[0-3]$ ]]; then
+            echo "Error: invalid tab index '$idx'. Valid indices: 0 (Media), 1 (Apps), 2 (Walls), 3 (Stats)" >&2
+            exit 1
+        fi
         cmd_ipc "$CMD"
         ;;
     tab)
         if [ $# -eq 0 ]; then
             echo "Error: tab command requires a tab index (0-3)" >&2
+            exit 1
+        fi
+        if [[ ! "$1" =~ ^[0-3]$ ]]; then
+            echo "Error: invalid tab index '$1'. Valid indices: 0 (Media), 1 (Apps), 2 (Walls), 3 (Stats)" >&2
             exit 1
         fi
         cmd_ipc "tab:$1"

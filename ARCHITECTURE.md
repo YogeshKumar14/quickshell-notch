@@ -149,8 +149,12 @@ graph TD
 │       ├── stream_audio_visualizer.py # CAVA child -> JSON stream (pdeathsig)
 │       ├── mpris_duration.py     # Multi-tier track duration resolver with caching
 │       └── mpris_seek.py         # Atomic MPRIS seek engine with D-Bus / playerctl fallback
+├── packaging/                     # Arch Linux PKGBUILD and packaging files
+├── templates/
+│   └── matugen/                   # Matugen config & 11 Material You templates
 ├── assets/
-│   └── icons/                    # Material Symbols Rounded SVGs
+│   ├── icons/                    # Official Apple macOS SF Symbols SVGs
+│   └── fonts/                    # Apple SF Pro & SF Mono system typography
 └── notch_settings.json           # Runtime notch preferences
 ```
 
@@ -198,14 +202,20 @@ The shell listens on a local Unix Domain Socket for fast keybind integration:
 | `toggle` | Toggle between compact pill and expanded island |
 | `close` | Immediately collapse notch and close all open sub-menus |
 | `nook` | Toggle directly to the Media Controller / NotchNook tab (PAGE 0) |
-| `apps` | Toggle directly to the App Launcher tab (PAGE 1) |
+| `apps` / `tray` | Toggle directly to the App Launcher tab (PAGE 1) |
 | `walls` | Toggle directly to the Wallpaper Selector tab (PAGE 2) |
+| `stats` | Toggle directly to the Hardware Stats tab (PAGE 3) |
+| `tab:<0-3>` | Direct switch to tab index (0: Media, 1: Apps, 2: Wallpapers, 3: Stats) |
 | `audio` | Toggle Audio Routing Drawer |
 | `notifs` | Toggle Notification History Drawer |
-| `notifs:clear` | Clear all active notifications with staggered animation |
+| `notifs:clear` | Clear active notifications with staggered 180ms card dismissal |
+| `wifi` | Toggle Wi-Fi Network Drawer |
+| `bluetooth` / `bt` | Toggle Bluetooth Device Drawer |
 | `settings` | Toggle Settings Window |
-| `osd:vol:<0-100>` | Display Volume OSD with percentage and icon animation |
+| `settings:tab:<0-3>` | Open Settings Window directly to tab index (0: Hyprland, 1: Notch Island, 2: Visualizer, 3: System & Apps) |
+| `osd:vol:<0-150>` | Display Volume OSD with percentage and icon animation |
 | `osd:bri:<0-100>` | Display Brightness OSD with ±45° rotating sun/moon impulse |
+| `reload_settings` | Reload notch preferences from disk without restart |
 
 ---
 
@@ -213,9 +223,9 @@ The shell listens on a local Unix Domain Socket for fast keybind integration:
 
 QuickShell Notch implements the **macOS NotchNook UI** design language with Apple SF Symbols:
 - **Surfaces**: Pure OLED black (`#000000`) root with elevated card containers (`#1C1C1E`) and subtle borders (`#2C2C2E`).
-- **Dynamic Accent**: Wallust-extracted dominant color automatically synchronized with the active wallpaper.
+- **Dynamic Accent**: Matugen 4.2.0 (Material You CAM16 palette generation with 11 custom templates) and Wallust compatibility automatically synchronized with the active wallpaper.
 - **iOS Semantic Battery**: Charging (`#30D158`), Normal (`#FFFFFF`), Low Power (`#FFD60A`), Critical (`#FF453A`).
-- **Physics**: Natural spring physics (`tension: 4.5..5.5`, `damping: 0.22..0.28`) driving geometry morphing, tab highlights, and icon impulses. No hard snapping transitions.
+- **Physics**: Unified single-body spring scaling and calibrated tab bounce physics ($4.5/0.30$ spring, `springPageEpsilon: 0.0005`, zero end-of-transition snap) driving geometry morphing, tab highlights, and icon impulses.
 
 ---
 
@@ -231,4 +241,4 @@ Checks QML syntax (`qmllint`), Python syntax (`py_compile`), and Bash scripts (`
 ```bash
 python3 ~/.config/quickshell/scripts/core/test_all_features.py
 ```
-Runs 170+ automated tests across 12 modules in an isolated temporary sandbox.
+Runs 195 automated tests across 15 modules in an isolated temporary sandbox.

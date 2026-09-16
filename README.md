@@ -253,15 +253,20 @@ quickshell-notch notifs:clear  # Clear notifications with staggered animation
 quickshell-notch wifi          # Toggle Wi-Fi drawer
 quickshell-notch bluetooth     # Toggle Bluetooth drawer
 quickshell-notch settings      # Open Notch Settings window
+quickshell-notch settings 1    # Open Settings window directly to tab index (0..3)
+quickshell-notch reload_settings # Reload preferences from disk without restarting daemon
 
 # Hardware OSD
 quickshell-notch osd volume up           # Step volume up (+5%) and show OSD
 quickshell-notch osd volume down         # Step volume down (-5%) and show OSD
 quickshell-notch osd brightness up       # Step brightness up (+5%) and show OSD
 quickshell-notch osd brightness down     # Step brightness down (-5%) and show OSD
+quickshell-notch osd vol 75              # Set/display volume level (0..150)
+quickshell-notch osd bri 80              # Set/display brightness level (0..100)
 
-# Codebase Validation
+# Codebase Validation & Automated Testing
 quickshell-notch validate      # Run QML, Python, and Bash validation pipeline
+quickshell-notch test          # Run full 195-test automated verification suite
 ```
 
 Runtime logs live at `/run/user/$UID/quickshell/by-id/*/log.qslog` — check there if something looks broken.
@@ -346,7 +351,7 @@ Socket path: `/tmp/quickshell-notch.sock` — send commands directly via `quicks
 | `wifi` | Toggle Wi-Fi network selector drawer |
 | `bluetooth` / `bt` | Toggle Bluetooth device drawer |
 | `settings` | Toggle Notch Settings window |
-| `settings:tab:<0-3>` | Open Settings window directly to tab index (0: Notch, 1: Hyprland, 2: Visualizer, 3: Network/Style) |
+| `settings:tab:<0-3>` | Open Settings window directly to tab index (0: Hyprland, 1: Notch Island, 2: Visualizer, 3: System & Apps) |
 | `osd:vol:<0-150>` | Display Volume OSD with percentage |
 | `osd:bri:<0-100>` | Display Brightness OSD with percentage |
 | `reload_settings` | Reload notch and Hyprland configuration from disk |
@@ -459,6 +464,8 @@ This verifies QML syntax (`qmllint`), Python backend compilation (`py_compile`),
 Run the full 195-test automated verification suite:
 
 ```bash
+quickshell-notch test
+# or:
 python3 ~/.config/quickshell/scripts/core/test_all_features.py
 ```
 
@@ -489,7 +496,7 @@ Scripts detect `QUICKSHELL_SANDBOX=1` and skip all Hyprland side-effects (no set
 | Wi-Fi / Bluetooth panels always empty | NetworkManager or Bluetooth services not active: `sudo systemctl enable --now NetworkManager bluetooth`. |
 | Visualizer never animates | `cava` missing or PipeWire daemon not running (`pipewire`, `pipewire-pulse`, `wireplumber`). |
 | Settings don't survive Hyprland restart | Persistence files must be imported in your Hyprland config (`source = ~/.config/hypr/quickshell_hypr.conf` or `import("quickshell_hypr.lua")`). |
-| Clipped or misaligned expanded notch | The expanded height is dynamic per tab; adjust `expanded_height` in Settings window → Notch tab. |
+| Clipped or misaligned expanded notch | The expanded height is dynamic per tab; adjust `expanded_height` in Settings window → Notch Island tab (Tab 1). |
 
 ---
 
