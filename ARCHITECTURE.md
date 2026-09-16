@@ -1,4 +1,4 @@
-# QuickShell Notch — System Architecture Specification (v2.1.0)
+# QuickShell Notch — System Architecture Specification (v2.4.0)
 
 This document provides a comprehensive technical reference for the architecture, component topology, data flows, persistence pipelines, and lifecycle models of the **QuickShell Notch** desktop shell for Hyprland.
 
@@ -116,12 +116,15 @@ graph TD
 │   ├── core/                     # Lifecycle, process safety, and validation tools
 │   │   ├── atomic_write.py       # Crash-resilient file write helper
 │   │   ├── process_utils.py      # Linux PR_SET_PDEATHSIG child process reaper
-│   │   ├── test_all_features.py  # 160-test automated test harness
+│   │   ├── test_all_features.py  # 195-test automated test harness
+│   │   ├── test_mpris_seek.py    # Exhaustive verification suite for MPRIS seeking engine
 │   │   ├── validate_codebase.sh  # QML lint + Python compile + Bash AST validator
 │   │   ├── launch_quickshell.sh  # Clean daemon launcher with process reaper
 │   │   ├── sandbox.sh            # Isolated test environment launcher
 │   │   ├── osd.sh                # Volume/brightness OSD helper
-│   │   └── download_m3_icons.sh  # Material Symbols SVG asset fetcher
+│   │   ├── download_macos_fonts.sh # Apple SF Pro & SF Mono font downloader
+│   │   ├── download_macos_icons.sh # Apple macOS SF Symbols SVGs downloader
+│   │   └── download_m3_icons.sh  # Legacy redirect to download_macos_icons.sh
 │   ├── desktop/                  # Desktop metadata providers
 │   │   ├── apply_wallpaper.sh    # Non-blocking wallpaper changer with wallust trigger
 │   │   ├── get_apps.py           # .desktop parser with icon heuristic resolver
@@ -143,7 +146,9 @@ graph TD
 │   └── notch/                    # Notch IPC, preferences, and visualizer daemons
 │       ├── notch_ipc.py          # IPC socket client (keybind commands)
 │       ├── get_notch_settings.py # Notch preferences loader and defaults store
-│       └── stream_audio_visualizer.py # CAVA child -> JSON stream (pdeathsig)
+│       ├── stream_audio_visualizer.py # CAVA child -> JSON stream (pdeathsig)
+│       ├── mpris_duration.py     # Multi-tier track duration resolver with caching
+│       └── mpris_seek.py         # Atomic MPRIS seek engine with D-Bus / playerctl fallback
 ├── assets/
 │   └── icons/                    # Material Symbols Rounded SVGs
 └── notch_settings.json           # Runtime notch preferences

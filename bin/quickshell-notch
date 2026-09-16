@@ -17,9 +17,13 @@
 #   nook                Toggle MPRIS Media Controller (Tab 0)
 #   apps                Toggle Application Launcher (Tab 1)
 #   walls               Toggle Wallpaper Selector (Tab 2)
+#   stats               Toggle Hardware Stats (Tab 3)
+#   tab <0-3>           Direct switch to specific tab index (0..3)
 #   audio               Toggle Audio routing drawer
 #   notifs              Toggle Notification drawer
 #   notifs:clear        Clear active notifications with staggered animation
+#   wifi                Toggle Wi-Fi network selector drawer
+#   bluetooth           Toggle Bluetooth device drawer
 #   settings            Open Notch Settings window
 #   osd <kind> <val>    Trigger Volume or Brightness OSD
 #   help, --help, -h    Display this help message
@@ -71,9 +75,13 @@ Notch Controls:
   nook                  Toggle Media Controller tab (Tab 0)
   apps                  Toggle App Launcher tab (Tab 1)
   walls                 Toggle Wallpaper Selector tab (Tab 2)
+  stats                 Toggle Hardware Stats tab (Tab 3)
+  tab <0-3>             Switch directly to tab index (0..3)
   audio                 Toggle Audio routing drawer
   notifs                Toggle Notification center drawer
   notifs:clear          Clear notifications with staggered animation
+  wifi                  Toggle Wi-Fi drawer
+  bluetooth             Toggle Bluetooth drawer
   settings              Open Notch Settings window
 
 OSD Controls:
@@ -265,8 +273,18 @@ case "$CMD" in
     ipc)
         cmd_ipc "$@"
         ;;
-    toggle|close|nook|apps|walls|audio|notifs|notifs:clear|settings)
+    toggle|close|nook|apps|walls|stats|audio|notifs|notifs:clear|wifi|bluetooth|settings)
         cmd_ipc "$CMD"
+        ;;
+    tab:*)
+        cmd_ipc "$CMD"
+        ;;
+    tab)
+        if [ $# -eq 0 ]; then
+            echo "Error: tab command requires a tab index (0-3)" >&2
+            exit 1
+        fi
+        cmd_ipc "tab:$1"
         ;;
     osd)
         cmd_osd "$@"
