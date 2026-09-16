@@ -4,6 +4,18 @@ All notable changes to QuickShell Top Notch are documented here.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.4.0] - 2026-09-16
+
+### Added
+- **Unified Expanded Notch Body Scaling**: Re-anchored viewport container and removed disconnected column opacity gates, ensuring media controller, calendar, and header bar scale organically as an indivisible unified body with notch physical spring physics.
+- **Synchronized Visualizer & Compact Pill Spring Dynamics**: Real-time spring scaling (`pillSpringScale`) and vertical bounce follow-through (`bounceCenterY`) across all compact pill states (audio visualizer spectrum, clock readout, and workspace indicators).
+- **Seamless Visualizer Expansion Handshake**: Implemented `wasVisualizerActive` geometry tracking and 350ms settling timers, completely eliminating visualizer crushing, premature pill narrowing, and clock flashing during expansion.
+- **Calibrated Tab Switching Bounce Physics**: Eliminated end-of-transition snapping by introducing sub-pixel thresholding (`springPageEpsilon: 0.0005`, $\approx 0.3\text{px}$) and tuned spring tension/damping ($4.5 / 0.30$), yielding an organic $+9.2\%$ overshoot rebound and smooth settling.
+- **Jitter-Free Fluid Sliders**: Replaced underdamped oscillations with smooth `Easing.OutQuad` monotonic easing curves across OSD volume/brightness overlays, Settings window `CustomSlider`, and tab gliders, with strict boundary clamping preventing track overshoots.
+- **Seamless Drawer Return & Collapse Continuity**: Delayed tab index resets until post-collapse idle, eliminating horizontal snapping while the notch container is shrinking.
+- **Direct Tab Switching IPC**: Added `switchTab()` and direct socket commands `stats`, `tab:0`, `tab:1`, `tab:2`, `tab:3` allowing guaranteed direct navigation without toggling the notch closed.
+- **Expanded 195-Test Comprehensive Verification Suite**: Verified all new IPC tab commands, spring dynamics, and layer isolation with 195/195 tests passing across all 15 modules.
+
 ## [2.3.0] - 2026-09-11
 
 ### Added
