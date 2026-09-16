@@ -680,6 +680,41 @@ FocusScope {
     property bool notifMenuAutoOpened: false
     readonly property bool grabsFocus: root.isExpanded || root.isNotifMenuOpen || root.isPowerMenuOpen || root.isWifiMenuOpen || root.isBluetoothMenuOpen
 
+    // Unified drawer state tracking for organic motion transitions
+    readonly property bool isAnyDrawerOpen: root.isPowerMenuOpen || root.isWifiMenuOpen || root.isBluetoothMenuOpen || root.isNotifMenuOpen || root.isAudioMenuOpen
+    property bool isReturningFromDrawer: false
+    property bool isDrawerClosing: false
+
+    onIsAnyDrawerOpenChanged: {
+        if (!root.isAnyDrawerOpen) {
+            root.isDrawerClosing = true;
+            drawerCloseGuardTimer.restart();
+            if (root.isExpanded) {
+                root.isReturningFromDrawer = true;
+                drawerReturnTimer.restart();
+            }
+        } else {
+            root.isDrawerClosing = false;
+            root.isReturningFromDrawer = false;
+            drawerCloseGuardTimer.stop();
+            drawerReturnTimer.stop();
+        }
+    }
+
+    Timer {
+        id: drawerReturnTimer
+        interval: 420
+        repeat: false
+        onTriggered: root.isReturningFromDrawer = false
+    }
+
+    Timer {
+        id: drawerCloseGuardTimer
+        interval: 420
+        repeat: false
+        onTriggered: root.isDrawerClosing = false
+    }
+
     property bool wifiPower: true
     property string wifiActiveSsid: ""
     property var wifiNetworks: []
@@ -1214,7 +1249,7 @@ FocusScope {
             width: (root.isWorkspaceActive ? 240 : (root.showVisualizer ? root.dynamicVisNotchWidth : root.compactWidthVal))
             height: Style.notchHeightCompact
             opacity: {
-                if (root.isExpanded || root.isOsdActive || root.isNotifMenuOpen || root.isPowerMenuOpen || root.isWifiMenuOpen || root.isBluetoothMenuOpen || root.isAudioMenuOpen) {
+                if (root.isExpanded || root.isOsdActive || root.isAnyDrawerOpen) {
                     return 0.0;
                 }
                 // Seamless hand-off when collapsing: start fading in as notch approaches compact height
@@ -1292,24 +1327,21 @@ FocusScope {
         // --- EXPANDED VIEWPORT CONTENT ---
         Item {
             id: expandedContainer
-            width: Style.notchWidthExpanded
-            height: root.pageNotchHeight
-            anchors.top: parent.top
-            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.fill: parent
             opacity: {
-                if (root.isOsdActive || root.isNotifMenuOpen || root.isPowerMenuOpen || root.isWifiMenuOpen || root.isBluetoothMenuOpen || root.isAudioMenuOpen) {
+                if (root.isOsdActive || root.isAnyDrawerOpen) {
                     return 0.0;
                 }
                 if (root.isExpanded) {
                     // Do not show until notch has expanded past compact pill to eliminate clock ghosting
-                    if (notchBox.height < Style.notchHeightCompact * 1.25) {
+                    if (!root.isReturningFromDrawer && notchBox.height < Style.notchHeightCompact * 1.25) {
                         return 0.0;
                     }
                     return 1.0;
                 }
                 // When collapsing from expanded tab, remain visible while pill is shrinking down so contents scale with pill
-                // Guard: only show if collapsing from normal expanded height, not from a tall drawer
-                if (notchBox.height > Style.notchHeightCompact * 1.40 && notchBox.height <= root.pageNotchHeight * 1.15) {
+                // Guard: only show if collapsing from normal expanded tab, NEVER when a drawer was closed
+                if (!root.isDrawerClosing && notchBox.height > Style.notchHeightCompact * 1.40 && notchBox.height <= root.pageNotchHeight * 1.15) {
                     return 1.0;
                 }
                 return 0.0;
@@ -1345,8 +1377,13 @@ FocusScope {
 
             scale: {
                 if (root.pageNotchHeight <= 0) return 1.0;
-                // Base smooth organic scale: 0.80 when compact up to 1.0 when fully expanded
-                var baseScale = 0.80 + (animProgress * 0.20);
+                if (root.isReturningFromDrawer) {
+                    // When returning from a drawer, maintain authentic 1.0 scale with subtle settling spring follow-through;
+                    // never squash or compress the content while the notch body is morphing.
+                    return Math.max(0.96, Math.min(1.06, 1.0 + (totalOvershoot * 0.25)));
+                }
+                // Base smooth organic scale: 0.85 when compact up to 1.0 when fully expanded
+                var baseScale = 0.85 + (animProgress * 0.15);
                 // Harmonious spring overshoot rebound follow-through:
                 var bounceScale = baseScale + (totalOvershoot * 0.35);
                 return Math.max(0.76, Math.min(1.12, bounceScale));
@@ -1421,24 +1458,22 @@ FocusScope {
                 anchors.topMargin: 28
                 anchors.left: parent.left
                 anchors.leftMargin: 14
-                anchors.right: parent.right
-                anchors.rightMargin: 14
-                anchors.bottom: parent.bottom
-                anchors.bottomMargin: 14
+                width: Math.max(0, parent.width - 28)
+                height: Math.min(root.pageNotchHeight - 42, Math.max(0, parent.height - 42))
                 clip: true
 
                 Row {
                     id: pageRow
                     height: parent.height
-                    x: -root.currentPage * (pageViewport.width > 0 ? pageViewport.width : 560)
-
-                    Behavior on x {
+                    property real pageOffset: root.currentPage
+                    Behavior on pageOffset {
                         SpringAnimation {
                             spring: root.tabSpringTension
                             damping: root.tabSpringDamping
                             epsilon: Style.springEpsilon
                         }
                     }
+                    x: -pageOffset * (pageViewport.width > 0 ? pageViewport.width : 560)
 
                     // PAGE 0: Media Controller (Nook Dashboard)
                     MediaController {

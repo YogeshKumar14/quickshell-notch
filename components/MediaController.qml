@@ -512,7 +512,8 @@ Item {
         anchors.left: parent.left
         anchors.top: parent.top
         anchors.bottom: parent.bottom
-        width: 310
+        width: Math.min(310, parent.width)
+        clip: true
 
         // Squircle Album Art (78x78px) with OpacityMask & Apple Music badge
         Item {
@@ -916,10 +917,14 @@ Item {
     // 2. RIGHT COLUMN: CALENDAR & EVENTS DASHBOARD (260px)
     // =====================================================================
     Item {
+        id: rightColItem
         anchors.right: parent.right
         anchors.top: parent.top
         anchors.bottom: parent.bottom
         width: 260
+        clip: true
+        opacity: Math.max(0.0, Math.min(1.0, (parent.width - 570) / (615 - 570)))
+        visible: opacity > 0.01
 
         Column {
             anchors.verticalCenter: parent.verticalCenter
