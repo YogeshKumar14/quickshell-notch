@@ -199,6 +199,32 @@ FocusScope {
         }
     }
 
+    /** Dispatches Wi-Fi drawer toggle */
+    function toggleWifiMenu() {
+        dismissOsd();
+        root.isWifiMenuOpen = !root.isWifiMenuOpen;
+        if (root.isWifiMenuOpen) {
+            root.isBluetoothMenuOpen = false;
+            root.isPowerMenuOpen = false;
+            root.isNotifMenuOpen = false;
+            root.isAudioMenuOpen = false;
+            root.isExpanded = true;
+        }
+    }
+
+    /** Dispatches Bluetooth drawer toggle */
+    function toggleBluetoothMenu() {
+        dismissOsd();
+        root.isBluetoothMenuOpen = !root.isBluetoothMenuOpen;
+        if (root.isBluetoothMenuOpen) {
+            root.isWifiMenuOpen = false;
+            root.isPowerMenuOpen = false;
+            root.isNotifMenuOpen = false;
+            root.isAudioMenuOpen = false;
+            root.isExpanded = true;
+        }
+    }
+
     /** Clears all notifications with staggered card dismiss */
     function clearNotifications() {
         if (notifHistoryComp) {
@@ -1281,8 +1307,9 @@ FocusScope {
                     }
                     return 1.0;
                 }
-                // When collapsing, remain visible while pill is shrinking down so contents scale with pill
-                if (notchBox.height > Style.notchHeightCompact * 1.40) {
+                // When collapsing from expanded tab, remain visible while pill is shrinking down so contents scale with pill
+                // Guard: only show if collapsing from normal expanded height, not from a tall drawer
+                if (notchBox.height > Style.notchHeightCompact * 1.40 && notchBox.height <= root.pageNotchHeight * 1.15) {
                     return 1.0;
                 }
                 return 0.0;
@@ -1305,11 +1332,11 @@ FocusScope {
             // Combined motion progress (60% vertical stroke + 40% horizontal widening)
             readonly property real animProgress: (heightProgress * 0.60) + (widthProgress * 0.40)
 
-            // Dynamic spring overshoot factors when notchBox bounces past target bounds
-            readonly property real heightOvershoot: (hTarget > 0 && notchBox.height > hTarget)
+            // Dynamic spring overshoot factors when notchBox bounces past target bounds (isolated from macro-drawer transitions)
+            readonly property real heightOvershoot: (hTarget > 0 && notchBox.height > hTarget && notchBox.height <= hTarget * 1.15)
                 ? (notchBox.height - hTarget) / hTarget
                 : 0.0
-            readonly property real widthOvershoot: (wTarget > 0 && notchBox.width > wTarget)
+            readonly property real widthOvershoot: (wTarget > 0 && notchBox.width > wTarget && notchBox.width <= wTarget * 1.15)
                 ? (notchBox.width - wTarget) / wTarget
                 : 0.0
             readonly property real totalOvershoot: (heightOvershoot * 0.60) + (widthOvershoot * 0.40)
@@ -1372,20 +1399,8 @@ FocusScope {
                     root.isWifiPasswordPromptOpen = false;
                     root.isPowerConfirming = false;
                 }
-                onWifiToggled: {
-                    root.isWifiMenuOpen = !root.isWifiMenuOpen;
-                    root.isBluetoothMenuOpen = false;
-                    root.isPowerMenuOpen = false;
-                    root.isNotifMenuOpen = false;
-                    root.isAudioMenuOpen = false;
-                }
-                onBluetoothToggled: {
-                    root.isBluetoothMenuOpen = !root.isBluetoothMenuOpen;
-                    root.isWifiMenuOpen = false;
-                    root.isPowerMenuOpen = false;
-                    root.isNotifMenuOpen = false;
-                    root.isAudioMenuOpen = false;
-                }
+                onWifiToggled: root.toggleWifiMenu()
+                onBluetoothToggled: root.toggleBluetoothMenu()
                 onNotifToggled: root.toggleNotifMenu()
                 onPowerToggled: {
                     root.isPowerMenuOpen = !root.isPowerMenuOpen;

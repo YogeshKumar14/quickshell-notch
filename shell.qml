@@ -141,6 +141,10 @@ Scope {
                             notchComp.toggleNotifMenu();
                         } else if (cmd === "notifs:clear") {
                             notchComp.clearNotifications();
+                        } else if (cmd === "wifi") {
+                            notchComp.toggleWifiMenu();
+                        } else if (cmd === "bluetooth" || cmd === "bt") {
+                            notchComp.toggleBluetoothMenu();
                         } else if (cmd === "toggle") {
                             notchComp.dismissOsd();
                             notchComp.isExpanded = !notchComp.isExpanded;

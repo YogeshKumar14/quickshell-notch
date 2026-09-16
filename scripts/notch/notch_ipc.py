@@ -14,6 +14,8 @@ Supported Commands:
     audio           - Toggle Audio routing drawer
     notifs          - Toggle Notification history drawer
     notifs:clear    - Clear all active notifications with staggered animation
+    wifi            - Toggle Wi-Fi network selector drawer
+    bluetooth       - Toggle Bluetooth device drawer
     osd:vol:<0-100> - Display Volume OSD with percentage
     osd:bri:<0-100> - Display Brightness OSD with percentage
 
