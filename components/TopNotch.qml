@@ -36,8 +36,11 @@ FocusScope {
             root.forceActiveFocus();
         }
     }
+    property bool wasVisualizerActive: false
+
     onIsExpandedChanged: {
         if (root.isExpanded) {
+            root.wasVisualizerActive = (root.visualizerEnabledVal && root.isVisualizerActive && !root.isWorkspaceActive && !root.isOsdActive);
             root.forceActiveFocus();
             if (root.currentPage === 1 || root.currentPage === 2) {
                 focusTabSearchTimer.restart();
@@ -45,8 +48,17 @@ FocusScope {
         } else {
             if (root.visualizerEnabledVal && root.isPlaying) {
                 visRestartTimer.restart();
+                root.triggerVisualizerPopup();
             }
+            wasVisResetTimer.restart();
         }
+    }
+
+    Timer {
+        id: wasVisResetTimer
+        interval: 350
+        repeat: false
+        onTriggered: root.wasVisualizerActive = false
     }
 
     // =========================================================================
@@ -685,6 +697,7 @@ FocusScope {
     property bool isReturningFromDrawer: false
     property bool isDrawerClosing: false
 
+
     onIsAnyDrawerOpenChanged: {
         if (!root.isAnyDrawerOpen) {
             root.isDrawerClosing = true;
@@ -714,6 +727,7 @@ FocusScope {
         repeat: false
         onTriggered: root.isDrawerClosing = false
     }
+
 
     property bool wifiPower: true
     property string wifiActiveSsid: ""
@@ -1246,7 +1260,7 @@ FocusScope {
             id: compactPillComp
             anchors.top: parent.top
             anchors.horizontalCenter: parent.horizontalCenter
-            width: (root.isWorkspaceActive ? 240 : (root.showVisualizer ? root.dynamicVisNotchWidth : root.compactWidthVal))
+            width: (root.isWorkspaceActive ? 240 : ((root.showVisualizer || (root.isExpanded && root.wasVisualizerActive)) ? root.dynamicVisNotchWidth : root.compactWidthVal))
             height: Style.notchHeightCompact
             opacity: {
                 if (root.isExpanded || root.isOsdActive || root.isAnyDrawerOpen) {
@@ -1262,7 +1276,7 @@ FocusScope {
 
             Behavior on opacity {
                 NumberAnimation {
-                    duration: root.isExpanded ? 40 : 80
+                    duration: root.isExpanded ? 50 : 80
                     easing.type: Easing.OutQuad
                 }
             }
@@ -1272,6 +1286,7 @@ FocusScope {
             targetWidth: width
             targetHeight: Style.notchHeightCompact
             isExpanded: root.isExpanded
+            wasVisualizerActive: root.wasVisualizerActive
 
             timeStr: root.timeStr
             clockFontSize: root.clockFontSizeVal
@@ -1285,7 +1300,7 @@ FocusScope {
             handleRight: root.handleRight
             singleHandleX: root.singleHandleX
 
-            showVisualizer: root.showVisualizer
+            showVisualizer: root.showVisualizer || (root.isExpanded && root.wasVisualizerActive)
             visualizerStyle: root.visualizerStyleVal
             visualizerBarCount: root.visualizerBarCountVal
             visualizerHeight: root.visualizerHeightVal
@@ -1327,7 +1342,10 @@ FocusScope {
         // --- EXPANDED VIEWPORT CONTENT ---
         Item {
             id: expandedContainer
-            anchors.fill: parent
+            width: Style.notchWidthExpanded
+            height: root.pageNotchHeight
+            anchors.top: parent.top
+            anchors.horizontalCenter: parent.horizontalCenter
             opacity: {
                 if (root.isOsdActive || root.isAnyDrawerOpen) {
                     return 0.0;
@@ -1350,7 +1368,7 @@ FocusScope {
 
             // Dynamic progress calculations tracking real-time spring physical geometry
             readonly property real hTarget: Math.max(Style.notchHeightCompact + 1, root.pageNotchHeight)
-            readonly property real compactW: root.isWorkspaceActive ? 240 : (root.showVisualizer ? root.dynamicVisNotchWidth : root.compactWidthVal)
+            readonly property real compactW: root.isWorkspaceActive ? 240 : ((root.showVisualizer || root.wasVisualizerActive) ? root.dynamicVisNotchWidth : root.compactWidthVal)
             readonly property real wTarget: Math.max(compactW + 1, Style.notchWidthExpanded)
 
             readonly property real heightProgress: (hTarget > Style.notchHeightCompact)
@@ -1377,21 +1395,21 @@ FocusScope {
 
             scale: {
                 if (root.pageNotchHeight <= 0) return 1.0;
-                if (root.isReturningFromDrawer) {
+                if (root.isReturningFromDrawer || notchBox.height > root.pageNotchHeight * 1.05) {
                     // When returning from a drawer, maintain authentic 1.0 scale with subtle settling spring follow-through;
                     // never squash or compress the content while the notch body is morphing.
-                    return Math.max(0.96, Math.min(1.06, 1.0 + (totalOvershoot * 0.25)));
+                    return Math.max(0.98, Math.min(1.04, 1.0 + (totalOvershoot * 0.25)));
                 }
-                // Base smooth organic scale: 0.85 when compact up to 1.0 when fully expanded
-                var baseScale = 0.85 + (animProgress * 0.15);
+                // Base smooth organic scale: scales with body from 0.78 up to 1.0 when fully expanded
+                var baseScale = 0.78 + (animProgress * 0.22);
                 // Harmonious spring overshoot rebound follow-through:
-                var bounceScale = baseScale + (totalOvershoot * 0.35);
-                return Math.max(0.76, Math.min(1.12, bounceScale));
+                var bounceScale = baseScale + (totalOvershoot * 0.30);
+                return Math.max(0.74, Math.min(1.10, bounceScale));
             }
 
             Behavior on opacity {
                 NumberAnimation {
-                    duration: root.isExpanded ? 130 : 80
+                    duration: root.isReturningFromDrawer ? 110 : (root.isExpanded ? 140 : 80)
                     easing.type: Easing.OutQuad
                 }
             }
@@ -1458,13 +1476,16 @@ FocusScope {
                 anchors.topMargin: 28
                 anchors.left: parent.left
                 anchors.leftMargin: 14
-                width: Math.max(0, parent.width - 28)
-                height: Math.min(root.pageNotchHeight - 42, Math.max(0, parent.height - 42))
+                anchors.right: parent.right
+                anchors.rightMargin: 14
+                anchors.bottom: parent.bottom
+                anchors.bottomMargin: 14
                 clip: true
 
                 Row {
                     id: pageRow
                     height: parent.height
+                    spacing: 20
                     property real pageOffset: root.currentPage
                     Behavior on pageOffset {
                         SpringAnimation {
@@ -1473,7 +1494,7 @@ FocusScope {
                             epsilon: Style.springEpsilon
                         }
                     }
-                    x: -pageOffset * (pageViewport.width > 0 ? pageViewport.width : 560)
+                    x: -pageOffset * ((pageViewport.width > 0 ? pageViewport.width : 560) + spacing)
 
                     // PAGE 0: Media Controller (Nook Dashboard)
                     MediaController {

@@ -35,7 +35,7 @@ Item {
     opacity: isOpen ? 1.0 : 0.0
     visible: opacity > 0.01
 
-    Behavior on opacity { NumberAnimation { duration: root.isOpen ? 180 : 90; easing.type: Easing.OutQuad } }
+    Behavior on opacity { NumberAnimation { duration: root.isOpen ? 180 : 80; easing.type: Easing.OutQuad } }
 
     onIsOpenChanged: {
         if (!isOpen) {

@@ -53,7 +53,7 @@ Item {
     /** Emitted when user clicks volume/device icon to open audio drawer */
     signal audioMenuRequested()
 
-    clip: false
+    clip: true
 
     /** Whether the active media player explicitly supports seeking operations */
     readonly property bool canSeek: {
@@ -512,8 +512,7 @@ Item {
         anchors.left: parent.left
         anchors.top: parent.top
         anchors.bottom: parent.bottom
-        width: Math.min(310, parent.width)
-        clip: true
+        width: 310
 
         // Squircle Album Art (78x78px) with OpacityMask & Apple Music badge
         Item {
@@ -922,9 +921,6 @@ Item {
         anchors.top: parent.top
         anchors.bottom: parent.bottom
         width: 260
-        clip: true
-        opacity: Math.max(0.0, Math.min(1.0, (parent.width - 570) / (615 - 570)))
-        visible: opacity > 0.01
 
         Column {
             anchors.verticalCenter: parent.verticalCenter
