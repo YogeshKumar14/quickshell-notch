@@ -1,6 +1,6 @@
 # Maintainer: Yogesh Kumar <yogesh@example.com>
 pkgname=quickshell-notch
-pkgver=2.3.0
+pkgver=2.4.0
 pkgrel=1
 pkgdesc="Apple-inspired dynamic top notch status bar and control center for Hyprland built with QuickShell"
 arch=('any')
