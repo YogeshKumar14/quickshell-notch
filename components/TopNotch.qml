@@ -36,17 +36,46 @@ FocusScope {
             root.forceActiveFocus();
         }
     }
+    property bool wasVisualizerActive: false
+
     onIsExpandedChanged: {
         if (root.isExpanded) {
+            collapseResetTimer.stop();
+            root.wasVisualizerActive = (root.visualizerEnabledVal && root.isVisualizerActive && !root.isWorkspaceActive && !root.isOsdActive);
             root.forceActiveFocus();
             if (root.currentPage === 1 || root.currentPage === 2) {
                 focusTabSearchTimer.restart();
             }
+            tabPreloadTimer.restart();
         } else {
+            tabPreloadTimer.stop();
+            appsUnloadTimer.restart();
+            wallsUnloadTimer.restart();
             if (root.visualizerEnabledVal && root.isPlaying) {
                 visRestartTimer.restart();
+                root.triggerVisualizerPopup();
+            }
+            wasVisResetTimer.restart();
+            collapseResetTimer.restart();
+        }
+    }
+
+    Timer {
+        id: collapseResetTimer
+        interval: 350
+        repeat: false
+        onTriggered: {
+            if (!root.isExpanded) {
+                root.currentPage = 0;
             }
         }
+    }
+
+    Timer {
+        id: wasVisResetTimer
+        interval: 350
+        repeat: false
+        onTriggered: root.wasVisualizerActive = false
     }
 
     // =========================================================================
@@ -155,9 +184,21 @@ FocusScope {
         dismissOsd();
         if (root.isExpanded && root.currentPage === page && !root.isNotifMenuOpen && !root.isPowerMenuOpen && !root.isWifiMenuOpen && !root.isBluetoothMenuOpen && !root.isAudioMenuOpen) {
             root.isExpanded = false;
-            root.currentPage = 0;
             return;
         }
+        root.currentPage = page;
+        root.isExpanded = true;
+        root.isNotifMenuOpen = false;
+        root.isPowerMenuOpen = false;
+        root.isWifiMenuOpen = false;
+        root.isBluetoothMenuOpen = false;
+        root.isAudioMenuOpen = false;
+        root.focusActiveTabSearch();
+    }
+
+    /** Directly switch to a tab by index without toggling closed if already active */
+    function switchTab(page) {
+        dismissOsd();
         root.currentPage = page;
         root.isExpanded = true;
         root.isNotifMenuOpen = false;
@@ -196,6 +237,32 @@ FocusScope {
             root.isAudioMenuOpen = false;
             root.isWifiPasswordPromptOpen = false;
             root.isPowerConfirming = false;
+        }
+    }
+
+    /** Dispatches Wi-Fi drawer toggle */
+    function toggleWifiMenu() {
+        dismissOsd();
+        root.isWifiMenuOpen = !root.isWifiMenuOpen;
+        if (root.isWifiMenuOpen) {
+            root.isBluetoothMenuOpen = false;
+            root.isPowerMenuOpen = false;
+            root.isNotifMenuOpen = false;
+            root.isAudioMenuOpen = false;
+            root.isExpanded = true;
+        }
+    }
+
+    /** Dispatches Bluetooth drawer toggle */
+    function toggleBluetoothMenu() {
+        dismissOsd();
+        root.isBluetoothMenuOpen = !root.isBluetoothMenuOpen;
+        if (root.isBluetoothMenuOpen) {
+            root.isWifiMenuOpen = false;
+            root.isPowerMenuOpen = false;
+            root.isNotifMenuOpen = false;
+            root.isAudioMenuOpen = false;
+            root.isExpanded = true;
         }
     }
 
@@ -450,8 +517,8 @@ FocusScope {
     // Spring Constants
     property real expandSpringTension: 5.0
     property real expandSpringDamping: 0.40
-    property real tabSpringTension: 5.5
-    property real tabSpringDamping: 0.22
+    property real tabSpringTension: 4.5
+    property real tabSpringDamping: 0.30
 
     // =========================================================================
     // 5. SETTINGS LOADING & CLOCK PROCESSES
@@ -529,7 +596,6 @@ FocusScope {
         onTriggered: {
             if (root.isExpanded && !root.isWifiMenuOpen && !root.isBluetoothMenuOpen && !root.isPowerMenuOpen && !root.isNotifMenuOpen && !root.isWifiPasswordPromptOpen) {
                 root.isExpanded = false;
-                root.currentPage = 0;
             }
         }
     }
@@ -654,6 +720,43 @@ FocusScope {
     property bool notifMenuAutoOpened: false
     readonly property bool grabsFocus: root.isExpanded || root.isNotifMenuOpen || root.isPowerMenuOpen || root.isWifiMenuOpen || root.isBluetoothMenuOpen
 
+    // Unified drawer state tracking for organic motion transitions
+    readonly property bool isAnyDrawerOpen: root.isPowerMenuOpen || root.isWifiMenuOpen || root.isBluetoothMenuOpen || root.isNotifMenuOpen || root.isAudioMenuOpen
+    property bool isReturningFromDrawer: false
+    property bool isDrawerClosing: false
+
+
+    onIsAnyDrawerOpenChanged: {
+        if (!root.isAnyDrawerOpen) {
+            root.isDrawerClosing = true;
+            drawerCloseGuardTimer.restart();
+            if (root.isExpanded) {
+                root.isReturningFromDrawer = true;
+                drawerReturnTimer.restart();
+            }
+        } else {
+            root.isDrawerClosing = false;
+            root.isReturningFromDrawer = false;
+            drawerCloseGuardTimer.stop();
+            drawerReturnTimer.stop();
+        }
+    }
+
+    Timer {
+        id: drawerReturnTimer
+        interval: 420
+        repeat: false
+        onTriggered: root.isReturningFromDrawer = false
+    }
+
+    Timer {
+        id: drawerCloseGuardTimer
+        interval: 420
+        repeat: false
+        onTriggered: root.isDrawerClosing = false
+    }
+
+
     property bool wifiPower: true
     property string wifiActiveSsid: ""
     property var wifiNetworks: []
@@ -761,6 +864,18 @@ FocusScope {
         id: appsUnloadTimer
         interval: 5000
         onTriggered: root.appsTabAlive = false
+    }
+
+    Timer {
+        id: tabPreloadTimer
+        interval: 350
+        repeat: false
+        onTriggered: {
+            if (root.isExpanded) {
+                root.appsTabAlive = true;
+                root.wallsTabAlive = true;
+            }
+        }
     }
 
     // =========================================================================
@@ -1183,9 +1298,35 @@ FocusScope {
         // --- SUB-COMPONENT 1: COMPACT PILL ---
         CompactPill {
             id: compactPillComp
-            anchors.fill: parent
-            opacity: (root.isExpanded || root.isOsdActive || root.isNotifMenuOpen || root.isPowerMenuOpen || root.isWifiMenuOpen || root.isBluetoothMenuOpen || root.isAudioMenuOpen) ? 0.0 : 1.0
+            anchors.top: parent.top
+            anchors.horizontalCenter: parent.horizontalCenter
+            width: (root.isWorkspaceActive ? 240 : ((root.showVisualizer || (root.isExpanded && root.wasVisualizerActive)) ? root.dynamicVisNotchWidth : root.compactWidthVal))
+            height: Style.notchHeightCompact
+            opacity: {
+                if (root.isExpanded || root.isOsdActive || root.isAnyDrawerOpen) {
+                    return 0.0;
+                }
+                // Seamless hand-off when collapsing: start fading in as notch approaches compact height
+                if (notchBox.height > Style.notchHeightCompact * 1.60) {
+                    return 0.0;
+                }
+                return 1.0;
+            }
             visible: opacity > 0.01
+
+            Behavior on opacity {
+                NumberAnimation {
+                    duration: root.isExpanded ? 50 : 80
+                    easing.type: Easing.OutQuad
+                }
+            }
+
+            containerWidth: notchBox.width
+            containerHeight: notchBox.height
+            targetWidth: width
+            targetHeight: Style.notchHeightCompact
+            isExpanded: root.isExpanded
+            wasVisualizerActive: root.wasVisualizerActive
 
             timeStr: root.timeStr
             clockFontSize: root.clockFontSizeVal
@@ -1199,7 +1340,7 @@ FocusScope {
             handleRight: root.handleRight
             singleHandleX: root.singleHandleX
 
-            showVisualizer: root.showVisualizer
+            showVisualizer: root.showVisualizer || (root.isExpanded && root.wasVisualizerActive)
             visualizerStyle: root.visualizerStyleVal
             visualizerBarCount: root.visualizerBarCountVal
             visualizerHeight: root.visualizerHeightVal
@@ -1245,11 +1386,72 @@ FocusScope {
             height: root.pageNotchHeight
             anchors.top: parent.top
             anchors.horizontalCenter: parent.horizontalCenter
-            opacity: (root.isExpanded && !root.isOsdActive && !root.isNotifMenuOpen && !root.isPowerMenuOpen && !root.isWifiMenuOpen && !root.isBluetoothMenuOpen && !root.isAudioMenuOpen) ? 1.0 : 0.0
+            opacity: {
+                if (root.isOsdActive || root.isAnyDrawerOpen) {
+                    return 0.0;
+                }
+                if (root.isExpanded) {
+                    // Do not show until notch has expanded past compact pill to eliminate clock ghosting
+                    if (!root.isReturningFromDrawer && notchBox.height < Style.notchHeightCompact * 1.25) {
+                        return 0.0;
+                    }
+                    return 1.0;
+                }
+                // When collapsing from expanded tab, remain visible while pill is shrinking down so contents scale with pill
+                // Guard: only show if collapsing from normal expanded tab, NEVER when a drawer was closed
+                if (!root.isDrawerClosing && notchBox.height > Style.notchHeightCompact * 1.40 && notchBox.height <= root.pageNotchHeight * 1.15) {
+                    return 1.0;
+                }
+                return 0.0;
+            }
             visible: opacity > 0.01
 
+            // Dynamic progress calculations tracking real-time spring physical geometry
+            readonly property real hTarget: Math.max(Style.notchHeightCompact + 1, root.pageNotchHeight)
+            readonly property real compactW: root.isWorkspaceActive ? 240 : ((root.showVisualizer || root.wasVisualizerActive) ? root.dynamicVisNotchWidth : root.compactWidthVal)
+            readonly property real wTarget: Math.max(compactW + 1, Style.notchWidthExpanded)
+
+            readonly property real heightProgress: (hTarget > Style.notchHeightCompact)
+                ? Math.max(0.0, Math.min(1.0, (notchBox.height - Style.notchHeightCompact) / (hTarget - Style.notchHeightCompact)))
+                : (root.isExpanded ? 1.0 : 0.0)
+
+            readonly property real widthProgress: (wTarget > compactW)
+                ? Math.max(0.0, Math.min(1.0, (notchBox.width - compactW) / (wTarget - compactW)))
+                : (root.isExpanded ? 1.0 : 0.0)
+
+            // Combined motion progress (60% vertical stroke + 40% horizontal widening)
+            readonly property real animProgress: (heightProgress * 0.60) + (widthProgress * 0.40)
+
+            // Dynamic spring overshoot factors when notchBox bounces past target bounds (isolated from macro-drawer transitions)
+            readonly property real heightOvershoot: (hTarget > 0 && notchBox.height > hTarget && notchBox.height <= hTarget * 1.15)
+                ? (notchBox.height - hTarget) / hTarget
+                : 0.0
+            readonly property real widthOvershoot: (wTarget > 0 && notchBox.width > wTarget && notchBox.width <= wTarget * 1.15)
+                ? (notchBox.width - wTarget) / wTarget
+                : 0.0
+            readonly property real totalOvershoot: (heightOvershoot * 0.60) + (widthOvershoot * 0.40)
+
+            transformOrigin: Item.Top
+
+            scale: {
+                if (root.pageNotchHeight <= 0) return 1.0;
+                if (root.isReturningFromDrawer || notchBox.height > root.pageNotchHeight * 1.05) {
+                    // When returning from a drawer, maintain authentic 1.0 scale with subtle settling spring follow-through;
+                    // never squash or compress the content while the notch body is morphing.
+                    return Math.max(0.98, Math.min(1.04, 1.0 + (totalOvershoot * 0.25)));
+                }
+                // Base smooth organic scale: scales with body from 0.78 up to 1.0 when fully expanded
+                var baseScale = 0.78 + (animProgress * 0.22);
+                // Harmonious spring overshoot rebound follow-through:
+                var bounceScale = baseScale + (totalOvershoot * 0.30);
+                return Math.max(0.74, Math.min(1.10, bounceScale));
+            }
+
             Behavior on opacity {
-                NumberAnimation { duration: 160; easing.type: Easing.OutQuad }
+                NumberAnimation {
+                    duration: root.isReturningFromDrawer ? 110 : (root.isExpanded ? 140 : 80)
+                    easing.type: Easing.OutQuad
+                }
             }
 
             // --- SUB-COMPONENT 3: STATUS BAR (HEADER ROW) ---
@@ -1258,9 +1460,9 @@ FocusScope {
                 anchors.top: parent.top
                 anchors.topMargin: 4
                 anchors.left: parent.left
-                anchors.leftMargin: 12
+                anchors.leftMargin: 14
                 anchors.right: parent.right
-                anchors.rightMargin: 12
+                anchors.rightMargin: 14
                 height: 20
 
                 currentPage: root.currentPage
@@ -1283,29 +1485,10 @@ FocusScope {
                 isPowerMenuOpen: root.isPowerMenuOpen
 
                 onTabSelected: function(idx) {
-                    root.currentPage = idx;
-                    root.isNotifMenuOpen = false;
-                    root.isPowerMenuOpen = false;
-                    root.isWifiMenuOpen = false;
-                    root.isBluetoothMenuOpen = false;
-                    root.isAudioMenuOpen = false;
-                    root.isWifiPasswordPromptOpen = false;
-                    root.isPowerConfirming = false;
+                    root.switchTab(idx);
                 }
-                onWifiToggled: {
-                    root.isWifiMenuOpen = !root.isWifiMenuOpen;
-                    root.isBluetoothMenuOpen = false;
-                    root.isPowerMenuOpen = false;
-                    root.isNotifMenuOpen = false;
-                    root.isAudioMenuOpen = false;
-                }
-                onBluetoothToggled: {
-                    root.isBluetoothMenuOpen = !root.isBluetoothMenuOpen;
-                    root.isWifiMenuOpen = false;
-                    root.isPowerMenuOpen = false;
-                    root.isNotifMenuOpen = false;
-                    root.isAudioMenuOpen = false;
-                }
+                onWifiToggled: root.toggleWifiMenu()
+                onBluetoothToggled: root.toggleBluetoothMenu()
                 onNotifToggled: root.toggleNotifMenu()
                 onPowerToggled: {
                     root.isPowerMenuOpen = !root.isPowerMenuOpen;
@@ -1325,30 +1508,34 @@ FocusScope {
                 anchors.top: parent.top
                 anchors.topMargin: 28
                 anchors.left: parent.left
-                anchors.leftMargin: 12
+                anchors.leftMargin: 14
                 anchors.right: parent.right
-                anchors.rightMargin: 12
+                anchors.rightMargin: 14
                 anchors.bottom: parent.bottom
-                anchors.bottomMargin: 6
+                anchors.bottomMargin: 14
                 clip: true
 
                 Row {
                     id: pageRow
                     height: parent.height
-                    x: -root.currentPage * (pageViewport.width > 0 ? pageViewport.width : 560)
-
-                    Behavior on x {
+                    spacing: 20
+                    readonly property real pageWidth: (pageViewport.width > 0 ? pageViewport.width : 572)
+                    readonly property real pageStep: pageWidth + spacing
+                    property real pageOffset: root.currentPage
+                    Behavior on pageOffset {
+                        enabled: root.isExpanded
                         SpringAnimation {
                             spring: root.tabSpringTension
                             damping: root.tabSpringDamping
-                            epsilon: Style.springEpsilon
+                            epsilon: Style.springPageEpsilon
                         }
                     }
+                    x: -pageOffset * pageStep
 
                     // PAGE 0: Media Controller (Nook Dashboard)
                     MediaController {
                         id: mediaControllerComp
-                        width: pageViewport.width > 0 ? pageViewport.width : 576
+                        width: pageRow.pageWidth
                         height: pageViewport.height > 0 ? pageViewport.height : 100
                         activePlayer: root.activePlayer
                         isPlaying: root.isPlaying
@@ -1367,7 +1554,7 @@ FocusScope {
 
                     // PAGE 1: Application Launcher (Tray)
                     Item {
-                        width: pageViewport.width > 0 ? pageViewport.width : 576
+                        width: pageRow.pageWidth
                         height: pageViewport.height > 0 ? pageViewport.height : 100
                         clip: true
 
@@ -1382,11 +1569,9 @@ FocusScope {
                                 gridAnimDuration: root.gridAnimDurationVal
                                 onAppLaunched: {
                                     root.isExpanded = false;
-                                    root.currentPage = 0;
                                 }
                                 onCloseRequested: {
                                     root.isExpanded = false;
-                                    root.currentPage = 0;
                                 }
                             }
                         }
@@ -1394,7 +1579,7 @@ FocusScope {
 
                     // PAGE 2: Wallpaper Selector (Walls)
                     Item {
-                        width: pageViewport.width > 0 ? pageViewport.width : 576
+                        width: pageRow.pageWidth
                         height: pageViewport.height > 0 ? pageViewport.height : 100
                         clip: true
 
@@ -1414,7 +1599,6 @@ FocusScope {
                                 }
                                 onCloseRequested: {
                                     root.isExpanded = false;
-                                    root.currentPage = 0;
                                 }
                             }
                         }
@@ -1423,7 +1607,7 @@ FocusScope {
                     // PAGE 3: Hardware Stats Dashboard (Stats)
                     HardwareStats {
                         id: hardwareStatsComp
-                        width: pageViewport.width > 0 ? pageViewport.width : 576
+                        width: pageRow.pageWidth
                         height: pageViewport.height > 0 ? pageViewport.height : 100
                         cpuUsage: root.cpuUsage
                         cpuHistory: root.cpuHistory

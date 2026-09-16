@@ -139,8 +139,8 @@ PanelWindow {
     property real expandSpringTension: 4.5
     property real expandSpringDamping: 0.28
 
-    property real tabSpringTension: 5.5
-    property real tabSpringDamping: 0.22
+    property real tabSpringTension: 4.5
+    property real tabSpringDamping: 0.30
 
     property string highlightAnimTypeVal: "spring"
     property real highlightSpringTensionVal: 5.5
@@ -343,8 +343,8 @@ PanelWindow {
             root.buttonSpeedVal = 180;
             root.expandSpringTension = 4.5;
             root.expandSpringDamping = 0.28;
-            root.tabSpringTension = 5.5;
-            root.tabSpringDamping = 0.22;
+            root.tabSpringTension = 4.5;
+            root.tabSpringDamping = 0.30;
         } else if (root.currentTab === 2) {
             root.visualizerEnabledVal = true;
             root.visualizerStyleVal = "bars";
@@ -438,8 +438,8 @@ PanelWindow {
                         x: currentItem ? currentItem.x + 3 : 0
                         width: currentItem ? currentItem.width : 0
 
-                        Behavior on x { enabled: tabGlider.width > 0; SpringAnimation { spring: root.tabSpringTension; damping: root.tabSpringDamping } }
-                        Behavior on width { enabled: tabGlider.width > 0; SpringAnimation { spring: root.tabSpringTension; damping: root.tabSpringDamping } }
+                        Behavior on x { enabled: tabGlider.width > 0; SpringAnimation { spring: root.tabSpringTension; damping: root.tabSpringDamping; epsilon: Style.springScaleEpsilon } }
+                        Behavior on width { enabled: tabGlider.width > 0; SpringAnimation { spring: root.tabSpringTension; damping: root.tabSpringDamping; epsilon: Style.springScaleEpsilon } }
                     }
 
                     RowLayout {
@@ -1004,7 +1004,7 @@ PanelWindow {
                                                     anchors.fill: parent; cursorShape: Qt.PointingHandCursor
                                                     onClicked: {
                                                         root.expandSpringTension = 4.5; root.expandSpringDamping = 0.22;
-                                                        root.tabSpringTension = 5.5; root.tabSpringDamping = 0.22;
+                                                        root.tabSpringTension = 4.5; root.tabSpringDamping = 0.30;
                                                         root.hasPendingChanges = true;
                                                     }
                                                 }

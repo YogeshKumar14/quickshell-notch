@@ -39,9 +39,9 @@ Item {
     /** Button scale animation duration / spring tension */
     property int buttonSpeed: 180
     /** Spring tension for buttons */
-    property real tabSpringTension: 5.5
+    property real tabSpringTension: 4.5
     /** Spring damping for buttons */
-    property real tabSpringDamping: 0.22
+    property real tabSpringDamping: 0.30
 
     /** Expose content height to parent */
     readonly property int mediaContentHeight: 100
@@ -53,7 +53,7 @@ Item {
     /** Emitted when user clicks volume/device icon to open audio drawer */
     signal audioMenuRequested()
 
-    clip: false
+    clip: true
 
     /** Whether the active media player explicitly supports seeking operations */
     readonly property bool canSeek: {
@@ -514,15 +514,13 @@ Item {
         anchors.bottom: parent.bottom
         width: 310
 
-        Row {
-            anchors.verticalCenter: parent.verticalCenter
-            spacing: 12
-
-            // Squircle Album Art (78x78px) with OpacityMask & Apple Music badge
-            Item {
-                id: albumArtBox
-                width: 78
-                height: 78
+        // Squircle Album Art (78x78px) with OpacityMask & Apple Music badge
+        Item {
+            id: albumArtBox
+            anchors.left: parent.left
+            anchors.bottom: parent.bottom
+            width: 78
+            height: 78
 
                 readonly property real albumRadius: Style.bottomRadius > 0 ? Style.bottomRadius : Style.radiusLarge
 
@@ -632,16 +630,29 @@ Item {
                 }
             }
 
-            // Track Info, Scrubber & Controls
+        // Track Info, Scrubber & Controls Column aligned with albumArtBox
+        Item {
+            id: trackControlsCol
+            anchors.left: albumArtBox.right
+            anchors.leftMargin: 12
+            anchors.right: parent.right
+            anchors.top: albumArtBox.top
+            anchors.bottom: albumArtBox.bottom
+
+            // Track Info (Title & Artist)
             Column {
-                width: 220
-                spacing: 3
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.top: parent.top
+                anchors.bottom: scrubberCol.top
+                anchors.bottomMargin: 2
+                spacing: 1
 
                 Text {
                     width: parent.width
                     text: root.trackTitle !== "" ? root.trackTitle : "No Media Playing"
                     font.family: Style.fontFamily
-                    font.pixelSize: 14
+                    font.pixelSize: 13
                     font.weight: Font.Bold
                     color: "#FFFFFF"
                     elide: Text.ElideRight
@@ -649,245 +660,252 @@ Item {
 
                 Text {
                     width: parent.width
-                    text: root.trackArtist !== "" ? root.trackArtist : "QuickShell Notch"
+                    text: root.trackArtist !== "" ? root.trackArtist : "Top Notch"
                     font.family: Style.fontFamily
-                    font.pixelSize: 12
+                    font.pixelSize: 11
                     color: Style.textSecondary
                     elide: Text.ElideRight
                 }
+            }
 
-                // Full-width Scrubber Seek Bar with timestamps directly underneath
-                Column {
+            // Full-width Scrubber Seek Bar with timestamps directly underneath
+            Column {
+                id: scrubberCol
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.bottom: controlsRow.top
+                anchors.bottomMargin: 2
+                spacing: 1
+
+                Item {
                     width: parent.width
-                    spacing: 2
+                    height: 9
 
-                    Item {
-                        width: parent.width
-                        height: 10
+                    Rectangle {
+                        anchors.left: parent.left
+                        anchors.right: parent.right
+                        anchors.verticalCenter: parent.verticalCenter
+                        height: (root.canSeek && scrubMouse.containsMouse) ? 4 : 3
+                        radius: height / 2
+                        color: "#3A3A3C"
+
+                        Behavior on height { NumberAnimation { duration: 100 } }
 
                         Rectangle {
                             anchors.left: parent.left
-                            anchors.right: parent.right
-                            anchors.verticalCenter: parent.verticalCenter
-                            height: (root.canSeek && scrubMouse.containsMouse) ? 4 : 3
+                            anchors.top: parent.top
+                            anchors.bottom: parent.bottom
+                            width: (root.trackLength > 0 && parent && parent.width > 0) ? Math.min(parent.width, Math.max(0, (root.cleanTrackPosition / root.trackLength) * parent.width)) : 0
                             radius: height / 2
-                            color: "#3A3A3C"
-
-                            Behavior on height { NumberAnimation { duration: 100 } }
-
-                            Rectangle {
-                                anchors.left: parent.left
-                                anchors.top: parent.top
-                                anchors.bottom: parent.bottom
-                                width: (root.trackLength > 0 && parent && parent.width > 0) ? Math.min(parent.width, Math.max(0, (root.cleanTrackPosition / root.trackLength) * parent.width)) : 0
-                                radius: height / 2
-                                color: "#FFFFFF"
-                                opacity: root.canSeek ? 1.0 : 0.6
-                            }
-                        }
-
-                        MouseArea {
-                            id: scrubMouse
-                            anchors.fill: parent
-                            enabled: root.canSeek && (root.trackLength > 0)
-                            hoverEnabled: root.canSeek && (root.trackLength > 0)
-                            cursorShape: (root.canSeek && root.trackLength > 0) ? Qt.PointingHandCursor : Qt.ArrowCursor
-                            onClicked: function(mouse) {
-                                if (root.canSeek && root.trackLength > 0 && width > 0) {
-                                    var pct = Math.max(0, Math.min(1.0, mouse.x / width));
-                                    var targetPos = pct * root.trackLength;
-                                    root.seekAbsolute(targetPos);
-                                }
-                            }
-                            onPositionChanged: function(mouse) {
-                                if (pressed && root.canSeek && root.trackLength > 0 && width > 0) {
-                                    var pct = Math.max(0, Math.min(1.0, mouse.x / width));
-                                    var targetPos = pct * root.trackLength;
-                                    root.seekAbsolute(targetPos);
-                                }
-                            }
+                            color: "#FFFFFF"
+                            opacity: root.canSeek ? 1.0 : 0.6
                         }
                     }
 
-                    Item {
-                        width: parent.width
-                        height: 12
-
-                        Text {
-                            anchors.left: parent.left
-                            anchors.top: parent.top
-                            text: root.formatTime(root.cleanTrackPosition)
-                            font.family: Style.fontFamilyMono
-                            font.pixelSize: 10
-                            color: Style.textSecondary
+                    MouseArea {
+                        id: scrubMouse
+                        anchors.fill: parent
+                        enabled: root.canSeek && (root.trackLength > 0)
+                        hoverEnabled: root.canSeek && (root.trackLength > 0)
+                        cursorShape: (root.canSeek && root.trackLength > 0) ? Qt.PointingHandCursor : Qt.ArrowCursor
+                        onClicked: function(mouse) {
+                            if (root.canSeek && root.trackLength > 0 && width > 0) {
+                                var pct = Math.max(0, Math.min(1.0, mouse.x / width));
+                                var targetPos = pct * root.trackLength;
+                                root.seekAbsolute(targetPos);
+                            }
                         }
-
-                        Text {
-                            anchors.right: parent.right
-                            anchors.top: parent.top
-                            text: (root.trackLength > 0) ? root.formatTime(root.trackLength) : "0:00"
-                            font.family: Style.fontFamilyMono
-                            font.pixelSize: 10
-                            color: Style.textSecondary
+                        onPositionChanged: function(mouse) {
+                            if (pressed && root.canSeek && root.trackLength > 0 && width > 0) {
+                                var pct = Math.max(0, Math.min(1.0, mouse.x / width));
+                                var targetPos = pct * root.trackLength;
+                                root.seekAbsolute(targetPos);
+                            }
                         }
                     }
                 }
 
-                // Playback Controls Row (10s Rewind on left, Prev/Play/Next centered, Device on right)
                 Item {
                     width: parent.width
-                    height: 22
+                    height: 12
 
-                    // 10s Rewind (Replay 10) on left
-                    Item {
+                    Text {
                         anchors.left: parent.left
-                        anchors.verticalCenter: parent.verticalCenter
-                        width: 22; height: 22
-                        opacity: root.canSeek ? 1.0 : 0.35
-                        scale: (root.canSeek && root.buttonAnims && rewMA.pressed) ? 0.85 : ((root.canSeek && root.buttonAnims && rewMA.containsMouse) ? 1.15 : 1.0)
-                        Behavior on opacity { NumberAnimation { duration: 150 } }
-                        Behavior on scale { enabled: root.buttonAnims; SpringAnimation { spring: root.tabSpringTension; damping: root.tabSpringDamping } }
-
-                        M3Icon {
-                            anchors.centerIn: parent
-                            name: "replay_10"
-                            size: 14
-                            color: (root.canSeek && rewMA.containsMouse) ? "#FFFFFF" : Style.textSecondary
-                        }
-                        MouseArea {
-                            id: rewMA
-                            anchors.fill: parent
-                            enabled: root.canSeek
-                            hoverEnabled: root.canSeek
-                            cursorShape: root.canSeek ? Qt.PointingHandCursor : Qt.ArrowCursor
-                            onClicked: {
-                                if (root.canSeek) {
-                                    root.seekRelative(-10);
-                                }
-                            }
-                        }
+                        anchors.top: parent.top
+                        text: root.formatTime(root.cleanTrackPosition)
+                        font.family: Style.fontFamilyMono
+                        font.pixelSize: 10
+                        color: Style.textSecondary
                     }
 
-                    // Prev / Play-Pause / Next Centered
-                    Row {
-                        anchors.centerIn: parent
-                        spacing: 16
-
-                        // Prev Button
-                        Item {
-                            width: 16; height: 16
-                            anchors.verticalCenter: parent.verticalCenter
-                            scale: (root.buttonAnims && prevMA.pressed) ? 0.85 : ((root.buttonAnims && prevMA.containsMouse) ? 1.15 : 1.0)
-                            Behavior on scale { enabled: root.buttonAnims; SpringAnimation { spring: root.tabSpringTension; damping: root.tabSpringDamping } }
-
-                            M3Icon {
-                                anchors.centerIn: parent
-                                name: "skip_previous"
-                                size: 15
-                                color: "#FFFFFF"
-                            }
-                            MouseArea {
-                                id: prevMA
-                                anchors.fill: parent
-                                hoverEnabled: true
-                                cursorShape: Qt.PointingHandCursor
-                                onClicked: {
-                                    if (root.activePlayer) {
-                                        root.activePlayer.previous();
-                                    } else {
-                                        var target = root.getPlayerTarget();
-                                        playerctlPrev.command = target ? ["playerctl", "-p", target, "previous"] : ["playerctl", "previous"];
-                                        playerctlPrev.running = false;
-                                        playerctlPrev.running = true;
-                                    }
-                                }
-                            }
-                        }
-
-                        // Play/Pause Button (Large Center Solid)
-                        Item {
-                            width: 20; height: 20
-                            anchors.verticalCenter: parent.verticalCenter
-                            scale: (root.buttonAnims && playMA.pressed) ? 0.85 : ((root.buttonAnims && playMA.containsMouse) ? 1.15 : 1.0)
-                            Behavior on scale { enabled: root.buttonAnims; SpringAnimation { spring: root.tabSpringTension; damping: root.tabSpringDamping } }
-
-                            M3Icon {
-                                anchors.centerIn: parent
-                                name: root.isPlaying ? "pause" : "play_arrow"
-                                size: 20
-                                color: "#FFFFFF"
-                            }
-                            MouseArea {
-                                id: playMA
-                                anchors.fill: parent
-                                hoverEnabled: true
-                                cursorShape: Qt.PointingHandCursor
-                                onClicked: {
-                                    if (root.activePlayer) {
-                                        root.activePlayer.togglePlaying();
-                                    } else {
-                                        var target = root.getPlayerTarget();
-                                        playerctlPlayPause.command = target ? ["playerctl", "-p", target, "play-pause"] : ["playerctl", "play-pause"];
-                                        playerctlPlayPause.running = false;
-                                        playerctlPlayPause.running = true;
-                                    }
-                                }
-                            }
-                        }
-
-                        // Next Button
-                        Item {
-                            width: 16; height: 16
-                            anchors.verticalCenter: parent.verticalCenter
-                            scale: (root.buttonAnims && nextMA.pressed) ? 0.85 : ((root.buttonAnims && nextMA.containsMouse) ? 1.15 : 1.0)
-                            Behavior on scale { enabled: root.buttonAnims; SpringAnimation { spring: root.tabSpringTension; damping: root.tabSpringDamping } }
-
-                            M3Icon {
-                                anchors.centerIn: parent
-                                name: "skip_next"
-                                size: 15
-                                color: "#FFFFFF"
-                            }
-                            MouseArea {
-                                id: nextMA
-                                anchors.fill: parent
-                                hoverEnabled: true
-                                cursorShape: Qt.PointingHandCursor
-                                onClicked: {
-                                    if (root.activePlayer) {
-                                        root.activePlayer.next();
-                                    } else {
-                                        var target = root.getPlayerTarget();
-                                        playerctlNext.command = target ? ["playerctl", "-p", target, "next"] : ["playerctl", "next"];
-                                        playerctlNext.running = false;
-                                        playerctlNext.running = true;
-                                    }
-                                }
-                            }
-                        }
-                    }
-
-                    // Output Device Icon (Matching Reference: macOS MacBook laptop icon) on right
-                    Item {
+                    Text {
                         anchors.right: parent.right
-                        anchors.verticalCenter: parent.verticalCenter
+                        anchors.top: parent.top
+                        text: (root.trackLength > 0) ? root.formatTime(root.trackLength) : "0:00"
+                        font.family: Style.fontFamilyMono
+                        font.pixelSize: 10
+                        color: Style.textSecondary
+                    }
+                }
+            }
+
+            // Playback Controls Row (10s Rewind on left, Prev/Play/Next centered, Device on right)
+            Item {
+                id: controlsRow
+                anchors.left: parent.left
+                anchors.right: parent.right
+                anchors.bottom: parent.bottom
+                height: 22
+
+                // 10s Rewind (Replay 10) on left
+                Item {
+                    anchors.left: parent.left
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 22; height: 22
+                    opacity: root.canSeek ? 1.0 : 0.35
+                    scale: (root.canSeek && root.buttonAnims && rewMA.pressed) ? 0.85 : ((root.canSeek && root.buttonAnims && rewMA.containsMouse) ? 1.15 : 1.0)
+                    Behavior on opacity { NumberAnimation { duration: 150 } }
+                    Behavior on scale { enabled: root.buttonAnims; SpringAnimation { spring: root.tabSpringTension; damping: root.tabSpringDamping; epsilon: Style.springScaleEpsilon } }
+
+                    M3Icon {
+                        anchors.centerIn: parent
+                        name: "replay_10"
+                        size: 14
+                        color: (root.canSeek && rewMA.containsMouse) ? "#FFFFFF" : Style.textSecondary
+                    }
+                    MouseArea {
+                        id: rewMA
+                        anchors.fill: parent
+                        enabled: root.canSeek
+                        hoverEnabled: root.canSeek
+                        cursorShape: root.canSeek ? Qt.PointingHandCursor : Qt.ArrowCursor
+                        onClicked: {
+                            if (root.canSeek) {
+                                root.seekRelative(-10);
+                            }
+                        }
+                    }
+                }
+
+                // Prev / Play-Pause / Next Centered
+                Row {
+                    anchors.centerIn: parent
+                    spacing: 16
+
+                    // Prev Button
+                    Item {
                         width: 16; height: 16
-                        scale: (root.buttonAnims && devMA.pressed) ? 0.85 : ((root.buttonAnims && devMA.containsMouse) ? 1.15 : 1.0)
-                        Behavior on scale { enabled: root.buttonAnims; SpringAnimation { spring: root.tabSpringTension; damping: root.tabSpringDamping } }
+                        anchors.verticalCenter: parent.verticalCenter
+                        scale: (root.buttonAnims && prevMA.pressed) ? 0.85 : ((root.buttonAnims && prevMA.containsMouse) ? 1.15 : 1.0)
+                        Behavior on scale { enabled: root.buttonAnims; SpringAnimation { spring: root.tabSpringTension; damping: root.tabSpringDamping; epsilon: Style.springScaleEpsilon } }
 
                         M3Icon {
                             anchors.centerIn: parent
-                            name: "laptopcomputer"
-                            size: 14
-                            color: devMA.containsMouse ? "#FFFFFF" : Style.textSecondary
+                            name: "skip_previous"
+                            size: 15
+                            color: "#FFFFFF"
                         }
                         MouseArea {
-                            id: devMA
+                            id: prevMA
                             anchors.fill: parent
                             hoverEnabled: true
                             cursorShape: Qt.PointingHandCursor
-                            onClicked: root.audioMenuRequested()
+                            onClicked: {
+                                if (root.activePlayer) {
+                                    root.activePlayer.previous();
+                                } else {
+                                    var target = root.getPlayerTarget();
+                                    playerctlPrev.command = target ? ["playerctl", "-p", target, "previous"] : ["playerctl", "previous"];
+                                    playerctlPrev.running = false;
+                                    playerctlPrev.running = true;
+                                }
+                            }
                         }
+                    }
+
+                    // Play/Pause Button (Large Center Solid)
+                    Item {
+                        width: 20; height: 20
+                        anchors.verticalCenter: parent.verticalCenter
+                        scale: (root.buttonAnims && playMA.pressed) ? 0.85 : ((root.buttonAnims && playMA.containsMouse) ? 1.15 : 1.0)
+                        Behavior on scale { enabled: root.buttonAnims; SpringAnimation { spring: root.tabSpringTension; damping: root.tabSpringDamping; epsilon: Style.springScaleEpsilon } }
+
+                        M3Icon {
+                            anchors.centerIn: parent
+                            name: root.isPlaying ? "pause" : "play_arrow"
+                            size: 20
+                            color: "#FFFFFF"
+                        }
+                        MouseArea {
+                            id: playMA
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                if (root.activePlayer) {
+                                    root.activePlayer.togglePlaying();
+                                } else {
+                                    var target = root.getPlayerTarget();
+                                    playerctlPlayPause.command = target ? ["playerctl", "-p", target, "play-pause"] : ["playerctl", "play-pause"];
+                                    playerctlPlayPause.running = false;
+                                    playerctlPlayPause.running = true;
+                                }
+                            }
+                        }
+                    }
+
+                    // Next Button
+                    Item {
+                        width: 16; height: 16
+                        anchors.verticalCenter: parent.verticalCenter
+                        scale: (root.buttonAnims && nextMA.pressed) ? 0.85 : ((root.buttonAnims && nextMA.containsMouse) ? 1.15 : 1.0)
+                        Behavior on scale { enabled: root.buttonAnims; SpringAnimation { spring: root.tabSpringTension; damping: root.tabSpringDamping; epsilon: Style.springScaleEpsilon } }
+
+                        M3Icon {
+                            anchors.centerIn: parent
+                            name: "skip_next"
+                            size: 15
+                            color: "#FFFFFF"
+                        }
+                        MouseArea {
+                            id: nextMA
+                            anchors.fill: parent
+                            hoverEnabled: true
+                            cursorShape: Qt.PointingHandCursor
+                            onClicked: {
+                                if (root.activePlayer) {
+                                    root.activePlayer.next();
+                                } else {
+                                    var target = root.getPlayerTarget();
+                                    playerctlNext.command = target ? ["playerctl", "-p", target, "next"] : ["playerctl", "next"];
+                                    playerctlNext.running = false;
+                                    playerctlNext.running = true;
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Output Device Icon (Matching Reference: macOS MacBook laptop icon) on right
+                Item {
+                    anchors.right: parent.right
+                    anchors.verticalCenter: parent.verticalCenter
+                    width: 16; height: 16
+                    scale: (root.buttonAnims && devMA.pressed) ? 0.85 : ((root.buttonAnims && devMA.containsMouse) ? 1.15 : 1.0)
+                    Behavior on scale { enabled: root.buttonAnims; SpringAnimation { spring: root.tabSpringTension; damping: root.tabSpringDamping; epsilon: Style.springScaleEpsilon } }
+
+                    M3Icon {
+                        anchors.centerIn: parent
+                        name: "laptopcomputer"
+                        size: 14
+                        color: devMA.containsMouse ? "#FFFFFF" : Style.textSecondary
+                    }
+                    MouseArea {
+                        id: devMA
+                        anchors.fill: parent
+                        hoverEnabled: true
+                        cursorShape: Qt.PointingHandCursor
+                        onClicked: root.audioMenuRequested()
                     }
                 }
             }
@@ -898,6 +916,7 @@ Item {
     // 2. RIGHT COLUMN: CALENDAR & EVENTS DASHBOARD (260px)
     // =====================================================================
     Item {
+        id: rightColItem
         anchors.right: parent.right
         anchors.top: parent.top
         anchors.bottom: parent.bottom

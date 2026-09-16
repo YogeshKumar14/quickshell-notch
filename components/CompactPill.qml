@@ -23,6 +23,13 @@ Item {
     /** Unread notification badge count */
     property int notifCount: 0
 
+    /** Realtime container dimensions from notch pill for spring bounce synchronization */
+    property real containerWidth: width
+    property real containerHeight: height
+    property real targetWidth: width
+    property real targetHeight: height
+    property bool isExpanded: false
+
     /** Active Hyprland workspace ID (1..10) */
     property int activeWorkspace: 1
     /** Array of occupied workspace IDs */
@@ -58,9 +65,47 @@ Item {
     property string trackArtUrl: ""
     /** True if OSD overlay is taking priority */
     property bool isOsdActive: false
+    /** Whether visualizer was active prior to expansion / during collapse handoff */
+    property bool wasVisualizerActive: false
 
     /** Text width of the track title ticker, read by parent for dynamic pill width */
     readonly property real trackTitleWidth: trackTitleText.implicitWidth
+
+    // Realtime deviation factors driven by SpringAnimation on notchBox
+    readonly property real hDelta: root.targetHeight > 0
+        ? (root.containerHeight - root.targetHeight) / root.targetHeight
+        : 0
+    readonly property real wDelta: root.targetWidth > 0
+        ? (root.containerWidth - root.targetWidth) / root.targetWidth
+        : 0
+
+    // Bound deviation inputs so macro-transitions glide smoothly into spring bounds
+    readonly property real clampedH: Math.max(-0.25, Math.min(0.35, root.hDelta))
+    readonly property real clampedW: Math.max(-0.45, Math.min(0.35, root.wDelta))
+
+    // Realtime spring bounce scale synchronized with notch pill physical motion
+    readonly property real pillSpringScale: {
+        if (root.isExpanded) {
+            // Smoothly follow outward expansion with the notch body
+            var expDeltaW = (root.containerWidth - root.targetWidth) / Math.max(1, root.targetWidth);
+            var expDeltaH = (root.containerHeight - root.targetHeight) / Math.max(1, root.targetHeight);
+            var expProgress = (Math.max(0.0, expDeltaW) * 0.40) + (Math.max(0.0, expDeltaH) * 0.60);
+            return 1.0 + Math.min(0.18, expProgress * 0.12);
+        }
+
+        // Dynamic spring scale:
+        // Vertical compression squashes down on impact, rebounds past 1.0, and settles to 1.0.
+        // Horizontal breathing flexes with width settling.
+        var scaleVal = 1.0 + (root.clampedH * 0.45) + (root.clampedW * 0.35);
+        return Math.max(0.80, Math.min(1.18, scaleVal));
+    }
+
+    // Vertical center follow-through clamped to physical notch bounds
+    readonly property real bounceCenterY: {
+        if (root.isExpanded) return 0;
+        var diff = (root.containerHeight - root.targetHeight) * 0.5;
+        return Math.max(-3.0, Math.min(3.0, diff));
+    }
 
     /** Emitted when user clicks compact pill to expand notch */
     signal expandRequested()
@@ -69,17 +114,27 @@ Item {
 
     // 1. COMPACT CLOCK DISPLAY
     Item {
+        id: clockDisplay
         anchors.fill: parent
         opacity: (!root.isWorkspaceActive && !root.showVisualizer && !root.isOsdActive) ? 1.0 : 0.0
         visible: opacity > 0.01
 
         Behavior on opacity {
-            NumberAnimation { duration: 180; easing.type: Easing.OutQuad }
+            NumberAnimation {
+                duration: (root.isOsdActive || root.isWorkspaceActive || root.isExpanded) ? 60 : 140
+                easing.type: Easing.OutQuad
+            }
         }
 
         RowLayout {
-            anchors.centerIn: parent
+            id: clockRow
+            anchors.horizontalCenter: parent.horizontalCenter
+            anchors.verticalCenter: parent.verticalCenter
+            anchors.verticalCenterOffset: root.bounceCenterY
             spacing: 6
+
+            transformOrigin: Item.Center
+            scale: root.pillSpringScale
 
             Text {
                 text: root.timeStr
@@ -90,12 +145,20 @@ Item {
                 style: Text.Raised
                 styleColor: "#000000"
                 color: Style.textPrimary
+                smooth: true
             }
 
             Rectangle {
                 width: 14; height: 14; radius: 7
                 color: Style.accent
-                visible: root.notifCount > 0
+                visible: scale > 0.01
+                smooth: true
+                antialiasing: true
+
+                scale: root.notifCount > 0 ? 1.0 : 0.0
+                Behavior on scale {
+                    SpringAnimation { spring: 5.5; damping: 0.3 }
+                }
 
                 Text {
                     anchors.centerIn: parent
@@ -116,7 +179,10 @@ Item {
         visible: opacity > 0.01
 
         Behavior on opacity {
-            NumberAnimation { duration: 180; easing.type: Easing.OutQuad }
+            NumberAnimation {
+                duration: (root.isOsdActive || root.isExpanded) ? 60 : 140
+                easing.type: Easing.OutQuad
+            }
         }
 
         MouseArea {
@@ -126,9 +192,14 @@ Item {
         }
 
         Item {
+            id: workspaceRow
             anchors.centerIn: parent
+            anchors.verticalCenterOffset: root.bounceCenterY
             width: 218
             height: 14
+
+            transformOrigin: Item.Center
+            scale: root.pillSpringScale
 
             Row {
                 anchors.centerIn: parent
@@ -184,15 +255,25 @@ Item {
         visible: opacity > 0.01
 
         Behavior on opacity {
-            NumberAnimation { duration: 180; easing.type: Easing.OutQuad }
+            NumberAnimation {
+                duration: (root.isOsdActive || root.isWorkspaceActive || root.isExpanded) ? 60 : 140
+                easing.type: Easing.OutQuad
+            }
         }
 
         RowLayout {
-            anchors.fill: parent
+            id: visRow
+            anchors.left: parent.left
+            anchors.right: parent.right
+            anchors.verticalCenter: parent.verticalCenter
+            anchors.verticalCenterOffset: root.bounceCenterY
             anchors.leftMargin: Math.max(12, Style.bottomRadius - 8)
             anchors.rightMargin: Math.max(14, Style.bottomRadius - 2)
             height: Style.notchHeightCompact
             spacing: 8
+
+            transformOrigin: Item.Center
+            scale: root.pillSpringScale
 
             // Mini Squircle Album Art Thumbnail (18x18px) with OpacityMask
             Item {
