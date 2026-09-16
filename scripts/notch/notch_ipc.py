@@ -11,6 +11,8 @@ Supported Commands:
     nook            - Toggle Media Controller / NotchNook tab (PAGE 0)
     apps            - Toggle Application launcher tab (PAGE 1)
     walls           - Toggle Wallpaper selector tab (PAGE 2)
+    stats           - Toggle Hardware Stats tab (PAGE 3)
+    tab:<0-3>       - Direct switch to specific tab index (0..3)
     audio           - Toggle Audio routing drawer
     notifs          - Toggle Notification history drawer
     notifs:clear    - Clear all active notifications with staggered animation

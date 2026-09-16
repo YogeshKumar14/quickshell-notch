@@ -122,6 +122,13 @@ Scope {
                             notchComp.toggleTab(1);
                         } else if (cmd === "walls") {
                             notchComp.toggleTab(2);
+                        } else if (cmd === "stats") {
+                            notchComp.toggleTab(3);
+                        } else if (cmd.startsWith("tab:")) {
+                            var tabIdxNum = parseInt(cmd.split(":")[1]);
+                            if (!isNaN(tabIdxNum) && tabIdxNum >= 0 && tabIdxNum <= 3) {
+                                notchComp.switchTab(tabIdxNum);
+                            }
                         } else if (cmd.startsWith("settings:tab:")) {
                             var tabIdx = parseInt(cmd.split(":")[2]);
                             if (!settingsLoader.active) settingsLoader.active = true;

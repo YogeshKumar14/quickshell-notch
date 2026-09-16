@@ -40,17 +40,34 @@ FocusScope {
 
     onIsExpandedChanged: {
         if (root.isExpanded) {
+            collapseResetTimer.stop();
             root.wasVisualizerActive = (root.visualizerEnabledVal && root.isVisualizerActive && !root.isWorkspaceActive && !root.isOsdActive);
             root.forceActiveFocus();
             if (root.currentPage === 1 || root.currentPage === 2) {
                 focusTabSearchTimer.restart();
             }
+            tabPreloadTimer.restart();
         } else {
+            tabPreloadTimer.stop();
+            appsUnloadTimer.restart();
+            wallsUnloadTimer.restart();
             if (root.visualizerEnabledVal && root.isPlaying) {
                 visRestartTimer.restart();
                 root.triggerVisualizerPopup();
             }
             wasVisResetTimer.restart();
+            collapseResetTimer.restart();
+        }
+    }
+
+    Timer {
+        id: collapseResetTimer
+        interval: 350
+        repeat: false
+        onTriggered: {
+            if (!root.isExpanded) {
+                root.currentPage = 0;
+            }
         }
     }
 
@@ -167,9 +184,21 @@ FocusScope {
         dismissOsd();
         if (root.isExpanded && root.currentPage === page && !root.isNotifMenuOpen && !root.isPowerMenuOpen && !root.isWifiMenuOpen && !root.isBluetoothMenuOpen && !root.isAudioMenuOpen) {
             root.isExpanded = false;
-            root.currentPage = 0;
             return;
         }
+        root.currentPage = page;
+        root.isExpanded = true;
+        root.isNotifMenuOpen = false;
+        root.isPowerMenuOpen = false;
+        root.isWifiMenuOpen = false;
+        root.isBluetoothMenuOpen = false;
+        root.isAudioMenuOpen = false;
+        root.focusActiveTabSearch();
+    }
+
+    /** Directly switch to a tab by index without toggling closed if already active */
+    function switchTab(page) {
+        dismissOsd();
         root.currentPage = page;
         root.isExpanded = true;
         root.isNotifMenuOpen = false;
@@ -488,8 +517,8 @@ FocusScope {
     // Spring Constants
     property real expandSpringTension: 5.0
     property real expandSpringDamping: 0.40
-    property real tabSpringTension: 5.5
-    property real tabSpringDamping: 0.22
+    property real tabSpringTension: 4.5
+    property real tabSpringDamping: 0.30
 
     // =========================================================================
     // 5. SETTINGS LOADING & CLOCK PROCESSES
@@ -567,7 +596,6 @@ FocusScope {
         onTriggered: {
             if (root.isExpanded && !root.isWifiMenuOpen && !root.isBluetoothMenuOpen && !root.isPowerMenuOpen && !root.isNotifMenuOpen && !root.isWifiPasswordPromptOpen) {
                 root.isExpanded = false;
-                root.currentPage = 0;
             }
         }
     }
@@ -836,6 +864,18 @@ FocusScope {
         id: appsUnloadTimer
         interval: 5000
         onTriggered: root.appsTabAlive = false
+    }
+
+    Timer {
+        id: tabPreloadTimer
+        interval: 350
+        repeat: false
+        onTriggered: {
+            if (root.isExpanded) {
+                root.appsTabAlive = true;
+                root.wallsTabAlive = true;
+            }
+        }
     }
 
     // =========================================================================
@@ -1445,14 +1485,7 @@ FocusScope {
                 isPowerMenuOpen: root.isPowerMenuOpen
 
                 onTabSelected: function(idx) {
-                    root.currentPage = idx;
-                    root.isNotifMenuOpen = false;
-                    root.isPowerMenuOpen = false;
-                    root.isWifiMenuOpen = false;
-                    root.isBluetoothMenuOpen = false;
-                    root.isAudioMenuOpen = false;
-                    root.isWifiPasswordPromptOpen = false;
-                    root.isPowerConfirming = false;
+                    root.switchTab(idx);
                 }
                 onWifiToggled: root.toggleWifiMenu()
                 onBluetoothToggled: root.toggleBluetoothMenu()
@@ -1486,20 +1519,23 @@ FocusScope {
                     id: pageRow
                     height: parent.height
                     spacing: 20
+                    readonly property real pageWidth: (pageViewport.width > 0 ? pageViewport.width : 572)
+                    readonly property real pageStep: pageWidth + spacing
                     property real pageOffset: root.currentPage
                     Behavior on pageOffset {
+                        enabled: root.isExpanded
                         SpringAnimation {
                             spring: root.tabSpringTension
                             damping: root.tabSpringDamping
-                            epsilon: Style.springEpsilon
+                            epsilon: Style.springPageEpsilon
                         }
                     }
-                    x: -pageOffset * ((pageViewport.width > 0 ? pageViewport.width : 560) + spacing)
+                    x: -pageOffset * pageStep
 
                     // PAGE 0: Media Controller (Nook Dashboard)
                     MediaController {
                         id: mediaControllerComp
-                        width: pageViewport.width > 0 ? pageViewport.width : 576
+                        width: pageRow.pageWidth
                         height: pageViewport.height > 0 ? pageViewport.height : 100
                         activePlayer: root.activePlayer
                         isPlaying: root.isPlaying
@@ -1518,7 +1554,7 @@ FocusScope {
 
                     // PAGE 1: Application Launcher (Tray)
                     Item {
-                        width: pageViewport.width > 0 ? pageViewport.width : 576
+                        width: pageRow.pageWidth
                         height: pageViewport.height > 0 ? pageViewport.height : 100
                         clip: true
 
@@ -1533,11 +1569,9 @@ FocusScope {
                                 gridAnimDuration: root.gridAnimDurationVal
                                 onAppLaunched: {
                                     root.isExpanded = false;
-                                    root.currentPage = 0;
                                 }
                                 onCloseRequested: {
                                     root.isExpanded = false;
-                                    root.currentPage = 0;
                                 }
                             }
                         }
@@ -1545,7 +1579,7 @@ FocusScope {
 
                     // PAGE 2: Wallpaper Selector (Walls)
                     Item {
-                        width: pageViewport.width > 0 ? pageViewport.width : 576
+                        width: pageRow.pageWidth
                         height: pageViewport.height > 0 ? pageViewport.height : 100
                         clip: true
 
@@ -1565,7 +1599,6 @@ FocusScope {
                                 }
                                 onCloseRequested: {
                                     root.isExpanded = false;
-                                    root.currentPage = 0;
                                 }
                             }
                         }
@@ -1574,7 +1607,7 @@ FocusScope {
                     // PAGE 3: Hardware Stats Dashboard (Stats)
                     HardwareStats {
                         id: hardwareStatsComp
-                        width: pageViewport.width > 0 ? pageViewport.width : 576
+                        width: pageRow.pageWidth
                         height: pageViewport.height > 0 ? pageViewport.height : 100
                         cpuUsage: root.cpuUsage
                         cpuHistory: root.cpuHistory

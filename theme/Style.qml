@@ -84,15 +84,19 @@ QtObject {
     /** Notch expansion spring damping */
     readonly property real springExpandDamping: 0.32
     /** Tab sliding highlight spring tension */
-    readonly property real springTabTension: 5.5
+    readonly property real springTabTension: 4.5
     /** Tab sliding highlight spring damping */
-    readonly property real springTabDamping: 0.22
+    readonly property real springTabDamping: 0.30
     /** Micro-interaction spring tension */
     readonly property real springMicroTension: 4.0
     /** Micro-interaction spring damping */
     readonly property real springMicroDamping: 0.60
     /** Minimum threshold delta to terminate spring oscillation */
     readonly property real springEpsilon: 0.05
+    /** Sub-pixel normalized carousel page offset spring threshold (~0.3px across 592px carousel) */
+    readonly property real springPageEpsilon: 0.0005
+    /** Micro-interaction and button scale spring threshold delta */
+    readonly property real springScaleEpsilon: 0.005
 
     // === Notch Dimensions (px) ===
     readonly property int notchHeightCompact: 30

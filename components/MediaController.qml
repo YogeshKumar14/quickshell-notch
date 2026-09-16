@@ -39,9 +39,9 @@ Item {
     /** Button scale animation duration / spring tension */
     property int buttonSpeed: 180
     /** Spring tension for buttons */
-    property real tabSpringTension: 5.5
+    property real tabSpringTension: 4.5
     /** Spring damping for buttons */
-    property real tabSpringDamping: 0.22
+    property real tabSpringDamping: 0.30
 
     /** Expose content height to parent */
     readonly property int mediaContentHeight: 100
@@ -765,7 +765,7 @@ Item {
                     opacity: root.canSeek ? 1.0 : 0.35
                     scale: (root.canSeek && root.buttonAnims && rewMA.pressed) ? 0.85 : ((root.canSeek && root.buttonAnims && rewMA.containsMouse) ? 1.15 : 1.0)
                     Behavior on opacity { NumberAnimation { duration: 150 } }
-                    Behavior on scale { enabled: root.buttonAnims; SpringAnimation { spring: root.tabSpringTension; damping: root.tabSpringDamping } }
+                    Behavior on scale { enabled: root.buttonAnims; SpringAnimation { spring: root.tabSpringTension; damping: root.tabSpringDamping; epsilon: Style.springScaleEpsilon } }
 
                     M3Icon {
                         anchors.centerIn: parent
@@ -797,7 +797,7 @@ Item {
                         width: 16; height: 16
                         anchors.verticalCenter: parent.verticalCenter
                         scale: (root.buttonAnims && prevMA.pressed) ? 0.85 : ((root.buttonAnims && prevMA.containsMouse) ? 1.15 : 1.0)
-                        Behavior on scale { enabled: root.buttonAnims; SpringAnimation { spring: root.tabSpringTension; damping: root.tabSpringDamping } }
+                        Behavior on scale { enabled: root.buttonAnims; SpringAnimation { spring: root.tabSpringTension; damping: root.tabSpringDamping; epsilon: Style.springScaleEpsilon } }
 
                         M3Icon {
                             anchors.centerIn: parent
@@ -828,7 +828,7 @@ Item {
                         width: 20; height: 20
                         anchors.verticalCenter: parent.verticalCenter
                         scale: (root.buttonAnims && playMA.pressed) ? 0.85 : ((root.buttonAnims && playMA.containsMouse) ? 1.15 : 1.0)
-                        Behavior on scale { enabled: root.buttonAnims; SpringAnimation { spring: root.tabSpringTension; damping: root.tabSpringDamping } }
+                        Behavior on scale { enabled: root.buttonAnims; SpringAnimation { spring: root.tabSpringTension; damping: root.tabSpringDamping; epsilon: Style.springScaleEpsilon } }
 
                         M3Icon {
                             anchors.centerIn: parent
@@ -859,7 +859,7 @@ Item {
                         width: 16; height: 16
                         anchors.verticalCenter: parent.verticalCenter
                         scale: (root.buttonAnims && nextMA.pressed) ? 0.85 : ((root.buttonAnims && nextMA.containsMouse) ? 1.15 : 1.0)
-                        Behavior on scale { enabled: root.buttonAnims; SpringAnimation { spring: root.tabSpringTension; damping: root.tabSpringDamping } }
+                        Behavior on scale { enabled: root.buttonAnims; SpringAnimation { spring: root.tabSpringTension; damping: root.tabSpringDamping; epsilon: Style.springScaleEpsilon } }
 
                         M3Icon {
                             anchors.centerIn: parent
@@ -892,7 +892,7 @@ Item {
                     anchors.verticalCenter: parent.verticalCenter
                     width: 16; height: 16
                     scale: (root.buttonAnims && devMA.pressed) ? 0.85 : ((root.buttonAnims && devMA.containsMouse) ? 1.15 : 1.0)
-                    Behavior on scale { enabled: root.buttonAnims; SpringAnimation { spring: root.tabSpringTension; damping: root.tabSpringDamping } }
+                    Behavior on scale { enabled: root.buttonAnims; SpringAnimation { spring: root.tabSpringTension; damping: root.tabSpringDamping; epsilon: Style.springScaleEpsilon } }
 
                     M3Icon {
                         anchors.centerIn: parent
