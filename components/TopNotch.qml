@@ -1187,12 +1187,21 @@ FocusScope {
             anchors.horizontalCenter: parent.horizontalCenter
             width: (root.isWorkspaceActive ? 240 : (root.showVisualizer ? root.dynamicVisNotchWidth : root.compactWidthVal))
             height: Style.notchHeightCompact
-            opacity: (root.isExpanded || root.isOsdActive || root.isNotifMenuOpen || root.isPowerMenuOpen || root.isWifiMenuOpen || root.isBluetoothMenuOpen || root.isAudioMenuOpen) ? 0.0 : 1.0
+            opacity: {
+                if (root.isExpanded || root.isOsdActive || root.isNotifMenuOpen || root.isPowerMenuOpen || root.isWifiMenuOpen || root.isBluetoothMenuOpen || root.isAudioMenuOpen) {
+                    return 0.0;
+                }
+                // Seamless hand-off when collapsing: start fading in as notch approaches compact height
+                if (notchBox.height > Style.notchHeightCompact * 1.60) {
+                    return 0.0;
+                }
+                return 1.0;
+            }
             visible: opacity > 0.01
 
             Behavior on opacity {
                 NumberAnimation {
-                    duration: root.isExpanded ? 80 : 140
+                    duration: root.isExpanded ? 40 : 80
                     easing.type: Easing.OutQuad
                 }
             }
@@ -1200,7 +1209,7 @@ FocusScope {
             containerWidth: notchBox.width
             containerHeight: notchBox.height
             targetWidth: width
-            targetHeight: height
+            targetHeight: Style.notchHeightCompact
             isExpanded: root.isExpanded
 
             timeStr: root.timeStr
@@ -1261,17 +1270,64 @@ FocusScope {
             height: root.pageNotchHeight
             anchors.top: parent.top
             anchors.horizontalCenter: parent.horizontalCenter
-            opacity: (root.isExpanded && !root.isOsdActive && !root.isNotifMenuOpen && !root.isPowerMenuOpen && !root.isWifiMenuOpen && !root.isBluetoothMenuOpen && !root.isAudioMenuOpen) ? 1.0 : 0.0
+            opacity: {
+                if (root.isOsdActive || root.isNotifMenuOpen || root.isPowerMenuOpen || root.isWifiMenuOpen || root.isBluetoothMenuOpen || root.isAudioMenuOpen) {
+                    return 0.0;
+                }
+                if (root.isExpanded) {
+                    // Do not show until notch has expanded past compact pill to eliminate clock ghosting
+                    if (notchBox.height < Style.notchHeightCompact * 1.25) {
+                        return 0.0;
+                    }
+                    return 1.0;
+                }
+                // When collapsing, remain visible while pill is shrinking down so contents scale with pill
+                if (notchBox.height > Style.notchHeightCompact * 1.40) {
+                    return 1.0;
+                }
+                return 0.0;
+            }
             visible: opacity > 0.01
 
+            // Dynamic progress calculations tracking real-time spring physical geometry
+            readonly property real hTarget: Math.max(Style.notchHeightCompact + 1, root.pageNotchHeight)
+            readonly property real compactW: root.isWorkspaceActive ? 240 : (root.showVisualizer ? root.dynamicVisNotchWidth : root.compactWidthVal)
+            readonly property real wTarget: Math.max(compactW + 1, Style.notchWidthExpanded)
+
+            readonly property real heightProgress: (hTarget > Style.notchHeightCompact)
+                ? Math.max(0.0, Math.min(1.0, (notchBox.height - Style.notchHeightCompact) / (hTarget - Style.notchHeightCompact)))
+                : (root.isExpanded ? 1.0 : 0.0)
+
+            readonly property real widthProgress: (wTarget > compactW)
+                ? Math.max(0.0, Math.min(1.0, (notchBox.width - compactW) / (wTarget - compactW)))
+                : (root.isExpanded ? 1.0 : 0.0)
+
+            // Combined motion progress (60% vertical stroke + 40% horizontal widening)
+            readonly property real animProgress: (heightProgress * 0.60) + (widthProgress * 0.40)
+
+            // Dynamic spring overshoot factors when notchBox bounces past target bounds
+            readonly property real heightOvershoot: (hTarget > 0 && notchBox.height > hTarget)
+                ? (notchBox.height - hTarget) / hTarget
+                : 0.0
+            readonly property real widthOvershoot: (wTarget > 0 && notchBox.width > wTarget)
+                ? (notchBox.width - wTarget) / wTarget
+                : 0.0
+            readonly property real totalOvershoot: (heightOvershoot * 0.60) + (widthOvershoot * 0.40)
+
             transformOrigin: Item.Top
-            scale: (root.isExpanded && root.pageNotchHeight > 0)
-                ? Math.max(0.60, notchBox.height / root.pageNotchHeight)
-                : 1.0
+
+            scale: {
+                if (root.pageNotchHeight <= 0) return 1.0;
+                // Base smooth organic scale: 0.80 when compact up to 1.0 when fully expanded
+                var baseScale = 0.80 + (animProgress * 0.20);
+                // Harmonious spring overshoot rebound follow-through:
+                var bounceScale = baseScale + (totalOvershoot * 0.35);
+                return Math.max(0.76, Math.min(1.12, bounceScale));
+            }
 
             Behavior on opacity {
                 NumberAnimation {
-                    duration: root.isExpanded ? 160 : 70
+                    duration: root.isExpanded ? 130 : 80
                     easing.type: Easing.OutQuad
                 }
             }

@@ -78,45 +78,42 @@ Item {
     Item {
         id: clockDisplay
         anchors.fill: parent
-        opacity: (!root.isWorkspaceActive && !root.showVisualizer && !root.isOsdActive && !root.isExpanded) ? 1.0 : 0.0
+        opacity: (!root.isWorkspaceActive && !root.showVisualizer && !root.isOsdActive) ? 1.0 : 0.0
         visible: opacity > 0.01
 
         Behavior on opacity {
             NumberAnimation {
-                duration: root.isExpanded ? 80 : 160
+                duration: (root.isOsdActive || root.isWorkspaceActive || root.isExpanded) ? 60 : 140
                 easing.type: Easing.OutQuad
             }
         }
 
-        // Realtime deviation factors driven by SpringAnimation on notchBox
-        readonly property real hDelta: root.targetHeight > 0
-            ? (root.containerHeight - root.targetHeight) / root.targetHeight
-            : 0
-        readonly property real wDelta: root.targetWidth > 0
-            ? (root.containerWidth - root.targetWidth) / root.targetWidth
-            : 0
-
-        // Synchronized spring bounce scale:
-        // Dynamically tracks vertical compression/rebound and horizontal settling
+        // Realtime spring bounce scale synchronized with notch pill physical motion
         readonly property real clockSpringScale: {
-            if (root.isExpanded) return 0.85;
+            if (root.isExpanded) {
+                // Smoothly follow outward expansion without abrupt jumps as pill fades out
+                var expDelta = (root.containerWidth - root.targetWidth) / Math.max(1, root.targetWidth);
+                return 1.0 + Math.min(0.08, Math.max(0.0, expDelta * 0.12));
+            }
 
-            var scaleVal = 1.0 + (hDelta * 0.40) + (wDelta * 0.35);
-            return Math.max(0.75, Math.min(1.20, scaleVal));
-        }
+            // Realtime deviation factors driven by SpringAnimation on notchBox
+            var hDelta = (root.containerHeight - root.targetHeight) / Math.max(1, root.targetHeight);
+            var wDelta = (root.containerWidth - root.targetWidth) / Math.max(1, root.targetWidth);
 
-        // Vertical center follow-through clamped to physical notch bounds
-        readonly property real bounceCenterY: {
-            if (root.isExpanded) return 0;
-            var diff = (root.containerHeight - root.targetHeight) * 0.5;
-            return Math.max(-3.0, Math.min(3.0, diff));
+            // Bound deviation inputs so macro-transitions glide smoothly into spring bounds
+            var clampedH = Math.max(-0.25, Math.min(0.35, hDelta));
+            var clampedW = Math.max(-0.25, Math.min(0.35, wDelta));
+
+            // Dynamic spring scale:
+            // Vertical compression squashes down on impact, rebounds past 1.0, and settles to 1.0.
+            // Horizontal breathing flexes with width settling.
+            var scaleVal = 1.0 + (clampedH * 0.45) + (clampedW * 0.30);
+            return Math.max(0.82, Math.min(1.15, scaleVal));
         }
 
         RowLayout {
             id: clockRow
-            anchors.horizontalCenter: parent.horizontalCenter
-            anchors.verticalCenter: parent.verticalCenter
-            anchors.verticalCenterOffset: clockDisplay.bounceCenterY
+            anchors.centerIn: parent
             spacing: 6
 
             transformOrigin: Item.Center
@@ -137,7 +134,7 @@ Item {
             Rectangle {
                 width: 14; height: 14; radius: 7
                 color: Style.accent
-                visible: root.notifCount > 0
+                visible: scale > 0.01
                 smooth: true
                 antialiasing: true
 
