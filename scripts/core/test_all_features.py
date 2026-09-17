@@ -614,7 +614,14 @@ def test_module_7():
         ("highlight_anim_type", "spring", "spring"),
         ("highlight_spring_tension", "4.2", 4.2),
         ("highlight_spring_damping", "0.28", 0.28),
-        ("grid_anim_duration", "150", 150)
+        ("grid_anim_duration", "150", 150),
+        ("shadow_enabled", "true", True),
+        ("shadow_enabled", "false", False),
+        ("shadow_color", "#000000", "#000000"),
+        ("shadow_opacity", "0.45", 0.45),
+        ("shadow_radius", "18", 18),
+        ("shadow_y_offset", "4", 4),
+        ("shadow_spread", "0.10", 0.10)
     ]
     for key, raw, expected in coercion_cases:
         t0 = time.perf_counter()
@@ -942,7 +949,20 @@ def test_module_13():
     dur = time.perf_counter() - t0
     record(mod, "SceneGraph OpacityMask Squircle Declarations", masks_valid, dur, "Missing OpacityMask")
 
-    # 13.2 Rapid 100-cycle IPC Morphing & State Burst
+    # 13.2 Verify Notch Drop Shadow & ShadowProxy Declarations
+    t0 = time.perf_counter()
+    tn_code = (COMPONENTS_DIR / "TopNotch.qml").read_text()
+    shadow_valid = (
+        "DropShadow" in tn_code and
+        "id: notchShadow" in tn_code and
+        "source: shadowProxy" in tn_code and
+        "id: shadowProxy" in tn_code and
+        "id: shadowRect" in tn_code
+    )
+    dur = time.perf_counter() - t0
+    record(mod, "Notch Drop Shadow & ShadowProxy Declarations", shadow_valid, dur, "Missing DropShadow in TopNotch.qml")
+
+    # 13.3 Rapid 100-cycle IPC Morphing & State Burst
     t0 = time.perf_counter()
     burst_passed = True
     if IPC_SOCK.exists():

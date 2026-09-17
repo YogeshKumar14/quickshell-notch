@@ -78,8 +78,8 @@ Scope {
             top: true
         }
 
-        implicitWidth: Style.notchWidthExpanded + 64
-        implicitHeight: Math.max(340, Style.notchHeightExpanded, notchComp.maxPageNotchHeight, notchComp.notifStackHeight)
+        implicitWidth: Style.notchWidthExpanded + 128
+        implicitHeight: Math.max(340, Style.notchHeightExpanded, notchComp.maxPageNotchHeight, notchComp.notifStackHeight) + 48
         color: "transparent"
 
         // Input passthrough: only the visible notchBox receives input, transparent area clicks through

@@ -328,6 +328,27 @@ FocusScope {
     property real highlightSpringDampingVal: 0.25
     property int gridAnimDurationVal: 120
 
+    // Drop Shadow Parameters
+    property bool shadowEnabledVal: true
+    property string shadowColorVal: "#000000"
+    property real shadowOpacityVal: 0.45
+    property int shadowRadiusVal: 18
+    property int shadowYOffsetVal: 4
+    property real shadowSpreadVal: 0.10
+
+    readonly property color resolvedShadowColor: {
+        try {
+            var hex = root.shadowColorVal;
+            if (!hex || hex === "" || hex === "accent") {
+                return Qt.rgba(Style.accent.r, Style.accent.g, Style.accent.b, Math.max(0.0, Math.min(1.0, root.shadowOpacityVal)));
+            }
+            var c = Qt.color(hex);
+            return Qt.rgba(c.r, c.g, c.b, Math.max(0.0, Math.min(1.0, root.shadowOpacityVal)));
+        } catch (e) {
+            return Qt.rgba(0, 0, 0, Math.max(0.0, Math.min(1.0, root.shadowOpacityVal)));
+        }
+    }
+
     // Visualizer Parameters
     property bool visualizerEnabledVal: true
     property string visualizerStyleVal: "bars"
@@ -565,6 +586,12 @@ FocusScope {
                     if (data.highlight_spring_tension !== undefined) root.highlightSpringTensionVal = data.highlight_spring_tension;
                     if (data.highlight_spring_damping !== undefined) root.highlightSpringDampingVal = data.highlight_spring_damping;
                     if (data.grid_anim_duration !== undefined) root.gridAnimDurationVal = data.grid_anim_duration;
+                    if (data.shadow_enabled !== undefined) root.shadowEnabledVal = data.shadow_enabled;
+                    if (data.shadow_color !== undefined) root.shadowColorVal = data.shadow_color;
+                    if (data.shadow_opacity !== undefined) root.shadowOpacityVal = data.shadow_opacity;
+                    if (data.shadow_radius !== undefined) root.shadowRadiusVal = data.shadow_radius;
+                    if (data.shadow_y_offset !== undefined) root.shadowYOffsetVal = data.shadow_y_offset;
+                    if (data.shadow_spread !== undefined) root.shadowSpreadVal = data.shadow_spread;
                 } catch (e) {
                     console.log("Error loading notch settings:", e);
                 }
@@ -1129,8 +1156,125 @@ FocusScope {
     }
 
     // =========================================================================
-    // 10. VISUAL PRESENTATION & GEOMETRY (DRIPPING INVERTED EARS)
+    // 10. VISUAL PRESENTATION & GEOMETRY (DROP SHADOW & DRIPPING INVERTED EARS)
     // =========================================================================
+
+    Item {
+        id: shadowProxy
+        z: -1
+        width: shadowRect.width + (root.drippingEarsVal && root.effectiveEarSize > 0 ? Math.round(root.effectiveEarSize) * 2 : 0)
+        height: shadowRect.height
+        anchors.top: notchBox.top
+        anchors.horizontalCenter: notchBox.horizontalCenter
+        visible: false
+
+        Canvas {
+            id: shadowEarLeft
+            width: Math.max(1, Math.round(root.effectiveEarSize))
+            height: Math.max(1, Math.round(root.effectiveEarSize))
+            anchors.top: parent.top
+            anchors.right: shadowRect.left
+            visible: root.drippingEarsVal && root.effectiveEarSize > 0
+
+            onPaint: {
+                var ctx = getContext("2d");
+                ctx.clearRect(0, 0, width, height);
+                ctx.fillStyle = "#000000";
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.lineTo(width, 0);
+                ctx.lineTo(width, height);
+                ctx.arcTo(width, 0, 0, 0, width);
+                ctx.closePath();
+                ctx.fill();
+            }
+
+            onWidthChanged: requestPaint()
+            onHeightChanged: requestPaint()
+            onVisibleChanged: if (visible) requestPaint()
+            Component.onCompleted: requestPaint()
+
+            Connections {
+                target: root
+                function onEarSizeChanged() { shadowEarLeft.requestPaint(); }
+                function onDrippingEarsValChanged() { shadowEarLeft.requestPaint(); }
+            }
+        }
+
+        Canvas {
+            id: shadowEarRight
+            width: Math.max(1, Math.round(root.effectiveEarSize))
+            height: Math.max(1, Math.round(root.effectiveEarSize))
+            anchors.top: parent.top
+            anchors.left: shadowRect.right
+            visible: root.drippingEarsVal && root.effectiveEarSize > 0
+
+            onPaint: {
+                var ctx = getContext("2d");
+                ctx.clearRect(0, 0, width, height);
+                ctx.fillStyle = "#000000";
+                ctx.beginPath();
+                ctx.moveTo(0, 0);
+                ctx.lineTo(width, 0);
+                ctx.lineTo(width, height);
+                ctx.arcTo(width, 0, 0, 0, width);
+                ctx.closePath();
+                ctx.fill();
+            }
+
+            onWidthChanged: requestPaint()
+            onHeightChanged: requestPaint()
+            onVisibleChanged: if (visible) requestPaint()
+            Component.onCompleted: requestPaint()
+
+            Connections {
+                target: root
+                function onEarSizeChanged() { shadowEarRight.requestPaint(); }
+                function onDrippingEarsValChanged() { shadowEarRight.requestPaint(); }
+            }
+        }
+
+        Rectangle {
+            id: shadowRect
+            anchors.top: parent.top
+            anchors.horizontalCenter: parent.horizontalCenter
+            width: notchBox.width
+            height: notchBox.height
+            color: "#000000"
+            bottomLeftRadius: notchBox.bottomLeftRadius
+            bottomRightRadius: notchBox.bottomRightRadius
+            topLeftRadius: 0
+            topRightRadius: 0
+        }
+    }
+
+    DropShadow {
+        id: notchShadow
+        z: -1
+        anchors.fill: shadowProxy
+        source: shadowProxy
+        radius: Math.max(0, root.shadowRadiusVal)
+        samples: Math.min(32, Math.max(9, Math.round(root.shadowRadiusVal * 1.5 + 1)))
+        color: root.resolvedShadowColor
+        verticalOffset: Math.max(0, root.shadowYOffsetVal)
+        horizontalOffset: 0
+        spread: Math.max(0.0, Math.min(1.0, root.shadowSpreadVal))
+        cached: false
+        visible: root.shadowEnabledVal && root.shadowOpacityVal > 0.001 && root.shadowRadiusVal > 0
+
+        Behavior on color {
+            ColorAnimation { duration: Style.animNormal }
+        }
+        Behavior on radius {
+            NumberAnimation { duration: Style.animNormal; easing.type: Easing.OutQuad }
+        }
+        Behavior on verticalOffset {
+            NumberAnimation { duration: Style.animNormal; easing.type: Easing.OutQuad }
+        }
+        Behavior on spread {
+            NumberAnimation { duration: Style.animNormal; easing.type: Easing.OutQuad }
+        }
+    }
 
     Canvas {
         id: earCanvasLeft
