@@ -5,7 +5,7 @@ apply_all_settings.py — Atomic Batch Settings Persistence & Live-Apply Pipelin
 Accepts a JSON payload containing notch and hyprland settings from SettingsWindow.qml:
   1. Validates and coerces all options against KEYWORD_MAP
   2. Merges notch settings atomically into ~/.config/quickshell/notch_settings.json
-  3. Executes dual-write into ~/.config/hypr/quickshell_hypr.lua AND quickshell_hypr.conf
+  3. Executes atomic persistence into ~/.config/hypr/quickshell_hypr.lua
   4. Live-applies settings without reload via apply_hypr_option helper
   5. Skips Hyprland side-effects when QUICKSHELL_SANDBOX=1 is set
 
@@ -22,14 +22,13 @@ sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(
 from atomic_write import atomic_write
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__))))
-from persist_hypr_state import generate_lua, generate_conf, load_state, save_state, ensure_includes
+from persist_hypr_state import generate_lua, load_state, save_state, ensure_includes
 from apply_hypr_option import apply as apply_hyprctl_keyword
 from hypr_keymap import KEYWORD_MAP
 
 CONFIG_DIR = os.path.expanduser("~/.config/quickshell")
 NOTCH_CONFIG_FILE = os.path.join(CONFIG_DIR, "notch_settings.json")
 HYPR_CONFIG_FILE = os.path.expanduser("~/.config/hypr/quickshell_hypr.lua")
-CONF_PATH = os.path.expanduser("~/.config/hypr/quickshell_hypr.conf")
 
 def main():
     if os.environ.get("QUICKSHELL_SANDBOX") == "1":
@@ -92,7 +91,7 @@ def main():
             except Exception:
                 pass
 
-    # 2. WRITE HYPRLAND LUA CONFIG & CONF (persistence) + sync state cache.
+    # 2. WRITE HYPRLAND LUA CONFIG (persistence) + sync state cache.
     #    Merge into existing state: a partial payload must never reset the
     #    settings it does not mention back to defaults.
     if converted:
@@ -100,12 +99,10 @@ def main():
         merged.update(converted)
         os.makedirs(os.path.dirname(HYPR_CONFIG_FILE), exist_ok=True)
         atomic_write(HYPR_CONFIG_FILE, generate_lua(merged))
-        atomic_write(CONF_PATH, generate_conf(merged))
         save_state(merged)
         ensure_includes(
             merged,
-            'pcall(dofile, os.getenv("HOME") .. "/.config/hypr/quickshell_hypr.lua")',
-            'source = $HOME/.config/hypr/quickshell_hypr.conf'
+            'pcall(dofile, os.getenv("HOME") .. "/.config/hypr/quickshell_hypr.lua")'
         )
 
         # 3. APPLY LIVE VIA TARGETED hyprctl keyword (no full reload)

@@ -274,7 +274,7 @@ def test_module_3():
         sys.path.insert(0, str(SCRIPTS_DIR / "hyprland"))
         sys.path.insert(0, str(SCRIPTS_DIR / "notch"))
         sys.path.insert(0, str(SCRIPTS_DIR / "core"))
-        from persist_hypr_state import generate_lua, generate_conf
+        from persist_hypr_state import generate_lua
         from get_notch_settings import DEFAULTS, coerce_value
         from atomic_write import atomic_write
 
@@ -293,12 +293,17 @@ def test_module_3():
         dur = time.perf_counter() - t0
         record(mod, "quickshell_hypr.lua Formatting & RGBA Syntax", lua_valid, dur, "Lua formatting failed")
 
-        # 3.2 Verify Conf generation with ARGB order
+        # 3.2 Verify Pure Lua Hyprland Configuration Table Schema
         t0 = time.perf_counter()
-        conf_content = generate_conf(test_state)
-        conf_valid = 'gaps_in = 7' in conf_content and 'rgba(ff55aa88)' in conf_content
+        lua_schema_valid = (
+            'general = {' in lua_content and
+            'decoration = {' in lua_content and
+            'animations = {' in lua_content and
+            'input = {' in lua_content and
+            'master = {' in lua_content
+        )
         dur = time.perf_counter() - t0
-        record(mod, "quickshell_hypr.conf Formatting & ARGB Syntax", conf_valid, dur, "Conf formatting failed")
+        record(mod, "quickshell_hypr.lua Pure Schema & Table Integrity", lua_schema_valid, dur, "Lua table schema integrity failed")
 
         # 3.3 Verify atomic write & zero-drift round-trip
         t0 = time.perf_counter()
@@ -320,16 +325,14 @@ def test_module_3():
         dur = time.perf_counter() - t0
         record(mod, "Notch Settings Zero-Drift Persistence", not drift, dur, "Setting values drifted")
 
-        # 3.4 Dual-write atomic file integrity
+        # 3.4 Pure Lua atomic file integrity
         t0 = time.perf_counter()
         target_lua = test_hypr_dir / "quickshell_hypr.lua"
-        target_conf = test_hypr_dir / "quickshell_hypr.conf"
         atomic_write(str(target_lua), lua_content)
-        atomic_write(str(target_conf), conf_content)
 
-        files_valid = target_lua.exists() and target_conf.exists() and target_lua.stat().st_size > 0 and target_conf.stat().st_size > 0
+        files_valid = target_lua.exists() and target_lua.stat().st_size > 0
         dur = time.perf_counter() - t0
-        record(mod, "Dual-Write Atomic File Integrity", files_valid, dur, "Dual-write files missing or empty")
+        record(mod, "Pure Lua Atomic File Integrity", files_valid, dur, "Pure Lua persistence file missing or empty")
 
         # 3.5 apply_all_settings.py nested "hyprland" payload test
         t0 = time.perf_counter()
@@ -394,19 +397,16 @@ def test_module_3():
 
         # 3.9 persist_hypr_state.py QUICKSHELL_SANDBOX guard verification
         t0 = time.perf_counter()
-        from persist_hypr_state import update_and_persist, LUA_PATH, CONF_PATH
+        from persist_hypr_state import update_and_persist, LUA_PATH
         lua_stat_before = os.path.getmtime(LUA_PATH) if os.path.exists(LUA_PATH) else 0
-        conf_stat_before = os.path.getmtime(CONF_PATH) if os.path.exists(CONF_PATH) else 0
         old_sandbox = os.environ.get("QUICKSHELL_SANDBOX")
         os.environ["QUICKSHELL_SANDBOX"] = "1"
         try:
             sandbox_ret = update_and_persist("border_size", "99")
             lua_stat_after = os.path.getmtime(LUA_PATH) if os.path.exists(LUA_PATH) else 0
-            conf_stat_after = os.path.getmtime(CONF_PATH) if os.path.exists(CONF_PATH) else 0
             sandbox_isolated = (
                 sandbox_ret is True and
-                lua_stat_before == lua_stat_after and
-                conf_stat_before == conf_stat_after
+                lua_stat_before == lua_stat_after
             )
         finally:
             if old_sandbox is None:
@@ -919,7 +919,7 @@ def generate_report():
         "",
         "- **Zero Zombie Processes**: Clean process tree verified in `/proc`.",
         "- **PR_SET_PDEATHSIG Verified**: Child processes terminate synchronously with daemon.",
-        "- **Dual-Write Integrity**: `quickshell_hypr.lua` and `quickshell_hypr.conf` syntax valid and drift-free.",
+        "- **Pure Lua Integrity**: `quickshell_hypr.lua` syntax valid and drift-free.",
         "- **100% Path Portability**: 0 hardcoded user home directory paths remain in tracked source files.",
         "- **IPC Fuzzing**: Handled 10KB binary payloads, null-bytes, boundary clamping, and 50 concurrent bursts without crashes."
     ])

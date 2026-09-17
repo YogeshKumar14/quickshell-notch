@@ -6,7 +6,7 @@
  *   - Notch Island Options: Compact Width, Corner Radius, Dripping Ears, Workspaces, Animations
  *   - Music Visualizer Options: Styles (Bars/Wave/Pulsar), Heights, Spectrum Count, Timeouts
  *   - System & Drawers: Magic Highlight, Wallpapers, Clock, Battery, OSD, Stats
- *   - Atomic Dual-Write persistence to ~/.config/hypr/quickshell_hypr.{lua,conf} and notch_settings.json
+ *   - Atomic persistence to ~/.config/hypr/quickshell_hypr.lua and notch_settings.json
  */
 
 import QtQuick
@@ -968,10 +968,11 @@ PanelWindow {
                                         Item { Layout.fillWidth: true }
                                         Rectangle {
                                             id: presetBar
-                                            implicitWidth: 260; implicitHeight: 28; radius: 14; color: "#2C2C2E"
+                                            implicitWidth: 320; implicitHeight: 28; radius: 14; color: "#2C2C2E"
                                             property string activePreset: (root.notchShadowRadiusVal === 18 && Math.abs(root.notchShadowOpacityVal - 0.45) < 0.03 && root.notchShadowYOffsetVal === 4 && (root.notchShadowColorVal === "#000000" || root.notchShadowColorVal === "#000")) ? "subtle" :
                                                                           ((root.notchShadowRadiusVal === 24 && Math.abs(root.notchShadowOpacityVal - 0.55) < 0.03 && root.notchShadowYOffsetVal === 6 && (root.notchShadowColorVal === "#000000" || root.notchShadowColorVal === "#000")) ? "soft" :
-                                                                          ((root.notchShadowRadiusVal === 20 && Math.abs(root.notchShadowOpacityVal - 0.60) < 0.03 && root.notchShadowYOffsetVal === 2 && root.notchShadowColorVal === "accent") ? "glow" : "custom"))
+                                                                          ((root.notchShadowRadiusVal === 32 && Math.abs(root.notchShadowOpacityVal - 0.80) < 0.03 && root.notchShadowYOffsetVal === 8 && (root.notchShadowColorVal === "#000000" || root.notchShadowColorVal === "#000")) ? "intense" :
+                                                                          ((root.notchShadowRadiusVal === 20 && Math.abs(root.notchShadowOpacityVal - 0.60) < 0.03 && root.notchShadowYOffsetVal === 2 && root.notchShadowColorVal === "accent") ? "glow" : "custom")))
                                             RowLayout {
                                                 anchors.fill: parent; spacing: 0
                                                 Rectangle {
@@ -1001,6 +1002,22 @@ PanelWindow {
                                                             root.notchShadowOpacityVal = 0.55;
                                                             root.notchShadowYOffsetVal = 6;
                                                             root.notchShadowSpreadVal = 0.15;
+                                                            root.notchShadowColorVal = "#000000";
+                                                            root.hasPendingChanges = true;
+                                                        }
+                                                    }
+                                                }
+                                                Rectangle {
+                                                    Layout.fillWidth: true; Layout.fillHeight: true; radius: 14
+                                                    color: presetBar.activePreset === "intense" ? Style.accent : "transparent"
+                                                    Text { anchors.centerIn: parent; text: "Intense"; font.family: Style.fontFamily; font.pixelSize: 11; font.weight: Font.Bold; color: presetBar.activePreset === "intense" ? Style.textOnAccent : Style.textPrimary }
+                                                    MouseArea {
+                                                        anchors.fill: parent; cursorShape: Qt.PointingHandCursor
+                                                        onClicked: {
+                                                            root.notchShadowRadiusVal = 32;
+                                                            root.notchShadowOpacityVal = 0.80;
+                                                            root.notchShadowYOffsetVal = 8;
+                                                            root.notchShadowSpreadVal = 0.25;
                                                             root.notchShadowColorVal = "#000000";
                                                             root.hasPendingChanges = true;
                                                         }

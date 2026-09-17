@@ -41,7 +41,6 @@ case "$TYPE" in
     blur_size)          KEY="decoration:blur:size" ;;
     reset_defaults)
         rm -f "$HOME/.config/hypr/quickshell_hypr.lua"
-        rm -f "$HOME/.config/hypr/quickshell_hypr.conf"
         PYTHONPATH="$HOME/.config/quickshell/scripts/notch:$HOME/.config/quickshell/scripts/core" \
         python3 - <<'PY'
 import json, os
@@ -68,6 +67,6 @@ if ! python3 "$APPLY_SCRIPT" "$KEY" "$VAL"; then
     exit 1
 fi
 
-# Persist to lua + conf files for reboot durability only if the live apply succeeded
+# Persist to lua file for reboot durability only if the live apply succeeded
 python3 "$PERSIST_SCRIPT" "$TYPE" "$VAL" || exit 1
 echo "ok"

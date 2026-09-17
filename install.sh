@@ -589,51 +589,36 @@ LUA_SNIPPET="
 hl.on(\"hyprland.start\", function()
     hl.exec_cmd(\"quickshell-notch launch\")
 end)
-import(\"quickshell_hypr.lua\")
+pcall(dofile, os.getenv(\"HOME\") .. \"/.config/hypr/quickshell_hypr.lua\")
 "
 
-if [ -f "$HYPR_CONF" ]; then
-    if grep -q "quickshell-notch launch" "$HYPR_CONF" 2>/dev/null || grep -q "launch_quickshell.sh" "$HYPR_CONF" 2>/dev/null; then
-        log_success "Hyprland configuration (${HYPR_CONF}) already includes QuickShell launch entry."
+if [ -f "$HYPR_LUA" ]; then
+    if grep -q "quickshell-notch launch" "$HYPR_LUA" 2>/dev/null || grep -q "launch_quickshell.sh" "$HYPR_LUA" 2>/dev/null; then
+        log_success "Hyprland Lua configuration (${HYPR_LUA}) already includes QuickShell launch entry."
     else
         if [ "$AUTO_HYPRLAND" = true ]; then
             if [ "$DRY_RUN" = true ]; then
-                log_dry "Would append QuickShell startup lines to ${HYPR_CONF}"
+                log_dry "Would append QuickShell startup lines to ${HYPR_LUA}"
             else
-                echo "$CONF_SNIPPET" >> "$HYPR_CONF"
-                log_success "Appended startup and persistence lines to ${HYPR_CONF}"
+                echo "$LUA_SNIPPET" >> "$HYPR_LUA"
+                log_success "Appended startup and persistence lines to ${HYPR_LUA}"
             fi
         else
             if [ "$DRY_RUN" = true ]; then
-                log_dry "Would offer to append startup & persistence snippet to ${HYPR_CONF}"
+                log_dry "Would offer to append startup & persistence snippet to ${HYPR_LUA}"
             else
-                echo -e "\n${C_BOLD}Hyprland integration snippet for ${HYPR_CONF}:${C_RESET}"
-                echo -e "${C_CYAN}${CONF_SNIPPET}${C_RESET}"
-                if prompt_confirm "Automatically append these lines to ${HYPR_CONF}?" "Y"; then
-                    echo "$CONF_SNIPPET" >> "$HYPR_CONF"
-                    log_success "Added to ${HYPR_CONF}"
+                echo -e "\n${C_BOLD}Hyprland Lua integration snippet for ${HYPR_LUA}:${C_RESET}"
+                echo -e "${C_CYAN}${LUA_SNIPPET}${C_RESET}"
+                if prompt_confirm "Automatically append these lines to ${HYPR_LUA}?" "Y"; then
+                    echo "$LUA_SNIPPET" >> "$HYPR_LUA"
+                    log_success "Added to ${HYPR_LUA}"
                 fi
             fi
         fi
     fi
-elif [ -f "$HYPR_LUA" ]; then
-    if grep -q "quickshell-notch launch" "$HYPR_LUA" 2>/dev/null || grep -q "launch_quickshell.sh" "$HYPR_LUA" 2>/dev/null; then
-        log_success "Hyprland Lua configuration (${HYPR_LUA}) already includes QuickShell launch entry."
-    else
-        if [ "$DRY_RUN" = true ]; then
-            log_dry "Would offer to append startup & persistence snippet to ${HYPR_LUA}"
-        else
-            echo -e "\n${C_BOLD}Hyprland Lua integration snippet for ${HYPR_LUA}:${C_RESET}"
-            echo -e "${C_CYAN}${LUA_SNIPPET}${C_RESET}"
-            if prompt_confirm "Automatically append these lines to ${HYPR_LUA}?" "Y"; then
-                echo "$LUA_SNIPPET" >> "$HYPR_LUA"
-                log_success "Added to ${HYPR_LUA}"
-            fi
-        fi
-    fi
 else
-    log_info "No hyprland.conf or hyprland.lua found at ~/.config/hypr/."
-    echo -e "Add this to your Hyprland configuration when ready:\n${C_CYAN}${CONF_SNIPPET}${C_RESET}"
+    log_info "No hyprland.lua found at ~/.config/hypr/."
+    echo -e "Add this to your Hyprland configuration when ready:\n${C_CYAN}${LUA_SNIPPET}${C_RESET}"
 fi
 
 # ==============================================================================

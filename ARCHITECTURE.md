@@ -172,8 +172,8 @@ graph TD
   - `currentPage`: 0 (Media), 1 (Apps), 2 (Walls), 3 (Stats).
   - Lazy Tab Loading: App launcher and Wallpaper tabs are dynamically activated and unloaded after 5 seconds of inactivity to conserve memory.
 
-### 3.2 Hyprland Dual-Write Persistence Pipeline
-Hyprland builds can use either the modern Lua config parser or the legacy configuration format. QuickShell Notch guarantees cross-version compatibility by executing an **Atomic Dual-Write**:
+### 3.2 Pure Lua Hyprland Persistence Pipeline
+Hyprland configuration is managed purely using modern Lua configuration architecture. QuickShell Notch guarantees clean, type-safe settings persistence by executing atomic writes into `quickshell_hypr.lua`:
 
 ```mermaid
 sequenceDiagram
@@ -181,13 +181,11 @@ sequenceDiagram
     participant Writer as apply_all_settings.py
     participant Cache as ~/.cache/quickshell/hypr_state.json
     participant Lua as ~/.config/hypr/quickshell_hypr.lua
-    participant Conf as ~/.config/hypr/quickshell_hypr.conf
     participant Live as apply_hypr_option.py
 
     UI->>Writer: JSON Settings Payload
     Writer->>Cache: Save Normalized State Cache
     Writer->>Lua: Atomic Write (RGBA byte order: rgba(rrggbbaa))
-    Writer->>Conf: Atomic Write (ARGB byte order: rgba(aarrggbb))
     Writer->>Live: Apply live options via hyprctl keyword / eval
 ```
 
