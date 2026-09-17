@@ -566,21 +566,7 @@ fi
 
 log_step "[5/6] Checking Hyprland integration..."
 
-HYPR_CONF="${HOME}/.config/hypr/hyprland.conf"
 HYPR_LUA="${HOME}/.config/hypr/hyprland.lua"
-
-CONF_SNIPPET="
-# ==============================================================================
-# QuickShell Notch Autostart & Persistence
-# ==============================================================================
-exec-once = quickshell-notch launch
-source = ~/.config/hypr/quickshell_hypr.conf
-
-# Keybinds
-bind = SUPER, N, exec, quickshell-notch toggle
-bind = SUPER, V, exec, quickshell-notch osd volume up
-bind = SUPER, B, exec, quickshell-notch osd brightness up
-"
 
 LUA_SNIPPET="
 -- ==============================================================================

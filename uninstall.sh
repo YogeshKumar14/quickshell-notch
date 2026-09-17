@@ -286,12 +286,12 @@ elif [ -d "$USER_CONFIG_DIR" ]; then
     fi
 fi
 
-# Hyprland persistence files cleanup if purged
+# Hyprland persistence file cleanup if purged
 if [ "$PURGE" = true ]; then
     if [ "$DRY_RUN" = true ]; then
-        log_dry "Would remove ~/.config/hypr/quickshell_hypr.conf and quickshell_hypr.lua"
+        log_dry "Would remove ~/.config/hypr/quickshell_hypr.lua"
     else
-        rm -f "${HOME}/.config/hypr/quickshell_hypr.conf" "${HOME}/.config/hypr/quickshell_hypr.lua"
+        rm -f "${HOME}/.config/hypr/quickshell_hypr.lua"
         log_success "Removed Hyprland persistence state files."
     fi
 fi
@@ -305,9 +305,9 @@ echo -e "${C_GREEN}${C_BOLD}  QuickShell Top Notch uninstalled successfully.  ${
 echo -e "${C_GREEN}${C_BOLD}================================================================${C_RESET}\n"
 
 echo -e "${C_BOLD}Next Steps:${C_RESET}"
-echo "  - If you added startup commands to ~/.config/hypr/hyprland.conf, remove:"
-echo "      exec-once = bash ~/.config/quickshell/scripts/core/launch_quickshell.sh"
-echo "      source = ~/.config/hypr/quickshell_hypr.conf"
+echo "  - If you added startup commands to ~/.config/hypr/hyprland.lua, remove:"
+echo "      hl.exec_cmd(\"~/.config/quickshell/scripts/core/launch_quickshell.sh\")"
+echo "      pcall(dofile, os.getenv(\"HOME\") .. \"/.config/hypr/quickshell_hypr.lua\")"
 echo "  - If you installed system packages (e.g. quickshell) specifically for the notch,"
 echo "    you can remove them with: sudo pacman -R <package_name>"
 echo ""

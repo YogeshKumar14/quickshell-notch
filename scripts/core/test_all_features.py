@@ -258,11 +258,11 @@ def test_module_2():
 
 
 # ==============================================================================
-# MODULE 3: HYPRLAND DUAL-WRITE & SETTINGS INTEGRITY
+# MODULE 3: HYPRLAND PURE LUA & SETTINGS INTEGRITY
 # ==============================================================================
 def test_module_3():
-    print(f"\n{Colors.BOLD}{Colors.BLUE}=== [MODULE 3] Hyprland Dual-Write & Settings Persistence ==={Colors.RESET}")
-    mod = "Module 3: Hyprland Dual-Write"
+    print(f"\n{Colors.BOLD}{Colors.BLUE}=== [MODULE 3] Hyprland Pure Lua & Settings Persistence ==={Colors.RESET}")
+    mod = "Module 3: Hyprland Pure Lua"
 
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp_path = Path(tmpdir)
@@ -325,14 +325,20 @@ def test_module_3():
         dur = time.perf_counter() - t0
         record(mod, "Notch Settings Zero-Drift Persistence", not drift, dur, "Setting values drifted")
 
-        # 3.4 Pure Lua atomic file integrity
+        # 3.4 Pure Lua atomic file integrity without legacy .conf
         t0 = time.perf_counter()
         target_lua = test_hypr_dir / "quickshell_hypr.lua"
         atomic_write(str(target_lua), lua_content)
+        legacy_conf = test_hypr_dir / "quickshell_hypr.conf"
 
-        files_valid = target_lua.exists() and target_lua.stat().st_size > 0
+        pure_lua_valid = (
+            target_lua.exists() and
+            target_lua.stat().st_size > 0 and
+            not legacy_conf.exists() and
+            not os.path.exists(os.path.expanduser("~/.config/hypr/quickshell_hypr.conf"))
+        )
         dur = time.perf_counter() - t0
-        record(mod, "Pure Lua Atomic File Integrity", files_valid, dur, "Pure Lua persistence file missing or empty")
+        record(mod, "Pure Lua Atomic File Integrity (Zero .conf)", pure_lua_valid, dur, "quickshell_hypr.lua invalid or obsolete quickshell_hypr.conf found")
 
         # 3.5 apply_all_settings.py nested "hyprland" payload test
         t0 = time.perf_counter()
@@ -415,6 +421,18 @@ def test_module_3():
                 os.environ["QUICKSHELL_SANDBOX"] = old_sandbox
         dur = time.perf_counter() - t0
         record(mod, "persist_hypr_state.py QUICKSHELL_SANDBOX guard verification", sandbox_isolated, dur, f"sandbox_ret: {sandbox_ret}")
+
+        # 3.10 Verify zero legacy .conf exports in persist_hypr_state & apply_all_settings
+        t0 = time.perf_counter()
+        import persist_hypr_state
+        import apply_all_settings
+        no_legacy_conf = (
+            not hasattr(persist_hypr_state, "generate_conf") and
+            not hasattr(persist_hypr_state, "CONF_PATH") and
+            not hasattr(apply_all_settings, "CONF_PATH")
+        )
+        dur = time.perf_counter() - t0
+        record(mod, "Zero Legacy .conf Exports in Persistence Backend", no_legacy_conf, dur, "Legacy .conf attributes still present in backend modules")
 
 
 # ==============================================================================

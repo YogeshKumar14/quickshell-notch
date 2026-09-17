@@ -9,14 +9,12 @@ post_install() {
     1. Initialize your user configuration:
        $ quickshell-notch init
 
-    2. Add autostart & persistence to ~/.config/hypr/hyprland.conf:
-       exec-once = quickshell-notch launch
-       source = ~/.config/hypr/quickshell_hypr.conf
-       bind = SUPER, N, exec, quickshell-notch toggle
-
-    3. Or in hyprland.lua:
-       hl.on("hyprland.start", function() hl.exec_cmd("quickshell-notch launch") end)
-       import("quickshell_hypr.lua")
+    2. Add autostart & persistence to ~/.config/hypr/hyprland.lua:
+       hl.on("hyprland.start", function()
+           hl.exec_cmd("quickshell-notch launch")
+       end)
+       pcall(dofile, os.getenv("HOME") .. "/.config/hypr/quickshell_hypr.lua")
+       hl.bind("SUPER + N", hl.dsp.exec_cmd("quickshell-notch toggle"))
 
 EOF
 }
