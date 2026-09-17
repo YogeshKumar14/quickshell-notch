@@ -337,15 +337,21 @@ FocusScope {
     property real shadowSpreadVal: 0.10
 
     readonly property color resolvedShadowColor: {
+        var op = Math.max(0.0, Math.min(1.0, root.shadowOpacityVal));
         try {
-            var hex = root.shadowColorVal;
-            if (!hex || hex === "" || hex === "accent") {
-                return Qt.rgba(Style.accent.r, Style.accent.g, Style.accent.b, Math.max(0.0, Math.min(1.0, root.shadowOpacityVal)));
+            var hex = (root.shadowColorVal || "").toString().trim();
+            if (hex === "accent") {
+                return Qt.rgba(Style.accent.r, Style.accent.g, Style.accent.b, op);
             }
-            var c = Qt.color(hex);
-            return Qt.rgba(c.r, c.g, c.b, Math.max(0.0, Math.min(1.0, root.shadowOpacityVal)));
+            if (hex !== "") {
+                var c = Qt.color(hex);
+                if (c && c.toString() !== "invalid") {
+                    return Qt.rgba(c.r, c.g, c.b, op);
+                }
+            }
+            return Qt.rgba(0, 0, 0, op);
         } catch (e) {
-            return Qt.rgba(0, 0, 0, Math.max(0.0, Math.min(1.0, root.shadowOpacityVal)));
+            return Qt.rgba(0, 0, 0, op);
         }
     }
 
@@ -1197,6 +1203,7 @@ FocusScope {
             Connections {
                 target: root
                 function onEarSizeChanged() { shadowEarLeft.requestPaint(); }
+                function onEffectiveEarSizeChanged() { shadowEarLeft.requestPaint(); }
                 function onDrippingEarsValChanged() { shadowEarLeft.requestPaint(); }
             }
         }
@@ -1214,10 +1221,10 @@ FocusScope {
                 ctx.clearRect(0, 0, width, height);
                 ctx.fillStyle = "#000000";
                 ctx.beginPath();
-                ctx.moveTo(0, 0);
-                ctx.lineTo(width, 0);
-                ctx.lineTo(width, height);
-                ctx.arcTo(width, 0, 0, 0, width);
+                ctx.moveTo(width, 0);
+                ctx.lineTo(0, 0);
+                ctx.lineTo(0, height);
+                ctx.arcTo(0, 0, width, 0, width);
                 ctx.closePath();
                 ctx.fill();
             }
@@ -1230,6 +1237,7 @@ FocusScope {
             Connections {
                 target: root
                 function onEarSizeChanged() { shadowEarRight.requestPaint(); }
+                function onEffectiveEarSizeChanged() { shadowEarRight.requestPaint(); }
                 function onDrippingEarsValChanged() { shadowEarRight.requestPaint(); }
             }
         }
@@ -1306,6 +1314,7 @@ FocusScope {
         Connections {
             target: root
             function onEarSizeChanged() { earCanvasLeft.requestPaint(); }
+            function onEffectiveEarSizeChanged() { earCanvasLeft.requestPaint(); }
             function onDrippingEarsValChanged() { earCanvasLeft.requestPaint(); }
         }
     }
@@ -1340,6 +1349,7 @@ FocusScope {
         Connections {
             target: root
             function onEarSizeChanged() { earCanvasRight.requestPaint(); }
+            function onEffectiveEarSizeChanged() { earCanvasRight.requestPaint(); }
             function onDrippingEarsValChanged() { earCanvasRight.requestPaint(); }
         }
     }

@@ -949,18 +949,28 @@ def test_module_13():
     dur = time.perf_counter() - t0
     record(mod, "SceneGraph OpacityMask Squircle Declarations", masks_valid, dur, "Missing OpacityMask")
 
-    # 13.2 Verify Notch Drop Shadow & ShadowProxy Declarations
+    # 13.2 Verify Notch Drop Shadow, Ear Geometry & ShadowProxy Declarations
     t0 = time.perf_counter()
     tn_code = (COMPONENTS_DIR / "TopNotch.qml").read_text()
+    sw_code = (COMPONENTS_DIR / "SettingsWindow.qml").read_text()
     shadow_valid = (
         "DropShadow" in tn_code and
         "id: notchShadow" in tn_code and
         "source: shadowProxy" in tn_code and
         "id: shadowProxy" in tn_code and
-        "id: shadowRect" in tn_code
+        "id: shadowRect" in tn_code and
+        "id: shadowEarLeft" in tn_code and
+        "id: shadowEarRight" in tn_code and
+        "arcTo(0, 0, width, 0, width)" in tn_code and
+        "notchShadowEnabledVal" in sw_code and
+        "notchShadowRadiusVal" in sw_code and
+        "notchShadowOpacityVal" in sw_code and
+        "notchShadowYOffsetVal" in sw_code and
+        "notchShadowSpreadVal" in sw_code and
+        "notchShadowColorVal" in sw_code
     )
     dur = time.perf_counter() - t0
-    record(mod, "Notch Drop Shadow & ShadowProxy Declarations", shadow_valid, dur, "Missing DropShadow in TopNotch.qml")
+    record(mod, "Notch Drop Shadow, Ear Geometry & ShadowProxy Declarations", shadow_valid, dur, "Missing DropShadow or Ear Geometry in TopNotch.qml / SettingsWindow.qml")
 
     # 13.3 Rapid 100-cycle IPC Morphing & State Burst
     t0 = time.perf_counter()

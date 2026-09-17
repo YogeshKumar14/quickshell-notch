@@ -967,21 +967,22 @@ PanelWindow {
                                         Text { text: "Elevation Presets"; font.family: Style.fontFamily; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
                                         Item { Layout.fillWidth: true }
                                         Rectangle {
+                                            id: presetBar
                                             implicitWidth: 260; implicitHeight: 28; radius: 14; color: "#2C2C2E"
-                                            property string activePreset: (root.notchShadowRadiusVal === 16 && Math.abs(root.notchShadowOpacityVal - 0.40) < 0.03 && root.notchShadowYOffsetVal === 4 && (root.notchShadowColorVal === "#000000" || root.notchShadowColorVal === "#000")) ? "subtle" :
+                                            property string activePreset: (root.notchShadowRadiusVal === 18 && Math.abs(root.notchShadowOpacityVal - 0.45) < 0.03 && root.notchShadowYOffsetVal === 4 && (root.notchShadowColorVal === "#000000" || root.notchShadowColorVal === "#000")) ? "subtle" :
                                                                           ((root.notchShadowRadiusVal === 24 && Math.abs(root.notchShadowOpacityVal - 0.55) < 0.03 && root.notchShadowYOffsetVal === 6 && (root.notchShadowColorVal === "#000000" || root.notchShadowColorVal === "#000")) ? "soft" :
                                                                           ((root.notchShadowRadiusVal === 20 && Math.abs(root.notchShadowOpacityVal - 0.60) < 0.03 && root.notchShadowYOffsetVal === 2 && root.notchShadowColorVal === "accent") ? "glow" : "custom"))
                                             RowLayout {
                                                 anchors.fill: parent; spacing: 0
                                                 Rectangle {
                                                     Layout.fillWidth: true; Layout.fillHeight: true; radius: 14
-                                                    color: parent.parent.activePreset === "subtle" ? Style.accent : "transparent"
-                                                    Text { anchors.centerIn: parent; text: "Subtle"; font.family: Style.fontFamily; font.pixelSize: 11; font.weight: Font.Bold; color: parent.parent.parent.activePreset === "subtle" ? Style.textOnAccent : Style.textPrimary }
+                                                    color: presetBar.activePreset === "subtle" ? Style.accent : "transparent"
+                                                    Text { anchors.centerIn: parent; text: "Subtle"; font.family: Style.fontFamily; font.pixelSize: 11; font.weight: Font.Bold; color: presetBar.activePreset === "subtle" ? Style.textOnAccent : Style.textPrimary }
                                                     MouseArea {
                                                         anchors.fill: parent; cursorShape: Qt.PointingHandCursor
                                                         onClicked: {
-                                                            root.notchShadowRadiusVal = 16;
-                                                            root.notchShadowOpacityVal = 0.40;
+                                                            root.notchShadowRadiusVal = 18;
+                                                            root.notchShadowOpacityVal = 0.45;
                                                             root.notchShadowYOffsetVal = 4;
                                                             root.notchShadowSpreadVal = 0.10;
                                                             root.notchShadowColorVal = "#000000";
@@ -991,8 +992,8 @@ PanelWindow {
                                                 }
                                                 Rectangle {
                                                     Layout.fillWidth: true; Layout.fillHeight: true; radius: 14
-                                                    color: parent.parent.activePreset === "soft" ? Style.accent : "transparent"
-                                                    Text { anchors.centerIn: parent; text: "Soft"; font.family: Style.fontFamily; font.pixelSize: 11; font.weight: Font.Bold; color: parent.parent.parent.activePreset === "soft" ? Style.textOnAccent : Style.textPrimary }
+                                                    color: presetBar.activePreset === "soft" ? Style.accent : "transparent"
+                                                    Text { anchors.centerIn: parent; text: "Soft"; font.family: Style.fontFamily; font.pixelSize: 11; font.weight: Font.Bold; color: presetBar.activePreset === "soft" ? Style.textOnAccent : Style.textPrimary }
                                                     MouseArea {
                                                         anchors.fill: parent; cursorShape: Qt.PointingHandCursor
                                                         onClicked: {
@@ -1007,8 +1008,8 @@ PanelWindow {
                                                 }
                                                 Rectangle {
                                                     Layout.fillWidth: true; Layout.fillHeight: true; radius: 14
-                                                    color: parent.parent.activePreset === "glow" ? Style.accent : "transparent"
-                                                    Text { anchors.centerIn: parent; text: "Glow"; font.family: Style.fontFamily; font.pixelSize: 11; font.weight: Font.Bold; color: parent.parent.parent.activePreset === "glow" ? Style.textOnAccent : Style.textPrimary }
+                                                    color: presetBar.activePreset === "glow" ? Style.accent : "transparent"
+                                                    Text { anchors.centerIn: parent; text: "Glow"; font.family: Style.fontFamily; font.pixelSize: 11; font.weight: Font.Bold; color: presetBar.activePreset === "glow" ? Style.textOnAccent : Style.textPrimary }
                                                     MouseArea {
                                                         anchors.fill: parent; cursorShape: Qt.PointingHandCursor
                                                         onClicked: {
@@ -1023,8 +1024,8 @@ PanelWindow {
                                                 }
                                                 Rectangle {
                                                     Layout.fillWidth: true; Layout.fillHeight: true; radius: 14
-                                                    color: parent.parent.activePreset === "custom" ? Style.accent : "transparent"
-                                                    Text { anchors.centerIn: parent; text: "Custom"; font.family: Style.fontFamily; font.pixelSize: 11; font.weight: Font.Bold; color: parent.parent.parent.activePreset === "custom" ? Style.textOnAccent : Style.textPrimary }
+                                                    color: presetBar.activePreset === "custom" ? Style.accent : "transparent"
+                                                    Text { anchors.centerIn: parent; text: "Custom"; font.family: Style.fontFamily; font.pixelSize: 11; font.weight: Font.Bold; color: presetBar.activePreset === "custom" ? Style.textOnAccent : Style.textPrimary }
                                                     MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor }
                                                 }
                                             }
