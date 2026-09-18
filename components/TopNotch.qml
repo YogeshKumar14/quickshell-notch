@@ -41,7 +41,7 @@ FocusScope {
     onIsExpandedChanged: {
         if (root.isExpanded) {
             collapseResetTimer.stop();
-            root.wasVisualizerActive = (root.visualizerEnabledVal && root.isVisualizerActive && !root.isWorkspaceActive && !root.isOsdActive);
+            root.wasVisualizerActive = root.isVisualizerMode;
             root.forceActiveFocus();
             if (root.currentPage === 1 || root.currentPage === 2) {
                 focusTabSearchTimer.restart();
@@ -366,15 +366,19 @@ FocusScope {
     property int visualizerPauseDelayVal: 1000
 
     property real textWidth: compactPillComp ? compactPillComp.trackTitleWidth : 0
-    property real dynamicVisNotchWidth: root.showVisualizer
-        ? Math.max(root.compactWidthVal, Math.min(460, 16 + 18 + 14 + Math.round(root.visualizerBarCountVal * 5.5) + 14 + root.textWidth + 20))
+    readonly property real compactVisArtMargin: Math.round((Style.notchHeightCompact - 18) / 2)
+    // Visualizer state regardless of expansion (used for stable layout width and crossfades during transitions)
+    readonly property bool isVisualizerMode: root.visualizerEnabledVal && root.isVisualizerActive && !root.isOsdActive && !root.isNotifMenuOpen && !root.isWorkspaceActive
+    readonly property bool showVisualizer: isVisualizerMode && !root.isExpanded
+
+    property real dynamicVisNotchWidth: (root.isVisualizerMode || root.wasVisualizerActive)
+        ? Math.max(root.compactWidthVal, Math.min(460, compactVisArtMargin + 18 + 10 + Math.round(root.visualizerBarCountVal * 5.5) + 10 + root.textWidth + 14))
         : root.compactWidthVal
 
     property var visualizerBars: []
     property var visualizerFrame: []
     property bool isAudioActive: false
     property bool isVisualizerActive: false
-    readonly property bool showVisualizer: root.visualizerEnabledVal && root.isVisualizerActive && !root.isExpanded && !root.isOsdActive && !root.isNotifMenuOpen && !root.isWorkspaceActive
 
     function triggerVisualizerPopup() {
         if (!root.visualizerEnabledVal) return;
@@ -1454,7 +1458,7 @@ FocusScope {
             id: compactPillComp
             anchors.top: parent.top
             anchors.horizontalCenter: parent.horizontalCenter
-            width: (root.isWorkspaceActive ? 240 : ((root.showVisualizer || (root.isExpanded && root.wasVisualizerActive)) ? root.dynamicVisNotchWidth : root.compactWidthVal))
+            width: root.isWorkspaceActive ? 240 : ((root.isVisualizerMode || root.wasVisualizerActive) ? root.dynamicVisNotchWidth : root.compactWidthVal)
             height: Style.notchHeightCompact
             opacity: {
                 if (root.isExpanded || root.isOsdActive || root.isAnyDrawerOpen) {
@@ -1470,7 +1474,7 @@ FocusScope {
 
             Behavior on opacity {
                 NumberAnimation {
-                    duration: root.isExpanded ? 50 : 80
+                    duration: root.isExpanded ? 0 : 80
                     easing.type: Easing.OutQuad
                 }
             }
@@ -1494,7 +1498,7 @@ FocusScope {
             handleRight: root.handleRight
             singleHandleX: root.singleHandleX
 
-            showVisualizer: root.showVisualizer || (root.isExpanded && root.wasVisualizerActive)
+            showVisualizer: (root.isVisualizerMode || root.wasVisualizerActive)
             visualizerStyle: root.visualizerStyleVal
             visualizerBarCount: root.visualizerBarCountVal
             visualizerHeight: root.visualizerHeightVal
@@ -1553,7 +1557,7 @@ FocusScope {
                 }
                 // When collapsing from expanded tab, remain visible while pill is shrinking down so contents scale with pill
                 // Guard: only show if collapsing from normal expanded tab, NEVER when a drawer was closed
-                if (!root.isDrawerClosing && notchBox.height > Style.notchHeightCompact * 1.40 && notchBox.height <= root.pageNotchHeight * 1.15) {
+                if (!root.isDrawerClosing && notchBox.height > Style.notchHeightCompact * 1.55 && notchBox.height <= root.pageNotchHeight * 1.15) {
                     return 1.0;
                 }
                 return 0.0;
@@ -1562,7 +1566,7 @@ FocusScope {
 
             // Dynamic progress calculations tracking real-time spring physical geometry
             readonly property real hTarget: Math.max(Style.notchHeightCompact + 1, root.pageNotchHeight)
-            readonly property real compactW: root.isWorkspaceActive ? 240 : ((root.showVisualizer || root.wasVisualizerActive) ? root.dynamicVisNotchWidth : root.compactWidthVal)
+            readonly property real compactW: root.isWorkspaceActive ? 240 : ((root.isVisualizerMode || root.wasVisualizerActive) ? root.dynamicVisNotchWidth : root.compactWidthVal)
             readonly property real wTarget: Math.max(compactW + 1, Style.notchWidthExpanded)
 
             readonly property real heightProgress: (hTarget > Style.notchHeightCompact)
@@ -1603,7 +1607,7 @@ FocusScope {
 
             Behavior on opacity {
                 NumberAnimation {
-                    duration: root.isReturningFromDrawer ? 110 : (root.isExpanded ? 140 : 80)
+                    duration: root.isReturningFromDrawer ? 110 : (root.isExpanded ? 140 : 60)
                     easing.type: Easing.OutQuad
                 }
             }
