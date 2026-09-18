@@ -78,8 +78,8 @@ Scope {
             top: true
         }
 
-        implicitWidth: Style.notchWidthExpanded + 64
-        implicitHeight: Math.max(340, Style.notchHeightExpanded, notchComp.maxPageNotchHeight, notchComp.notifStackHeight)
+        implicitWidth: Style.notchWidthExpanded + 128
+        implicitHeight: Math.max(340, Style.notchHeightExpanded, notchComp.maxPageNotchHeight, notchComp.notifStackHeight) + 64
         color: "transparent"
 
         // Input passthrough: only the visible notchBox receives input, transparent area clicks through
@@ -131,10 +131,14 @@ Scope {
                             }
                         } else if (cmd.startsWith("settings:tab:")) {
                             var tabIdx = parseInt(cmd.split(":")[2]);
-                            if (!settingsLoader.active) settingsLoader.active = true;
-                            if (settingsLoader.item) {
-                                settingsLoader.item.isOpen = true;
-                                settingsLoader.item.currentTab = tabIdx;
+                            if (!isNaN(tabIdx) && tabIdx >= 0 && tabIdx <= 3) {
+                                settingsLoader.targetTab = tabIdx;
+                                if (!settingsLoader.active) {
+                                    settingsLoader.active = true;
+                                } else if (settingsLoader.item) {
+                                    settingsLoader.item.isOpen = true;
+                                    settingsLoader.item.currentTab = tabIdx;
+                                }
                             }
                         } else if (cmd === "settings") {
                             if (!settingsLoader.active) {
@@ -190,10 +194,17 @@ Scope {
     // iOS-Style Hyprland Settings Window (Lazy-loaded on first open)
     LazyLoader {
         id: settingsLoader
+        property int targetTab: -1
         SettingsWindow {
             id: settingsWin
             onNotchSettingsChanged: notchComp.refreshNotchSettings()
-            Component.onCompleted: settingsWin.isOpen = true
+            Component.onCompleted: {
+                settingsWin.isOpen = true;
+                if (settingsLoader.targetTab >= 0) {
+                    settingsWin.currentTab = settingsLoader.targetTab;
+                    settingsLoader.targetTab = -1;
+                }
+            }
         }
     }
 }

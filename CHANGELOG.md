@@ -4,6 +4,21 @@ All notable changes to QuickShell Top Notch are documented here.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.5.0] - 2026-09-18
+
+### Added
+- **Configurable Ambient Drop Shadow Engine**: Hardware-accelerated multi-component drop shadow (`DropShadow` with unified `shadowProxy` combining solid notch container and dripping ear canvases) with full dynamic elevation controls and zero surface clipping (`shell.qml` surface margin expanded by +128px width, +64px height).
+- **Elevation & Ambient Shadow Settings Card**: Added dedicated shadow configuration card to Tab 1 ("Notch Island") in Settings App with 5 presets (Subtle, Soft, Intense, Wallust Glow, Custom) and real-time sliders for blur radius, opacity, vertical offset, and spread.
+- **Pure Lua Hyprland Architecture**: Completely dropped legacy `.conf` dual-writing (`quickshell_hypr.conf` purged); transitioned `persist_hypr_state.py`, `apply_all_settings.py`, `set_hypr_option.sh`, and `apply_wallpaper.sh` to pure Lua with modularized architecture (`~/.config/hypr/lua/`).
+
+### Fixed
+- **Visualizer Expansion Glitch & Layout Snapping**: Resolved split-second glitch during notch expansion when visualizer is active by decoupling `isVisualizerMode` from `!root.isExpanded`, stabilizing `dynamicVisNotchWidth` across macro-transitions, and harmonizing `compactPillComp` opacity transitions (`duration: root.isExpanded ? 0 : 80`) to completely eliminate text truncation, bar jumps, and header icon ghosting.
+- **Symmetric Compact Album Art Margins**: Equalized small album cover thumbnail margins in `CompactPill.qml` (`compactArtMargin: 6px`) to ensure exact 6px symmetry on left, top, and bottom edges against the notch boundary.
+- **Smooth Collapse Crossfade Continuity**: Tightened `expandedContainer` collapse threshold to $1.55 \times$ compact height (46.5px) and 60ms exit duration, eliminating faint lingering header glyphs during collapse.
+
+### Removed
+- **Legacy M3 Expressive UI Skill**: Cleaned up obsolete `m3-expressive-ui` skill and references per updated design practices and Apple HIG alignment.
+
 ## [2.4.0] - 2026-09-16
 
 ### Added

@@ -6,7 +6,7 @@
  *   - Notch Island Options: Compact Width, Corner Radius, Dripping Ears, Workspaces, Animations
  *   - Music Visualizer Options: Styles (Bars/Wave/Pulsar), Heights, Spectrum Count, Timeouts
  *   - System & Drawers: Magic Highlight, Wallpapers, Clock, Battery, OSD, Stats
- *   - Atomic Dual-Write persistence to ~/.config/hypr/quickshell_hypr.{lua,conf} and notch_settings.json
+ *   - Atomic persistence to ~/.config/hypr/quickshell_hypr.lua and notch_settings.json
  */
 
 import QtQuick
@@ -120,6 +120,14 @@ PanelWindow {
     property bool buttonAnimsVal: true
     property int buttonSpeedVal: 180
 
+    // --- NOTCH DROP SHADOW OPTIONS ---
+    property bool notchShadowEnabledVal: true
+    property string notchShadowColorVal: "#000000"
+    property real notchShadowOpacityVal: 0.45
+    property int notchShadowRadiusVal: 18
+    property int notchShadowYOffsetVal: 4
+    property real notchShadowSpreadVal: 0.10
+
     property bool visualizerEnabledVal: true
     property string visualizerStyleVal: "bars"
     property int visualizerHeightVal: 16
@@ -222,6 +230,12 @@ PanelWindow {
                     if (data.highlight_spring_tension !== undefined) root.highlightSpringTensionVal = data.highlight_spring_tension;
                     if (data.highlight_spring_damping !== undefined) root.highlightSpringDampingVal = data.highlight_spring_damping;
                     if (data.grid_anim_duration !== undefined) root.gridAnimDurationVal = data.grid_anim_duration;
+                    if (data.shadow_enabled !== undefined) root.notchShadowEnabledVal = data.shadow_enabled;
+                    if (data.shadow_color !== undefined) root.notchShadowColorVal = data.shadow_color;
+                    if (data.shadow_opacity !== undefined) root.notchShadowOpacityVal = data.shadow_opacity;
+                    if (data.shadow_radius !== undefined) root.notchShadowRadiusVal = data.shadow_radius;
+                    if (data.shadow_y_offset !== undefined) root.notchShadowYOffsetVal = data.shadow_y_offset;
+                    if (data.shadow_spread !== undefined) root.notchShadowSpreadVal = data.shadow_spread;
                 } catch(e) {}
             }
         }
@@ -304,7 +318,13 @@ PanelWindow {
                 "highlight_anim_type": root.highlightAnimTypeVal,
                 "highlight_spring_tension": root.highlightSpringTensionVal,
                 "highlight_spring_damping": root.highlightSpringDampingVal,
-                "grid_anim_duration": root.gridAnimDurationVal
+                "grid_anim_duration": root.gridAnimDurationVal,
+                "shadow_enabled": root.notchShadowEnabledVal,
+                "shadow_color": root.notchShadowColorVal,
+                "shadow_opacity": root.notchShadowOpacityVal,
+                "shadow_radius": root.notchShadowRadiusVal,
+                "shadow_y_offset": root.notchShadowYOffsetVal,
+                "shadow_spread": root.notchShadowSpreadVal
             }
         };
 
@@ -345,6 +365,12 @@ PanelWindow {
             root.expandSpringDamping = 0.28;
             root.tabSpringTension = 4.5;
             root.tabSpringDamping = 0.30;
+            root.notchShadowEnabledVal = true;
+            root.notchShadowColorVal = "#000000";
+            root.notchShadowOpacityVal = 0.45;
+            root.notchShadowRadiusVal = 18;
+            root.notchShadowYOffsetVal = 4;
+            root.notchShadowSpreadVal = 0.10;
         } else if (root.currentTab === 2) {
             root.visualizerEnabledVal = true;
             root.visualizerStyleVal = "bars";
@@ -900,7 +926,229 @@ PanelWindow {
                             }
                         }
 
-                        // CARD 2: Workspace Indicator
+                        // CARD 2: Ambient Drop Shadow & Elevation
+                        Rectangle {
+                            Layout.fillWidth: true
+                            implicitHeight: nShadowCol.implicitHeight + 28
+                            radius: 16
+                            color: "#1C1C1E"
+                            border.color: "#2C2C2E"
+
+                            ColumnLayout {
+                                id: nShadowCol
+                                anchors.fill: parent
+                                anchors.margins: 14
+                                spacing: 12
+
+                                RowLayout {
+                                    spacing: 8
+                                    M3Icon { name: "blur_on"; size: 14; color: Style.accent }
+                                    Text { text: "Notch Elevation & Ambient Drop Shadow"; font.family: Style.fontFamily; font.pixelSize: 12; font.weight: Font.Bold; color: Style.textSecondary }
+                                }
+
+                                // Enable Shadow Switch
+                                RowLayout {
+                                    Layout.fillWidth: true
+                                    Text { text: "Enable Notch Drop Shadow"; font.family: Style.fontFamily; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
+                                    Item { Layout.fillWidth: true }
+                                    CustomSwitch {
+                                        checked: root.notchShadowEnabledVal
+                                        onToggled: function(val) { root.notchShadowEnabledVal = val; root.hasPendingChanges = true; }
+                                    }
+                                }
+
+                                // Shadow Presets Segmented Bar
+                                ColumnLayout {
+                                    Layout.fillWidth: true; spacing: 4
+                                    visible: root.notchShadowEnabledVal
+
+                                    RowLayout {
+                                        Layout.fillWidth: true
+                                        Text { text: "Elevation Presets"; font.family: Style.fontFamily; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
+                                        Item { Layout.fillWidth: true }
+                                        Rectangle {
+                                            id: presetBar
+                                            implicitWidth: 320; implicitHeight: 28; radius: 14; color: "#2C2C2E"
+                                            property string activePreset: (root.notchShadowRadiusVal === 18 && Math.abs(root.notchShadowOpacityVal - 0.45) < 0.03 && root.notchShadowYOffsetVal === 4 && (root.notchShadowColorVal === "#000000" || root.notchShadowColorVal === "#000")) ? "subtle" :
+                                                                          ((root.notchShadowRadiusVal === 24 && Math.abs(root.notchShadowOpacityVal - 0.55) < 0.03 && root.notchShadowYOffsetVal === 6 && (root.notchShadowColorVal === "#000000" || root.notchShadowColorVal === "#000")) ? "soft" :
+                                                                          ((root.notchShadowRadiusVal === 32 && Math.abs(root.notchShadowOpacityVal - 0.80) < 0.03 && root.notchShadowYOffsetVal === 8 && (root.notchShadowColorVal === "#000000" || root.notchShadowColorVal === "#000")) ? "intense" :
+                                                                          ((root.notchShadowRadiusVal === 20 && Math.abs(root.notchShadowOpacityVal - 0.60) < 0.03 && root.notchShadowYOffsetVal === 2 && root.notchShadowColorVal === "accent") ? "glow" : "custom")))
+                                            RowLayout {
+                                                anchors.fill: parent; spacing: 0
+                                                Rectangle {
+                                                    Layout.fillWidth: true; Layout.fillHeight: true; radius: 14
+                                                    color: presetBar.activePreset === "subtle" ? Style.accent : "transparent"
+                                                    Text { anchors.centerIn: parent; text: "Subtle"; font.family: Style.fontFamily; font.pixelSize: 11; font.weight: Font.Bold; color: presetBar.activePreset === "subtle" ? Style.textOnAccent : Style.textPrimary }
+                                                    MouseArea {
+                                                        anchors.fill: parent; cursorShape: Qt.PointingHandCursor
+                                                        onClicked: {
+                                                            root.notchShadowRadiusVal = 18;
+                                                            root.notchShadowOpacityVal = 0.45;
+                                                            root.notchShadowYOffsetVal = 4;
+                                                            root.notchShadowSpreadVal = 0.10;
+                                                            root.notchShadowColorVal = "#000000";
+                                                            root.hasPendingChanges = true;
+                                                        }
+                                                    }
+                                                }
+                                                Rectangle {
+                                                    Layout.fillWidth: true; Layout.fillHeight: true; radius: 14
+                                                    color: presetBar.activePreset === "soft" ? Style.accent : "transparent"
+                                                    Text { anchors.centerIn: parent; text: "Soft"; font.family: Style.fontFamily; font.pixelSize: 11; font.weight: Font.Bold; color: presetBar.activePreset === "soft" ? Style.textOnAccent : Style.textPrimary }
+                                                    MouseArea {
+                                                        anchors.fill: parent; cursorShape: Qt.PointingHandCursor
+                                                        onClicked: {
+                                                            root.notchShadowRadiusVal = 24;
+                                                            root.notchShadowOpacityVal = 0.55;
+                                                            root.notchShadowYOffsetVal = 6;
+                                                            root.notchShadowSpreadVal = 0.15;
+                                                            root.notchShadowColorVal = "#000000";
+                                                            root.hasPendingChanges = true;
+                                                        }
+                                                    }
+                                                }
+                                                Rectangle {
+                                                    Layout.fillWidth: true; Layout.fillHeight: true; radius: 14
+                                                    color: presetBar.activePreset === "intense" ? Style.accent : "transparent"
+                                                    Text { anchors.centerIn: parent; text: "Intense"; font.family: Style.fontFamily; font.pixelSize: 11; font.weight: Font.Bold; color: presetBar.activePreset === "intense" ? Style.textOnAccent : Style.textPrimary }
+                                                    MouseArea {
+                                                        anchors.fill: parent; cursorShape: Qt.PointingHandCursor
+                                                        onClicked: {
+                                                            root.notchShadowRadiusVal = 32;
+                                                            root.notchShadowOpacityVal = 0.80;
+                                                            root.notchShadowYOffsetVal = 8;
+                                                            root.notchShadowSpreadVal = 0.25;
+                                                            root.notchShadowColorVal = "#000000";
+                                                            root.hasPendingChanges = true;
+                                                        }
+                                                    }
+                                                }
+                                                Rectangle {
+                                                    Layout.fillWidth: true; Layout.fillHeight: true; radius: 14
+                                                    color: presetBar.activePreset === "glow" ? Style.accent : "transparent"
+                                                    Text { anchors.centerIn: parent; text: "Glow"; font.family: Style.fontFamily; font.pixelSize: 11; font.weight: Font.Bold; color: presetBar.activePreset === "glow" ? Style.textOnAccent : Style.textPrimary }
+                                                    MouseArea {
+                                                        anchors.fill: parent; cursorShape: Qt.PointingHandCursor
+                                                        onClicked: {
+                                                            root.notchShadowRadiusVal = 20;
+                                                            root.notchShadowOpacityVal = 0.60;
+                                                            root.notchShadowYOffsetVal = 2;
+                                                            root.notchShadowSpreadVal = 0.20;
+                                                            root.notchShadowColorVal = "accent";
+                                                            root.hasPendingChanges = true;
+                                                        }
+                                                    }
+                                                }
+                                                Rectangle {
+                                                    Layout.fillWidth: true; Layout.fillHeight: true; radius: 14
+                                                    color: presetBar.activePreset === "custom" ? Style.accent : "transparent"
+                                                    Text { anchors.centerIn: parent; text: "Custom"; font.family: Style.fontFamily; font.pixelSize: 11; font.weight: Font.Bold; color: presetBar.activePreset === "custom" ? Style.textOnAccent : Style.textPrimary }
+                                                    MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+
+                                // Shadow Blur Radius Slider
+                                ColumnLayout {
+                                    Layout.fillWidth: true; spacing: 4
+                                    visible: root.notchShadowEnabledVal
+                                    RowLayout {
+                                        Layout.fillWidth: true
+                                        Text { text: "Shadow Blur Radius"; font.family: Style.fontFamily; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
+                                        Item { Layout.fillWidth: true }
+                                        Text { text: root.notchShadowRadiusVal + " px"; font.family: Style.fontFamilyMono; font.pixelSize: 12; font.weight: Font.Bold; color: Style.accent }
+                                    }
+                                    CustomSlider {
+                                        Layout.fillWidth: true; from: 4; to: 36; stepSize: 1; value: root.notchShadowRadiusVal
+                                        onMoved: function(val) { root.notchShadowRadiusVal = Math.round(val); root.hasPendingChanges = true; }
+                                    }
+                                }
+
+                                // Shadow Vertical (Y) Offset Slider
+                                ColumnLayout {
+                                    Layout.fillWidth: true; spacing: 4
+                                    visible: root.notchShadowEnabledVal
+                                    RowLayout {
+                                        Layout.fillWidth: true
+                                        Text { text: "Vertical Drop Offset"; font.family: Style.fontFamily; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
+                                        Item { Layout.fillWidth: true }
+                                        Text { text: root.notchShadowYOffsetVal + " px"; font.family: Style.fontFamilyMono; font.pixelSize: 12; font.weight: Font.Bold; color: Style.accent }
+                                    }
+                                    CustomSlider {
+                                        Layout.fillWidth: true; from: 0; to: 16; stepSize: 1; value: root.notchShadowYOffsetVal
+                                        onMoved: function(val) { root.notchShadowYOffsetVal = Math.round(val); root.hasPendingChanges = true; }
+                                    }
+                                }
+
+                                // Shadow Opacity Slider
+                                ColumnLayout {
+                                    Layout.fillWidth: true; spacing: 4
+                                    visible: root.notchShadowEnabledVal
+                                    RowLayout {
+                                        Layout.fillWidth: true
+                                        Text { text: "Shadow Density (Opacity)"; font.family: Style.fontFamily; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
+                                        Item { Layout.fillWidth: true }
+                                        Text { text: Math.round(root.notchShadowOpacityVal * 100) + " %"; font.family: Style.fontFamilyMono; font.pixelSize: 12; font.weight: Font.Bold; color: Style.accent }
+                                    }
+                                    CustomSlider {
+                                        Layout.fillWidth: true; from: 0.05; to: 1.0; stepSize: 0.05; value: root.notchShadowOpacityVal
+                                        onMoved: function(val) { root.notchShadowOpacityVal = Number(val.toFixed(2)); root.hasPendingChanges = true; }
+                                    }
+                                }
+
+                                // Shadow Spread Factor Slider
+                                ColumnLayout {
+                                    Layout.fillWidth: true; spacing: 4
+                                    visible: root.notchShadowEnabledVal
+                                    RowLayout {
+                                        Layout.fillWidth: true
+                                        Text { text: "Shadow Spread"; font.family: Style.fontFamily; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
+                                        Item { Layout.fillWidth: true }
+                                        Text { text: (root.notchShadowSpreadVal * 100).toFixed(0) + " %"; font.family: Style.fontFamilyMono; font.pixelSize: 12; font.weight: Font.Bold; color: Style.accent }
+                                    }
+                                    CustomSlider {
+                                        Layout.fillWidth: true; from: 0.0; to: 0.50; stepSize: 0.02; value: root.notchShadowSpreadVal
+                                        onMoved: function(val) { root.notchShadowSpreadVal = Number(val.toFixed(2)); root.hasPendingChanges = true; }
+                                    }
+                                }
+
+                                // Shadow Color Style (Pure Dark vs Dynamic Accent)
+                                RowLayout {
+                                    Layout.fillWidth: true
+                                    visible: root.notchShadowEnabledVal
+                                    Text { text: "Shadow Tint & Glow"; font.family: Style.fontFamily; font.pixelSize: 13; font.weight: Font.Medium; color: Style.textPrimary }
+                                    Item { Layout.fillWidth: true }
+                                    Rectangle {
+                                        implicitWidth: 190; implicitHeight: 28; radius: 14; color: "#2C2C2E"
+                                        RowLayout {
+                                            anchors.fill: parent; spacing: 0
+                                            Rectangle {
+                                                Layout.fillWidth: true; Layout.fillHeight: true; radius: 14
+                                                color: (root.notchShadowColorVal === "#000000" || root.notchShadowColorVal === "#000") ? Style.accent : "transparent"
+                                                Text { anchors.centerIn: parent; text: "Pure Dark"; font.family: Style.fontFamily; font.pixelSize: 11; font.weight: Font.Bold; color: (root.notchShadowColorVal === "#000000" || root.notchShadowColorVal === "#000") ? Style.textOnAccent : Style.textPrimary }
+                                                MouseArea {
+                                                    anchors.fill: parent; cursorShape: Qt.PointingHandCursor
+                                                    onClicked: { root.notchShadowColorVal = "#000000"; root.hasPendingChanges = true; }
+                                                }
+                                            }
+                                            Rectangle {
+                                                Layout.fillWidth: true; Layout.fillHeight: true; radius: 14
+                                                color: root.notchShadowColorVal === "accent" ? Style.accent : "transparent"
+                                                Text { anchors.centerIn: parent; text: "Wallust Glow"; font.family: Style.fontFamily; font.pixelSize: 11; font.weight: Font.Bold; color: root.notchShadowColorVal === "accent" ? Style.textOnAccent : Style.textPrimary }
+                                                MouseArea {
+                                                    anchors.fill: parent; cursorShape: Qt.PointingHandCursor
+                                                    onClicked: { root.notchShadowColorVal = "accent"; root.hasPendingChanges = true; }
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+                        }
+
+                        // CARD 3: Workspace Indicator
                         Rectangle {
                             Layout.fillWidth: true
                             implicitHeight: n2Col.implicitHeight + 28

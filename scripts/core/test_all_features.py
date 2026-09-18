@@ -258,11 +258,11 @@ def test_module_2():
 
 
 # ==============================================================================
-# MODULE 3: HYPRLAND DUAL-WRITE & SETTINGS INTEGRITY
+# MODULE 3: HYPRLAND PURE LUA & SETTINGS INTEGRITY
 # ==============================================================================
 def test_module_3():
-    print(f"\n{Colors.BOLD}{Colors.BLUE}=== [MODULE 3] Hyprland Dual-Write & Settings Persistence ==={Colors.RESET}")
-    mod = "Module 3: Hyprland Dual-Write"
+    print(f"\n{Colors.BOLD}{Colors.BLUE}=== [MODULE 3] Hyprland Pure Lua & Settings Persistence ==={Colors.RESET}")
+    mod = "Module 3: Hyprland Pure Lua"
 
     with tempfile.TemporaryDirectory() as tmpdir:
         tmp_path = Path(tmpdir)
@@ -274,7 +274,7 @@ def test_module_3():
         sys.path.insert(0, str(SCRIPTS_DIR / "hyprland"))
         sys.path.insert(0, str(SCRIPTS_DIR / "notch"))
         sys.path.insert(0, str(SCRIPTS_DIR / "core"))
-        from persist_hypr_state import generate_lua, generate_conf
+        from persist_hypr_state import generate_lua
         from get_notch_settings import DEFAULTS, coerce_value
         from atomic_write import atomic_write
 
@@ -293,12 +293,17 @@ def test_module_3():
         dur = time.perf_counter() - t0
         record(mod, "quickshell_hypr.lua Formatting & RGBA Syntax", lua_valid, dur, "Lua formatting failed")
 
-        # 3.2 Verify Conf generation with ARGB order
+        # 3.2 Verify Pure Lua Hyprland Configuration Table Schema
         t0 = time.perf_counter()
-        conf_content = generate_conf(test_state)
-        conf_valid = 'gaps_in = 7' in conf_content and 'rgba(ff55aa88)' in conf_content
+        lua_schema_valid = (
+            'general = {' in lua_content and
+            'decoration = {' in lua_content and
+            'animations = {' in lua_content and
+            'input = {' in lua_content and
+            'master = {' in lua_content
+        )
         dur = time.perf_counter() - t0
-        record(mod, "quickshell_hypr.conf Formatting & ARGB Syntax", conf_valid, dur, "Conf formatting failed")
+        record(mod, "quickshell_hypr.lua Pure Schema & Table Integrity", lua_schema_valid, dur, "Lua table schema integrity failed")
 
         # 3.3 Verify atomic write & zero-drift round-trip
         t0 = time.perf_counter()
@@ -320,16 +325,20 @@ def test_module_3():
         dur = time.perf_counter() - t0
         record(mod, "Notch Settings Zero-Drift Persistence", not drift, dur, "Setting values drifted")
 
-        # 3.4 Dual-write atomic file integrity
+        # 3.4 Pure Lua atomic file integrity without legacy .conf
         t0 = time.perf_counter()
         target_lua = test_hypr_dir / "quickshell_hypr.lua"
-        target_conf = test_hypr_dir / "quickshell_hypr.conf"
         atomic_write(str(target_lua), lua_content)
-        atomic_write(str(target_conf), conf_content)
+        legacy_conf = test_hypr_dir / "quickshell_hypr.conf"
 
-        files_valid = target_lua.exists() and target_conf.exists() and target_lua.stat().st_size > 0 and target_conf.stat().st_size > 0
+        pure_lua_valid = (
+            target_lua.exists() and
+            target_lua.stat().st_size > 0 and
+            not legacy_conf.exists() and
+            not os.path.exists(os.path.expanduser("~/.config/hypr/quickshell_hypr.conf"))
+        )
         dur = time.perf_counter() - t0
-        record(mod, "Dual-Write Atomic File Integrity", files_valid, dur, "Dual-write files missing or empty")
+        record(mod, "Pure Lua Atomic File Integrity (Zero .conf)", pure_lua_valid, dur, "quickshell_hypr.lua invalid or obsolete quickshell_hypr.conf found")
 
         # 3.5 apply_all_settings.py nested "hyprland" payload test
         t0 = time.perf_counter()
@@ -394,19 +403,16 @@ def test_module_3():
 
         # 3.9 persist_hypr_state.py QUICKSHELL_SANDBOX guard verification
         t0 = time.perf_counter()
-        from persist_hypr_state import update_and_persist, LUA_PATH, CONF_PATH
+        from persist_hypr_state import update_and_persist, LUA_PATH
         lua_stat_before = os.path.getmtime(LUA_PATH) if os.path.exists(LUA_PATH) else 0
-        conf_stat_before = os.path.getmtime(CONF_PATH) if os.path.exists(CONF_PATH) else 0
         old_sandbox = os.environ.get("QUICKSHELL_SANDBOX")
         os.environ["QUICKSHELL_SANDBOX"] = "1"
         try:
             sandbox_ret = update_and_persist("border_size", "99")
             lua_stat_after = os.path.getmtime(LUA_PATH) if os.path.exists(LUA_PATH) else 0
-            conf_stat_after = os.path.getmtime(CONF_PATH) if os.path.exists(CONF_PATH) else 0
             sandbox_isolated = (
                 sandbox_ret is True and
-                lua_stat_before == lua_stat_after and
-                conf_stat_before == conf_stat_after
+                lua_stat_before == lua_stat_after
             )
         finally:
             if old_sandbox is None:
@@ -415,6 +421,18 @@ def test_module_3():
                 os.environ["QUICKSHELL_SANDBOX"] = old_sandbox
         dur = time.perf_counter() - t0
         record(mod, "persist_hypr_state.py QUICKSHELL_SANDBOX guard verification", sandbox_isolated, dur, f"sandbox_ret: {sandbox_ret}")
+
+        # 3.10 Verify zero legacy .conf exports in persist_hypr_state & apply_all_settings
+        t0 = time.perf_counter()
+        import persist_hypr_state
+        import apply_all_settings
+        no_legacy_conf = (
+            not hasattr(persist_hypr_state, "generate_conf") and
+            not hasattr(persist_hypr_state, "CONF_PATH") and
+            not hasattr(apply_all_settings, "CONF_PATH")
+        )
+        dur = time.perf_counter() - t0
+        record(mod, "Zero Legacy .conf Exports in Persistence Backend", no_legacy_conf, dur, "Legacy .conf attributes still present in backend modules")
 
 
 # ==============================================================================
@@ -614,7 +632,14 @@ def test_module_7():
         ("highlight_anim_type", "spring", "spring"),
         ("highlight_spring_tension", "4.2", 4.2),
         ("highlight_spring_damping", "0.28", 0.28),
-        ("grid_anim_duration", "150", 150)
+        ("grid_anim_duration", "150", 150),
+        ("shadow_enabled", "true", True),
+        ("shadow_enabled", "false", False),
+        ("shadow_color", "#000000", "#000000"),
+        ("shadow_opacity", "0.45", 0.45),
+        ("shadow_radius", "18", 18),
+        ("shadow_y_offset", "4", 4),
+        ("shadow_spread", "0.10", 0.10)
     ]
     for key, raw, expected in coercion_cases:
         t0 = time.perf_counter()
@@ -912,7 +937,7 @@ def generate_report():
         "",
         "- **Zero Zombie Processes**: Clean process tree verified in `/proc`.",
         "- **PR_SET_PDEATHSIG Verified**: Child processes terminate synchronously with daemon.",
-        "- **Dual-Write Integrity**: `quickshell_hypr.lua` and `quickshell_hypr.conf` syntax valid and drift-free.",
+        "- **Pure Lua Integrity**: `quickshell_hypr.lua` syntax valid and drift-free.",
         "- **100% Path Portability**: 0 hardcoded user home directory paths remain in tracked source files.",
         "- **IPC Fuzzing**: Handled 10KB binary payloads, null-bytes, boundary clamping, and 50 concurrent bursts without crashes."
     ])
@@ -942,7 +967,30 @@ def test_module_13():
     dur = time.perf_counter() - t0
     record(mod, "SceneGraph OpacityMask Squircle Declarations", masks_valid, dur, "Missing OpacityMask")
 
-    # 13.2 Rapid 100-cycle IPC Morphing & State Burst
+    # 13.2 Verify Notch Drop Shadow, Ear Geometry & ShadowProxy Declarations
+    t0 = time.perf_counter()
+    tn_code = (COMPONENTS_DIR / "TopNotch.qml").read_text()
+    sw_code = (COMPONENTS_DIR / "SettingsWindow.qml").read_text()
+    shadow_valid = (
+        "DropShadow" in tn_code and
+        "id: notchShadow" in tn_code and
+        "source: shadowProxy" in tn_code and
+        "id: shadowProxy" in tn_code and
+        "id: shadowRect" in tn_code and
+        "id: shadowEarLeft" in tn_code and
+        "id: shadowEarRight" in tn_code and
+        "arcTo(0, 0, width, 0, width)" in tn_code and
+        "notchShadowEnabledVal" in sw_code and
+        "notchShadowRadiusVal" in sw_code and
+        "notchShadowOpacityVal" in sw_code and
+        "notchShadowYOffsetVal" in sw_code and
+        "notchShadowSpreadVal" in sw_code and
+        "notchShadowColorVal" in sw_code
+    )
+    dur = time.perf_counter() - t0
+    record(mod, "Notch Drop Shadow, Ear Geometry & ShadowProxy Declarations", shadow_valid, dur, "Missing DropShadow or Ear Geometry in TopNotch.qml / SettingsWindow.qml")
+
+    # 13.3 Rapid 100-cycle IPC Morphing & State Burst
     t0 = time.perf_counter()
     burst_passed = True
     if IPC_SOCK.exists():

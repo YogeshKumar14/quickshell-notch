@@ -56,7 +56,13 @@ DEFAULTS = {
     "highlight_anim_type": "spring",
     "highlight_spring_tension": 5.5,
     "highlight_spring_damping": 0.25,
-    "grid_anim_duration": 120
+    "grid_anim_duration": 120,
+    "shadow_enabled": True,
+    "shadow_color": "#000000",
+    "shadow_opacity": 0.45,
+    "shadow_radius": 18,
+    "shadow_y_offset": 4,
+    "shadow_spread": 0.10
 }
 
 def coerce_value(key, val):

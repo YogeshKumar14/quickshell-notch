@@ -51,7 +51,7 @@ Top Notch morphs dynamically between a compact top-center status pill and an exp
 
 ## Requirements
 
-- **Hyprland** ≥ 0.49 (uses the `hyprland-toplevel-mapping-v1` protocol; tested on 0.56.x with both legacy `hyprland.conf` and the new Lua config parser)
+- **Hyprland** ≥ 0.49 (uses the `hyprland-toplevel-mapping-v1` protocol; tested on 0.56.x with modern Lua config parser)
 - **QuickShell** ≥ 0.3.1 (Hyprland-enabled build)
 - **Python** 3.10+ (with `python-pillow`, `python-dbus`, `python-gobject`, `python-requests`)
 - **PipeWire** & **WirePlumber** (audio routing and volume control)
@@ -83,7 +83,7 @@ bash <(curl -fsSL https://raw.githubusercontent.com/YogeshKumar14/quickshell-not
 |------|-------------|
 | `-y`, `--yes` | Non-interactive mode (auto-confirms package installation and setup) |
 | `--dry-run` | Inspect actions without modifying files or system packages |
-| `--hyprland` | Automatically append autostart and persistence imports to `hyprland.conf` / `hyprland.lua` |
+| `--hyprland` | Automatically append autostart and persistence imports to `hyprland.lua` |
 | `--no-deps` | Skip dependency checks and package installation |
 | `--no-fonts` | Skip Apple SF Pro / SF Mono font installation |
 | `--link` | Symlink repository to `~/.config/quickshell` (default when cloned outside) |
@@ -202,25 +202,17 @@ matugen image ~/Pictures/wallpapers/your-wallpaper.jpg -m dark --source-color-in
 
 ### Integrate with Hyprland
 
-**Option A — Standard `hyprland.conf`:**
-
-```ini
-exec-once = bash ~/.config/quickshell/scripts/core/launch_quickshell.sh
-
-# Persistence imports for dynamically applied settings
-source = ~/.config/hypr/quickshell_hypr.conf
-```
-
-**Option B — Lua Config (`hyprland.lua`):**
+Add the autostart and persistence entries to `~/.config/hypr/hyprland.lua`:
 
 ```lua
 hl.on("hyprland.start", function()
-    hl.exec_cmd("$HOME/.config/quickshell/scripts/core/launch_quickshell.sh")
+    hl.exec_cmd(os.getenv("HOME") .. "/.config/quickshell/scripts/core/launch_quickshell.sh")
 end)
 
--- Persistence imports for dynamically applied settings
-import("quickshell_hypr.lua")
+-- Include Top Notch Bar permanent runtime settings overrides
+pcall(dofile, os.getenv("HOME") .. "/.config/hypr/quickshell_hypr.lua")
 ```
+
 
 The launcher script ([`launch_quickshell.sh`](scripts/core/launch_quickshell.sh)) terminates any stale `quickshell`, `cava`, visualizer, and `swaync` processes before starting QuickShell against `shell.qml`. Use the same script whenever you want a clean restart.
 
@@ -321,12 +313,11 @@ sudo pacman -R quickshell-notch
 
 ## Dynamic Settings Persistence
 
-The notch writes user configuration overrides dynamically to **both**:
+The notch writes user configuration overrides dynamically to:
 
 - `~/.config/hypr/quickshell_hypr.lua`
-- `~/.config/hypr/quickshell_hypr.conf`
 
-These files are written atomically and must be imported/sourced inside your main Hyprland configuration so options like border sizes, rounding, shadows, and gaps persist across restarts. The same option is written in the correct syntax for each parser (`rgba(...)` byte order differs between the Lua and legacy conf parsers).
+This file is written atomically with native `rgba(...)` byte order and is evaluated via `pcall(dofile, ...)` inside your root `hyprland.lua` so options like border sizes, rounding, shadows, and gaps persist across restarts with zero configuration drift.
 
 > On Hyprland builds with the non-legacy (Lua) config parser, `hyprctl keyword` silently no-ops. All live-apply paths detect this and fall back to `hyprctl eval` + `hl.config(...)` merging automatically.
 
@@ -495,7 +486,7 @@ Scripts detect `QUICKSHELL_SANDBOX=1` and skip all Hyprland side-effects (no set
 | Audio device switching not updating | Verify PipeWire and WirePlumber are active: `systemctl --user status pipewire wireplumber`. |
 | Wi-Fi / Bluetooth panels always empty | NetworkManager or Bluetooth services not active: `sudo systemctl enable --now NetworkManager bluetooth`. |
 | Visualizer never animates | `cava` missing or PipeWire daemon not running (`pipewire`, `pipewire-pulse`, `wireplumber`). |
-| Settings don't survive Hyprland restart | Persistence files must be imported in your Hyprland config (`source = ~/.config/hypr/quickshell_hypr.conf` or `import("quickshell_hypr.lua")`). |
+| Settings don't survive Hyprland restart | Persistence file must be imported in `hyprland.lua` (`pcall(dofile, os.getenv("HOME") .. "/.config/hypr/quickshell_hypr.lua")`). |
 | Clipped or misaligned expanded notch | The expanded height is dynamic per tab; adjust `expanded_height` in Settings window → Notch Island tab (Tab 1). |
 
 ---

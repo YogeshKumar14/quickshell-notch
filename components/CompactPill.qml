@@ -267,8 +267,9 @@ Item {
             anchors.right: parent.right
             anchors.verticalCenter: parent.verticalCenter
             anchors.verticalCenterOffset: root.bounceCenterY
-            anchors.leftMargin: Math.max(12, Style.bottomRadius - 8)
-            anchors.rightMargin: Math.max(14, Style.bottomRadius - 2)
+            readonly property real compactArtMargin: Math.round((Style.notchHeightCompact - 18) / 2)
+            anchors.leftMargin: compactArtMargin
+            anchors.rightMargin: Math.max(10, compactArtMargin + 6)
             height: Style.notchHeightCompact
             spacing: 8
 
