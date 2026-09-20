@@ -349,31 +349,6 @@ Item {
                             color: Style.textMuted
                             Layout.alignment: Qt.AlignTop
                         }
-
-                        // Quick dismiss button on hover
-                        Rectangle {
-                            width: 18
-                            height: 18
-                            radius: 9
-                            color: closeBtnM.containsMouse ? Style.cardBgHover : "transparent"
-                            visible: notifItemM.containsMouse && !delegateWrapper.isDragging
-                            Layout.alignment: Qt.AlignTop
-
-                            M3Icon {
-                                anchors.centerIn: parent
-                                name: "close"
-                                size: 12
-                                color: closeBtnM.containsMouse ? Style.danger : Style.textMuted
-                            }
-
-                            MouseArea {
-                                id: closeBtnM
-                                anchors.fill: parent
-                                hoverEnabled: true
-                                cursorShape: Qt.PointingHandCursor
-                                onClicked: root.dismissNotification(index)
-                            }
-                        }
                     }
                 }
 
