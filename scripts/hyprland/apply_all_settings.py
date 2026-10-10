@@ -17,18 +17,60 @@ import os
 import sys
 import json
 import socket
+import subprocess
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.dirname(os.path.abspath(__file__))), "core"))
 from atomic_write import atomic_write
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__))))
 from persist_hypr_state import generate_lua, load_state, save_state, ensure_includes
-from apply_hypr_option import apply as apply_hyprctl_keyword
+from apply_hypr_option import apply as apply_hyprctl_keyword, _lua_value
 from hypr_keymap import KEYWORD_MAP
 
 CONFIG_DIR = os.path.expanduser("~/.config/quickshell")
 NOTCH_CONFIG_FILE = os.path.join(CONFIG_DIR, "notch_settings.json")
 HYPR_CONFIG_FILE = os.path.expanduser("~/.config/hypr/quickshell_hypr.lua")
+
+
+def dict_to_lua_table(d):
+    """Serialize nested python dict to lua table syntax."""
+    items = []
+    for k, v in d.items():
+        if isinstance(v, dict):
+            items.append(f"{k} = {dict_to_lua_table(v)}")
+        else:
+            items.append(f"{k} = {v}")
+    return "{ " + ", ".join(items) + " }"
+
+
+def batch_apply_hypr_options(converted):
+    """Batch all converted Hyprland settings into a single hyprctl eval hl.config(...) call."""
+    if not converted:
+        return True
+
+    tree = {}
+    for key, value in converted.items():
+        hyprctl_key = KEYWORD_MAP[key][0]
+        parts = [p for seg in hyprctl_key.split(":") for p in seg.split(".")]
+        cur = tree
+        for p in parts[:-1]:
+            cur = cur.setdefault(p, {})
+        cur[parts[-1]] = _lua_value(hyprctl_key, value)
+
+    lua_table = dict_to_lua_table(tree)
+    try:
+        res = subprocess.run(
+            ["hyprctl", "eval", f"hl.config({lua_table})"],
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            timeout=2
+        )
+        out = (res.stdout or b"").decode("utf-8", errors="replace").lower()
+        if res.returncode == 0 and "error" not in out:
+            return True
+        return False
+    except Exception:
+        return False
 
 def main():
     if os.environ.get("QUICKSHELL_SANDBOX") == "1":
@@ -105,16 +147,19 @@ def main():
             'pcall(dofile, os.getenv("HOME") .. "/.config/hypr/quickshell_hypr.lua")'
         )
 
-        # 3. APPLY LIVE VIA TARGETED hyprctl keyword (no full reload)
-        failures = []
-        for key, value in converted.items():
-            hyprctl_key = KEYWORD_MAP[key][0]
-            if not apply_hyprctl_keyword(hyprctl_key, value):
-                failures.append(key)
+        # 3. APPLY LIVE VIA TARGETED BATCH EVAL (single subprocess fork)
+        #    Falls back to individual apply_hyprctl_keyword if the batch eval fails.
+        if not batch_apply_hypr_options(converted):
+            failures = []
+            for key, value in converted.items():
+                hyprctl_key = KEYWORD_MAP[key][0]
+                if not apply_hyprctl_keyword(hyprctl_key, value):
+                    failures.append(key)
 
-        if failures:
-            print(json.dumps({"status": "partial", "errors": [f"hyprctl failed: {k}" for k in failures]}))
-            return
+            if failures:
+                print(json.dumps({"status": "partial", "errors": [f"hyprctl failed: {k}" for k in failures]}))
+                return
+
         print(json.dumps({"status": "ok"}))
         return
 
