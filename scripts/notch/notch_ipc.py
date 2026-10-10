@@ -59,6 +59,7 @@ def send_command(cmd: str) -> None:
             s.sendall(f"{cmd}\n".encode('utf-8'))
     except Exception as e:
         print(f"Error sending command '{cmd}' to quickshell notch socket: {e}", file=sys.stderr)
+        sys.exit(1)
 
 
 if __name__ == "__main__":
