@@ -98,12 +98,15 @@ def main():
 
     converted = {}
     errors = []
-    for key, (hyprctl_key, converter) in KEYWORD_MAP.items():
-        if key in hypr_data:
-            try:
-                converted[key] = converter(hypr_data[key])
-            except Exception as e:
-                errors.append(f"{key}: {e}")
+    for key, val in hypr_data.items():
+        if key not in KEYWORD_MAP:
+            errors.append(f"unknown hyprland key: {key}")
+            continue
+        hyprctl_key, converter = KEYWORD_MAP[key]
+        try:
+            converted[key] = converter(val)
+        except Exception as e:
+            errors.append(f"{key}: {e}")
 
     if errors:
         print(json.dumps({"status": "error", "errors": errors}))
