@@ -46,9 +46,7 @@ FocusScope {
             if (root.currentPage === 1 || root.currentPage === 2) {
                 focusTabSearchTimer.restart();
             }
-            tabPreloadTimer.restart();
         } else {
-            tabPreloadTimer.stop();
             appsUnloadTimer.restart();
             wallsUnloadTimer.restart();
             if (root.visualizerEnabledVal && root.isPlaying) {
@@ -1002,13 +1000,21 @@ FocusScope {
 
     // MPRIS Media properties
     property int _mprisTrigger: 0
+    property bool cameraActive: false
 
     function refreshActivePlayer() {
         root._mprisTrigger++;
     }
 
     Instantiator {
+        id: mprisInstantiator
         model: Mpris.players
+        onObjectAdded: function(index, object) {
+            root._mprisTrigger++;
+        }
+        onObjectRemoved: function(index, object) {
+            root._mprisTrigger++;
+        }
         delegate: Connections {
             target: modelData
             function onPlaybackStateChanged() {
@@ -1028,7 +1034,9 @@ FocusScope {
 
     property var activePlayer: {
         var _trigger = root._mprisTrigger;
+        var _count = mprisInstantiator.count;
         var players = Mpris.players.values;
+        if (!players || players.length === 0) return null;
         for (var i = 0; i < players.length; i++) {
             if (players[i] && players[i].playbackState === MprisPlaybackState.Playing) return players[i];
         }
@@ -1180,6 +1188,9 @@ FocusScope {
 
         Canvas {
             id: shadowEarLeft
+            canvasSize: Qt.size(Math.max(1, Math.round(root.earSize)), Math.max(1, Math.round(root.earSize)))
+            renderTarget: Canvas.FramebufferObject
+            renderStrategy: Canvas.Cooperative
             width: Math.max(1, Math.round(root.effectiveEarSize))
             height: Math.max(1, Math.round(root.effectiveEarSize))
             anchors.top: parent.top
@@ -1188,6 +1199,8 @@ FocusScope {
 
             onPaint: {
                 var ctx = getContext("2d");
+                var width = canvasSize.width;
+                var height = canvasSize.height;
                 ctx.clearRect(0, 0, width, height);
                 ctx.fillStyle = "#000000";
                 ctx.beginPath();
@@ -1199,21 +1212,21 @@ FocusScope {
                 ctx.fill();
             }
 
-            onWidthChanged: requestPaint()
-            onHeightChanged: requestPaint()
             onVisibleChanged: if (visible) requestPaint()
             Component.onCompleted: requestPaint()
 
             Connections {
                 target: root
                 function onEarSizeChanged() { shadowEarLeft.requestPaint(); }
-                function onEffectiveEarSizeChanged() { shadowEarLeft.requestPaint(); }
                 function onDrippingEarsValChanged() { shadowEarLeft.requestPaint(); }
             }
         }
 
         Canvas {
             id: shadowEarRight
+            canvasSize: Qt.size(Math.max(1, Math.round(root.earSize)), Math.max(1, Math.round(root.earSize)))
+            renderTarget: Canvas.FramebufferObject
+            renderStrategy: Canvas.Cooperative
             width: Math.max(1, Math.round(root.effectiveEarSize))
             height: Math.max(1, Math.round(root.effectiveEarSize))
             anchors.top: parent.top
@@ -1222,6 +1235,8 @@ FocusScope {
 
             onPaint: {
                 var ctx = getContext("2d");
+                var width = canvasSize.width;
+                var height = canvasSize.height;
                 ctx.clearRect(0, 0, width, height);
                 ctx.fillStyle = "#000000";
                 ctx.beginPath();
@@ -1233,15 +1248,12 @@ FocusScope {
                 ctx.fill();
             }
 
-            onWidthChanged: requestPaint()
-            onHeightChanged: requestPaint()
             onVisibleChanged: if (visible) requestPaint()
             Component.onCompleted: requestPaint()
 
             Connections {
                 target: root
                 function onEarSizeChanged() { shadowEarRight.requestPaint(); }
-                function onEffectiveEarSizeChanged() { shadowEarRight.requestPaint(); }
                 function onDrippingEarsValChanged() { shadowEarRight.requestPaint(); }
             }
         }
@@ -1291,6 +1303,9 @@ FocusScope {
     Canvas {
         id: earCanvasLeft
         z: 10
+        canvasSize: Qt.size(Math.max(1, Math.round(root.earSize)), Math.max(1, Math.round(root.earSize)))
+        renderTarget: Canvas.FramebufferObject
+        renderStrategy: Canvas.Cooperative
         width: Math.max(1, Math.round(root.effectiveEarSize))
         height: Math.max(1, Math.round(root.effectiveEarSize))
         anchors.top: notchBox.top
@@ -1299,6 +1314,8 @@ FocusScope {
 
         onPaint: {
             var ctx = getContext("2d");
+            var width = canvasSize.width;
+            var height = canvasSize.height;
             ctx.clearRect(0, 0, width, height);
             ctx.fillStyle = "#000000";
             ctx.beginPath();
@@ -1310,15 +1327,12 @@ FocusScope {
             ctx.fill();
         }
 
-        onWidthChanged: requestPaint()
-        onHeightChanged: requestPaint()
         onVisibleChanged: if (visible) requestPaint()
         Component.onCompleted: requestPaint()
 
         Connections {
             target: root
             function onEarSizeChanged() { earCanvasLeft.requestPaint(); }
-            function onEffectiveEarSizeChanged() { earCanvasLeft.requestPaint(); }
             function onDrippingEarsValChanged() { earCanvasLeft.requestPaint(); }
         }
     }
@@ -1326,6 +1340,9 @@ FocusScope {
     Canvas {
         id: earCanvasRight
         z: 10
+        canvasSize: Qt.size(Math.max(1, Math.round(root.earSize)), Math.max(1, Math.round(root.earSize)))
+        renderTarget: Canvas.FramebufferObject
+        renderStrategy: Canvas.Cooperative
         width: Math.max(1, Math.round(root.effectiveEarSize))
         height: Math.max(1, Math.round(root.effectiveEarSize))
         anchors.top: notchBox.top
@@ -1334,6 +1351,8 @@ FocusScope {
 
         onPaint: {
             var ctx = getContext("2d");
+            var width = canvasSize.width;
+            var height = canvasSize.height;
             ctx.clearRect(0, 0, width, height);
             ctx.fillStyle = "#000000";
             ctx.beginPath();
@@ -1345,15 +1364,12 @@ FocusScope {
             ctx.fill();
         }
 
-        onWidthChanged: requestPaint()
-        onHeightChanged: requestPaint()
         onVisibleChanged: if (visible) requestPaint()
         Component.onCompleted: requestPaint()
 
         Connections {
             target: root
             function onEarSizeChanged() { earCanvasRight.requestPaint(); }
-            function onEffectiveEarSizeChanged() { earCanvasRight.requestPaint(); }
             function onDrippingEarsValChanged() { earCanvasRight.requestPaint(); }
         }
     }
@@ -1628,6 +1644,8 @@ FocusScope {
                 tabSpringDamping: root.tabSpringDamping
                 buttonSpeed: root.buttonSpeedVal
                 buttonAnims: root.buttonAnimsVal
+                isExpanded: root.isExpanded
+                cameraActive: root.cameraActive
 
                 batteryLevel: root.batteryLevel
                 batteryStatus: root.batteryStatus
@@ -1699,6 +1717,8 @@ FocusScope {
                         isPlaying: root.isPlaying
                         trackTitle: root.trackTitle
                         trackArtist: root.trackArtist
+                        isExpanded: root.isExpanded
+                        activeTab: root.currentPage
                         trackPosition: root.trackPosition
                         externalTrackLength: root.trackLength
                         volumeLevel: root.volumeLevel
