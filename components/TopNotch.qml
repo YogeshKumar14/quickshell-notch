@@ -111,7 +111,8 @@ FocusScope {
     function showOsd(type, value) {
         var num = Math.round(Number(value));
         if (isNaN(num)) num = 0;
-        root.osdValue = Math.max(0, Math.min(100, num));
+        var maxLimit = (type === "vol" || type === "volume") ? 150 : 100;
+        root.osdValue = Math.max(0, Math.min(maxLimit, num));
 
         if (!root.isOsdActive) {
             root.wasExpandedBeforeOsd = root.isExpanded;

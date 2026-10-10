@@ -70,12 +70,13 @@ Item {
             radius: 3
             color: "#3A3A3C"
             Layout.alignment: Qt.AlignVCenter
+            clip: true
 
             Rectangle {
                 height: parent.height
-                width: parent.width * (root.animatedOsdValue / 100.0)
+                width: Math.max(0, Math.min(parent.width, parent.width * (root.animatedOsdValue / 100.0)))
                 radius: 3
-                color: root.osdColor
+                color: root.animatedOsdValue > 100 ? Style.warning : root.osdColor
             }
         }
 
