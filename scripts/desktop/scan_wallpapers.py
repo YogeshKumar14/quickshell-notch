@@ -111,8 +111,9 @@ def scan(target_dir=""):
                 name = os.path.splitext(entry)[0].replace("-", " ").replace("_", " ").title()
                 items_to_process.append((name, entry, full_path, folder_name))
 
-    # Process thumbnails in parallel (4 workers bounds memory on large sets)
-    with ThreadPoolExecutor(max_workers=4) as executor:
+    # Process thumbnails in parallel (bound workers to host core count, max 2 on dual-core systems)
+    workers = min(2, os.cpu_count() or 1)
+    with ThreadPoolExecutor(max_workers=workers) as executor:
         wallpapers = list(executor.map(process_wallpaper, items_to_process))
 
     # Sort alphabetically by name
