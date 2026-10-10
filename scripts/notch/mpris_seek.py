@@ -156,7 +156,7 @@ def seek_via_playerctl(target_player, value, is_relative=True, current_pos_hint=
     if is_relative:
         arg = f"{abs(value):.2f}-" if value < 0 else f"{value:.2f}+"
         res = subprocess.run(cmd_prefix + ["position", arg], capture_output=True, text=True)
-        if res.returncode == 0:
+        if res.returncode == 0 and not res.stderr.strip():
             return True
 
         # Fallback: query current position and compute absolute position
@@ -169,13 +169,14 @@ def seek_via_playerctl(target_player, value, is_relative=True, current_pos_hint=
 
         if curr_sec is not None:
             target_sec = max(0.0, curr_sec + value)
-            res2 = subprocess.run(cmd_prefix + ["position", f"{target_sec:.2f}"], capture_output=True)
-            if res2.returncode == 0:
+            res2 = subprocess.run(cmd_prefix + ["position", f"{target_sec:.2f}"], capture_output=True, text=True)
+            if res2.returncode == 0 and not res2.stderr.strip():
                 return True
         return False
     else:
-        res = subprocess.run(cmd_prefix + ["position", f"{value:.2f}"], capture_output=True, text=True)
-        if res.returncode == 0:
+        clamped_val = max(0.0, float(value))
+        res = subprocess.run(cmd_prefix + ["position", f"{clamped_val:.2f}"], capture_output=True, text=True)
+        if res.returncode == 0 and not res.stderr.strip():
             return True
 
         # Fallback: query current position and compute relative delta
@@ -187,10 +188,10 @@ def seek_via_playerctl(target_player, value, is_relative=True, current_pos_hint=
             curr_sec = current_pos_hint
 
         if curr_sec is not None:
-            delta = value - curr_sec
+            delta = clamped_val - curr_sec
             arg = f"{abs(delta):.2f}-" if delta < 0 else f"{delta:.2f}+"
-            res2 = subprocess.run(cmd_prefix + ["position", arg], capture_output=True)
-            if res2.returncode == 0:
+            res2 = subprocess.run(cmd_prefix + ["position", arg], capture_output=True, text=True)
+            if res2.returncode == 0 and not res2.stderr.strip():
                 return True
         return False
 
