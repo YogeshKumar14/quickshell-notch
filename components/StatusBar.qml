@@ -296,6 +296,7 @@ Item {
 
             // macOS Battery Display (Matching Reference: [43%] [Battery Pill] at far right)
             RowLayout {
+                id: batteryDisplayRow
                 spacing: 4
                 Layout.alignment: Qt.AlignVCenter
 
@@ -326,7 +327,7 @@ Item {
                         anchors.left: parent.left
                         anchors.verticalCenter: parent.verticalCenter
                         color: "transparent"
-                        border.color: parent.parent.batColor
+                        border.color: batteryDisplayRow.batColor
                         border.width: 1.0
 
                         Behavior on border.color { ColorAnimation { duration: Style.animNormal; easing.type: Easing.OutQuad } }
@@ -339,7 +340,7 @@ Item {
                             height: parent.height - 2
                             width: Math.max(0, Math.min(parent.width - 2, Math.round((parent.width - 2) * (root.batteryLevel / 100.0))))
                             radius: 2
-                            color: parent.parent.parent.batColor
+                            color: batteryDisplayRow.batColor
                             opacity: 0.92
 
                             Behavior on width { NumberAnimation { duration: 300; easing.type: Easing.OutQuad } }
@@ -365,7 +366,7 @@ Item {
                         width: 1.2
                         height: 3.5
                         radius: 0.6
-                        color: parent.parent.batColor
+                        color: batteryDisplayRow.batColor
 
                         Behavior on color { ColorAnimation { duration: Style.animNormal; easing.type: Easing.OutQuad } }
                     }
