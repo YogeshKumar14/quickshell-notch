@@ -208,10 +208,20 @@ def main():
     target_player = args.player.strip()
     success = False
 
-    # Step 1: Try direct D-Bus communication
+    # Check if any active media players exist on D-Bus
+    has_players = False
+    bus = None
     if dbus is not None:
         try:
             bus = dbus.SessionBus()
+            names = [n for n in bus.list_names() if n.startswith("org.mpris.MediaPlayer2.") and not n.endswith(".playerctld")]
+            has_players = bool(names)
+        except Exception:
+            has_players = False
+
+    # Step 1: Try direct D-Bus communication
+    if bus is not None:
+        try:
             bus_name = find_mpris_player(bus, target_player)
             if bus_name:
                 success = seek_via_dbus(bus, bus_name, args.value, is_relative=is_relative, current_pos_hint=args.current_pos)
@@ -219,14 +229,18 @@ def main():
             success = False
 
     # Step 2: Fallback to playerctl if D-Bus attempt did not succeed
-    if not success:
+    if not success and (has_players or target_player):
         try:
             success = seek_via_playerctl(target_player, args.value, is_relative=is_relative, current_pos_hint=args.current_pos)
         except Exception as e:
             print(f"Error seeking media: {e}", file=sys.stderr)
             sys.exit(1)
 
-    sys.exit(0 if success else 0)
+    # When no player is targeted and no players exist on the system, treat as a safe no-op
+    if not success and not target_player and not has_players:
+        success = True
+
+    sys.exit(0 if success else 1)
 
 
 if __name__ == "__main__":
