@@ -159,6 +159,8 @@ Item {
         source: name !== "" ? Qt.resolvedUrl("../assets/icons/" + getSvgName(name) + ".svg") : ""
         sourceSize: Qt.size(Math.max(48, Math.round(root.size * 3)), Math.max(48, Math.round(root.size * 3)))
         fillMode: Image.PreserveAspectFit
+        asynchronous: true
+        cache: true
         smooth: true
         mipmap: true
         antialiasing: true
@@ -169,6 +171,7 @@ Item {
         anchors.fill: img
         source: img
         color: root.color
+        cached: true
         smooth: true
         antialiasing: true
         visible: name !== "" && img.status === Image.Ready
