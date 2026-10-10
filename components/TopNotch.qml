@@ -909,18 +909,6 @@ FocusScope {
         onTriggered: root.appsTabAlive = false
     }
 
-    Timer {
-        id: tabPreloadTimer
-        interval: 350
-        repeat: false
-        onTriggered: {
-            if (root.isExpanded) {
-                root.appsTabAlive = true;
-                root.wallsTabAlive = true;
-            }
-        }
-    }
-
     // =========================================================================
     // 8. WALLUST COLOR INTEGRATION & WALLPAPER APPLICATION
     // =========================================================================
