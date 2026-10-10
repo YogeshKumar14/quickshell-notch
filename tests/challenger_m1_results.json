@@ -1,0 +1,214 @@
+{
+  "mpris_tests": {
+    "1.1_no_player_no_target": {
+      "passed": true,
+      "code": 0,
+      "expected": 0,
+      "desc": "No player running and no target specified returns exit code 0 (safe no-op)"
+    },
+    "1.2_nonexistent_target_relative": {
+      "passed": true,
+      "code": 1,
+      "expected": 1,
+      "desc": "Non-existent target with relative seek returns exit code 1"
+    },
+    "1.3_nonexistent_target_absolute_pos": {
+      "passed": true,
+      "code": 1,
+      "expected": 1,
+      "desc": "Non-existent target with absolute positive seek returns exit code 1"
+    },
+    "1.4_nonexistent_target_absolute_neg": {
+      "passed": true,
+      "code": 1,
+      "expected": 1,
+      "desc": "Non-existent target with absolute negative seek returns exit code 1 (Checks playerctl Unknown option flaw)",
+      "flaw_observed": false
+    },
+    "1.5_invalid_target_prefix": {
+      "passed": true,
+      "code": 1,
+      "expected": 1,
+      "desc": "Bare prefix 'org.mpris.MediaPlayer2.' returns exit code 1"
+    },
+    "1.6_unseekable_rel_pos": {
+      "code": 1,
+      "expected": 1,
+      "passed": true
+    },
+    "1.6_unseekable_rel_neg": {
+      "code": 1,
+      "expected": 1,
+      "passed": true
+    },
+    "1.6_unseekable_abs_pos": {
+      "code": 1,
+      "expected": 1,
+      "passed": true
+    },
+    "1.6_unseekable_abs_neg": {
+      "code": 1,
+      "expected": 1,
+      "passed": true,
+      "flaw_observed": false
+    },
+    "1.6_unseekable_calls_count": {
+      "seek_calls": 0,
+      "setpos_calls": 0,
+      "passed": true
+    },
+    "1.7_extreme_1e9": {
+      "code": 0,
+      "expected": 0,
+      "passed": true
+    },
+    "1.7_overflow_1e15": {
+      "code": 1,
+      "expected": 1,
+      "passed": true
+    },
+    "1.7_nan": {
+      "code": 1,
+      "expected": 1,
+      "passed": true
+    },
+    "1.7_inf": {
+      "code": 1,
+      "expected": 1,
+      "passed": true
+    }
+  },
+  "ipc_tests": {
+    "concurrent_50_bursts": {
+      "total": 50,
+      "success": 50,
+      "failed": 0,
+      "duration_sec": 0.103,
+      "errors": []
+    },
+    "fuzzing": {
+      "payloads_tested": 24,
+      "fuzz_results": {
+        "empty_newline": {
+          "sent": true,
+          "error": null
+        },
+        "whitespace": {
+          "sent": true,
+          "error": null
+        },
+        "unknown_command": {
+          "sent": true,
+          "error": null
+        },
+        "tab_negative": {
+          "sent": true,
+          "error": null
+        },
+        "tab_overflow": {
+          "sent": true,
+          "error": null
+        },
+        "tab_nan": {
+          "sent": false,
+          "error": "[Errno 11] Resource temporarily unavailable"
+        },
+        "tab_empty": {
+          "sent": false,
+          "error": "[Errno 11] Resource temporarily unavailable"
+        },
+        "tab_huge_int": {
+          "sent": false,
+          "error": "[Errno 11] Resource temporarily unavailable"
+        },
+        "settings_tab_neg": {
+          "sent": false,
+          "error": "[Errno 11] Resource temporarily unavailable"
+        },
+        "settings_tab_out_of_bounds": {
+          "sent": false,
+          "error": "[Errno 11] Resource temporarily unavailable"
+        },
+        "settings_tab_string": {
+          "sent": false,
+          "error": "[Errno 11] Resource temporarily unavailable"
+        },
+        "osd_vol_neg": {
+          "sent": false,
+          "error": "[Errno 11] Resource temporarily unavailable"
+        },
+        "osd_vol_over_150": {
+          "sent": false,
+          "error": "[Errno 11] Resource temporarily unavailable"
+        },
+        "osd_vol_nan": {
+          "sent": false,
+          "error": "[Errno 11] Resource temporarily unavailable"
+        },
+        "osd_vol_empty": {
+          "sent": false,
+          "error": "[Errno 11] Resource temporarily unavailable"
+        },
+        "osd_bri_neg": {
+          "sent": false,
+          "error": "[Errno 11] Resource temporarily unavailable"
+        },
+        "osd_bri_over_100": {
+          "sent": false,
+          "error": "[Errno 11] Resource temporarily unavailable"
+        },
+        "osd_bri_invalid": {
+          "sent": false,
+          "error": "[Errno 11] Resource temporarily unavailable"
+        },
+        "unicode_emojis": {
+          "sent": false,
+          "error": "[Errno 11] Resource temporarily unavailable"
+        },
+        "null_bytes": {
+          "sent": false,
+          "error": "[Errno 11] Resource temporarily unavailable"
+        },
+        "binary_garbage": {
+          "sent": false,
+          "error": "[Errno 11] Resource temporarily unavailable"
+        },
+        "command_injection_shell": {
+          "sent": false,
+          "error": "[Errno 11] Resource temporarily unavailable"
+        },
+        "command_injection_subshell": {
+          "sent": false,
+          "error": "[Errno 11] Resource temporarily unavailable"
+        },
+        "oversized_100kb": {
+          "sent": false,
+          "error": "[Errno 11] Resource temporarily unavailable"
+        }
+      },
+      "socket_alive_after_fuzz": true
+    },
+    "rapid_multiline": {
+      "multiline_sent": true,
+      "rapid_sequential_50": 0
+    }
+  },
+  "resource_telemetry": {
+    "baseline": {
+      "cpu": 12.6,
+      "rss_mb": 341.2421875
+    },
+    "during_burst": {
+      "cpu": 12.7,
+      "rss_mb": 342.13671875
+    },
+    "cooldown_2s": {
+      "cpu": 14.1,
+      "rss_mb": 353.1171875
+    },
+    "cooldown_5s": {
+      "cpu": 13.8,
+      "rss_mb": 352.98828125
+    }
+  }
+}
