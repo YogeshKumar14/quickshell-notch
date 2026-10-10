@@ -110,3 +110,19 @@ This document itemizes all discovered functional bugs, visual glitches, performa
 - **Fix**: Dynamically scaled workers with `min(2, os.cpu_count() or 1)`.
 - **Commit**: `b62c493` — `perf(wallpaper): scale thumbnail workers dynamically to host core capacity`
 - **Verification**: Executed `python3 scripts/desktop/scan_wallpapers.py` and validated thumbnail pipeline with `test_all_features.py` Module 8.
+
+---
+
+### BUG-08: Inverted Ear Canvas Static Sizing & FBO Viewport Clipping Artifact
+- **Affected File**: [`components/TopNotch.qml`](file:///home/yogesh/.config/quickshell/components/TopNotch.qml#L1186-L1375)
+- **Severity**: High
+- **Category**: Visual Glitch / Rendering Pipeline
+- **Description**: In the compact pill state, a sharp black rectangular box/step artifact appeared on the right side in place of the smooth inverted ear curve, while the left ear curve was completely missing/transparent.
+- **Root Cause**: `ad1f2dc` introduced static `canvasSize: Qt.size(Math.max(1, Math.round(root.earSize)), Math.max(1, Math.round(root.earSize)))` (33×33 px) and removed `onWidthChanged`/`onHeightChanged`/`onEffectiveEarSizeChanged` repaint handlers. In the compact pill state, `effectiveEarSize` shrinks to 8 px (`notchBox.height - notchBox.bottomLeftRadius = 30 - 22 = 8`). Qt Quick Canvas rendered the 33×33 coordinate space into an 8×8 Item viewport without scaling. Because `earCanvasRight`'s filled region anchors at `(0, 0)`, the 8×8 top-left sub-region was 100% solid black, producing an 8×8 px solid square block. Conversely, `earCanvasLeft`'s filled mass anchors at `(33, 0)`, leaving its 8×8 top-left sub-region 100% transparent.
+- **Fix**:
+  1. Updated `canvasSize` dynamically to `Qt.size(width, height)` across `earCanvasLeft`, `earCanvasRight`, `shadowEarLeft`, and `shadowEarRight`.
+  2. Restored `onWidthChanged: requestPaint()`, `onHeightChanged: requestPaint()`, and `onEffectiveEarSizeChanged` listeners in `Connections`.
+  3. Switched back to native `Canvas.Image` rasterization for crisp anti-aliased 1:1 pixel rendering at both 8 px (compact) and 33 px (expanded) sizes.
+- **Commit**: Pending
+- **Verification**: Visual inspection and pixel analysis of `notch_compact_pill_fixed_zoom.png` and `notch_expanded_fixed_crop.png` confirmed symmetric, smooth inverted curves and zero rectangular protrusion. Validated via `validate_codebase.sh` and `e2e_test_suite.py`.
+

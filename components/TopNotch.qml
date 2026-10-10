@@ -1185,72 +1185,74 @@ FocusScope {
 
         Canvas {
             id: shadowEarLeft
-            canvasSize: Qt.size(Math.max(1, Math.round(root.earSize)), Math.max(1, Math.round(root.earSize)))
-            renderTarget: Canvas.FramebufferObject
-            renderStrategy: Canvas.Cooperative
             width: Math.max(1, Math.round(root.effectiveEarSize))
             height: Math.max(1, Math.round(root.effectiveEarSize))
+            canvasSize: Qt.size(width, height)
             anchors.top: parent.top
             anchors.right: shadowRect.left
             visible: root.drippingEarsVal && root.effectiveEarSize > 0
 
             onPaint: {
                 var ctx = getContext("2d");
-                var width = canvasSize.width;
-                var height = canvasSize.height;
-                ctx.clearRect(0, 0, width, height);
+                var w = width;
+                var h = height;
+                ctx.clearRect(0, 0, w, h);
                 ctx.fillStyle = "#000000";
                 ctx.beginPath();
                 ctx.moveTo(0, 0);
-                ctx.lineTo(width, 0);
-                ctx.lineTo(width, height);
-                ctx.arcTo(width, 0, 0, 0, width);
+                ctx.lineTo(w, 0);
+                ctx.lineTo(w, h);
+                ctx.arcTo(w, 0, 0, 0, w);
                 ctx.closePath();
                 ctx.fill();
             }
 
+            onWidthChanged: requestPaint()
+            onHeightChanged: requestPaint()
             onVisibleChanged: if (visible) requestPaint()
             Component.onCompleted: requestPaint()
 
             Connections {
                 target: root
                 function onEarSizeChanged() { shadowEarLeft.requestPaint(); }
+                function onEffectiveEarSizeChanged() { shadowEarLeft.requestPaint(); }
                 function onDrippingEarsValChanged() { shadowEarLeft.requestPaint(); }
             }
         }
 
         Canvas {
             id: shadowEarRight
-            canvasSize: Qt.size(Math.max(1, Math.round(root.earSize)), Math.max(1, Math.round(root.earSize)))
-            renderTarget: Canvas.FramebufferObject
-            renderStrategy: Canvas.Cooperative
             width: Math.max(1, Math.round(root.effectiveEarSize))
             height: Math.max(1, Math.round(root.effectiveEarSize))
+            canvasSize: Qt.size(width, height)
             anchors.top: parent.top
             anchors.left: shadowRect.right
             visible: root.drippingEarsVal && root.effectiveEarSize > 0
 
             onPaint: {
                 var ctx = getContext("2d");
-                var width = canvasSize.width;
-                var height = canvasSize.height;
-                ctx.clearRect(0, 0, width, height);
+                var w = width;
+                var h = height;
+                ctx.clearRect(0, 0, w, h);
                 ctx.fillStyle = "#000000";
                 ctx.beginPath();
-                ctx.moveTo(width, 0);
+                ctx.moveTo(w, 0);
                 ctx.lineTo(0, 0);
-                ctx.lineTo(0, height);
-                ctx.arcTo(0, 0, width, 0, width);
+                ctx.lineTo(0, h);
+                ctx.arcTo(0, 0, w, 0, w);
                 ctx.closePath();
                 ctx.fill();
             }
 
+            onWidthChanged: requestPaint()
+            onHeightChanged: requestPaint()
             onVisibleChanged: if (visible) requestPaint()
             Component.onCompleted: requestPaint()
 
             Connections {
                 target: root
                 function onEarSizeChanged() { shadowEarRight.requestPaint(); }
+                function onEffectiveEarSizeChanged() { shadowEarRight.requestPaint(); }
                 function onDrippingEarsValChanged() { shadowEarRight.requestPaint(); }
             }
         }
@@ -1300,36 +1302,37 @@ FocusScope {
     Canvas {
         id: earCanvasLeft
         z: 10
-        canvasSize: Qt.size(Math.max(1, Math.round(root.earSize)), Math.max(1, Math.round(root.earSize)))
-        renderTarget: Canvas.FramebufferObject
-        renderStrategy: Canvas.Cooperative
         width: Math.max(1, Math.round(root.effectiveEarSize))
         height: Math.max(1, Math.round(root.effectiveEarSize))
+        canvasSize: Qt.size(width, height)
         anchors.top: notchBox.top
         anchors.right: notchBox.left
         visible: root.drippingEarsVal && root.effectiveEarSize > 0
 
         onPaint: {
             var ctx = getContext("2d");
-            var width = canvasSize.width;
-            var height = canvasSize.height;
-            ctx.clearRect(0, 0, width, height);
+            var w = width;
+            var h = height;
+            ctx.clearRect(0, 0, w, h);
             ctx.fillStyle = "#000000";
             ctx.beginPath();
             ctx.moveTo(0, 0);
-            ctx.lineTo(width, 0);
-            ctx.lineTo(width, height);
-            ctx.arcTo(width, 0, 0, 0, width);
+            ctx.lineTo(w, 0);
+            ctx.lineTo(w, h);
+            ctx.arcTo(w, 0, 0, 0, w);
             ctx.closePath();
             ctx.fill();
         }
 
+        onWidthChanged: requestPaint()
+        onHeightChanged: requestPaint()
         onVisibleChanged: if (visible) requestPaint()
         Component.onCompleted: requestPaint()
 
         Connections {
             target: root
             function onEarSizeChanged() { earCanvasLeft.requestPaint(); }
+            function onEffectiveEarSizeChanged() { earCanvasLeft.requestPaint(); }
             function onDrippingEarsValChanged() { earCanvasLeft.requestPaint(); }
         }
     }
@@ -1337,36 +1340,37 @@ FocusScope {
     Canvas {
         id: earCanvasRight
         z: 10
-        canvasSize: Qt.size(Math.max(1, Math.round(root.earSize)), Math.max(1, Math.round(root.earSize)))
-        renderTarget: Canvas.FramebufferObject
-        renderStrategy: Canvas.Cooperative
         width: Math.max(1, Math.round(root.effectiveEarSize))
         height: Math.max(1, Math.round(root.effectiveEarSize))
+        canvasSize: Qt.size(width, height)
         anchors.top: notchBox.top
         anchors.left: notchBox.right
         visible: root.drippingEarsVal && root.effectiveEarSize > 0
 
         onPaint: {
             var ctx = getContext("2d");
-            var width = canvasSize.width;
-            var height = canvasSize.height;
-            ctx.clearRect(0, 0, width, height);
+            var w = width;
+            var h = height;
+            ctx.clearRect(0, 0, w, h);
             ctx.fillStyle = "#000000";
             ctx.beginPath();
-            ctx.moveTo(width, 0);
+            ctx.moveTo(w, 0);
             ctx.lineTo(0, 0);
-            ctx.lineTo(0, height);
-            ctx.arcTo(0, 0, width, 0, width);
+            ctx.lineTo(0, h);
+            ctx.arcTo(0, 0, w, 0, w);
             ctx.closePath();
             ctx.fill();
         }
 
+        onWidthChanged: requestPaint()
+        onHeightChanged: requestPaint()
         onVisibleChanged: if (visible) requestPaint()
         Component.onCompleted: requestPaint()
 
         Connections {
             target: root
             function onEarSizeChanged() { earCanvasRight.requestPaint(); }
+            function onEffectiveEarSizeChanged() { earCanvasRight.requestPaint(); }
             function onDrippingEarsValChanged() { earCanvasRight.requestPaint(); }
         }
     }
