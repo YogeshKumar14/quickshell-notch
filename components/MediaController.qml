@@ -28,6 +28,10 @@ Item {
     property real trackPosition: 0
     /** Whether media is currently playing */
     property bool isPlaying: false
+    /** Whether notch is currently expanded */
+    property bool isExpanded: false
+    /** Currently active page index in notch */
+    property int activeTab: 0
 
     /** Master volume level (0..100) */
     property int volumeLevel: 50
@@ -464,10 +468,15 @@ Item {
     Timer {
         id: posPollingTimer
         interval: 500
-        running: root.isPlaying
+        running: root.isPlaying && root.isExpanded && root.activeTab === 0
         repeat: true
         onTriggered: {
             root.pollPlayerctlPosition(false);
+        }
+        onRunningChanged: {
+            if (running) {
+                root.pollPlayerctlPosition(true);
+            }
         }
     }
 
