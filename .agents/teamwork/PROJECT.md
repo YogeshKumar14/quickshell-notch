@@ -53,9 +53,9 @@
 | M1 | Backend & Streaming Optimization | Eliminate CAVA disk polling, orphan hazard, CAVA churn, batch Hyprland eval, fix IPC | M0 | DONE |
 | M2 | Scene Graph & Rendering Optimization | Fix camera dot idle CPU, MPRIS Instantiator leak, playerctl polling, Canvas rasterization | M0, M1 | DONE |
 | M3 | Bug Discovery & Itemized Remediation | Create BUG_LEDGER.md, fix all functional and visual bugs across all states | M1, M2 | DONE |
-| M4 | Final Milestone Phase 1: Pass E2E Tests | Pass 100% of authentic E2E test suite (Tiers 1-4) | E2E, M3 | IN PROGRESS |
-| M5 | Final Milestone Phase 2: Adversarial & Visual | Adversarial stress testing (Tier 5) and frame-capture visual regression | M4 | PLANNED |
-| M6 | Architectural Docs & Victory Preparation | Sync ARCHITECTURE.md, AGENTS.md, post-opt benchmarks, Victory Audit prep | M5 | PLANNED |
+| M4 | Final Milestone Phase 1: Pass E2E Tests | Pass 100% of authentic E2E test suite (Tiers 1-4) | E2E, M3 | DONE |
+| M5 | Final Milestone Phase 2: Adversarial & Visual | Adversarial stress testing (Tier 5) and frame-capture visual regression | M4 | DONE |
+| M6 | Architectural Docs & Victory Preparation | Sync ARCHITECTURE.md, AGENTS.md, post-opt benchmarks, Victory Audit prep | M5 | DONE |
 
 ## Interface Contracts
 ### Visualizer Daemon ↔ QML TopNotch

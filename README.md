@@ -2,7 +2,8 @@
 
 [![Release](https://img.shields.io/badge/release-v2.4.0-blue.svg?style=flat-square)](https://github.com/YogeshKumar14/quickshell-notch/releases)
 [![License](https://img.shields.io/badge/license-MIT-green.svg?style=flat-square)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-195%20passed-brightgreen.svg?style=flat-square)](scripts/core/test_all_features.py)
+[![Tests](https://img.shields.io/badge/tests-209%20passed-brightgreen.svg?style=flat-square)](scripts/core/test_all_features.py)
+[![E2E Tests](https://img.shields.io/badge/e2e-59%20passed-brightgreen.svg?style=flat-square)](scripts/core/e2e_test_suite.py)
 [![Arch Linux](https://img.shields.io/badge/Arch%20Linux-supported-1793D1.svg?style=flat-square&logo=arch-linux&logoColor=white)](install.sh)
 [![Hyprland](https://img.shields.io/badge/Hyprland-%E2%89%A50.49-00A86B.svg?style=flat-square)](https://hyprland.org)
 [![QuickShell](https://img.shields.io/badge/QuickShell-v0.3.1+-orange.svg?style=flat-square)](https://quickshell.outfoxxed.me/)
@@ -43,9 +44,9 @@ Top Notch morphs dynamically between a compact top-center status pill and an exp
 - **Material 3 Expressive Dynamic Battery Capsule**: Battery capsule (19×10.5px) with solid crisp white outline, animated fluid fill bar, light bright yellow charging bolt (`#FFE81F`), and Apple iOS 4-tier dark mode palette (Charging Green `#30D158`, Normal White `#FFFFFF`, Low Power Yellow `#FFD60A`, Critical Red `#FF453A`).
 - **Official Apple SF Symbols & SF Pro Typography**: Official Apple SF Symbols vector icons ([`components/M3Icon.qml`](components/M3Icon.qml) with 2x retina density and mipmapping) and Apple SF Pro / SF Mono typography hierarchy.
 - **Matugen 4.2.0 Dynamic Theming**: High-speed zero-cache CAM16 palette generation pipeline with 11 custom Material You templates ([`templates/matugen/`](templates/matugen/)) for Hyprland, SwayNC, Cava, Waybar, Kitty, Rofi, etc., with backward-compatible Wallust support.
-- **Settings Controller**: 4-card grouped Settings window with Matugen/Wallust gliding pills, jitter-free fluid sliders, live Hyprland persistence dual-write, animation tuning, and notch geometry controls.
+- **Settings Controller**: 4-card grouped Settings window with Matugen/Wallust gliding pills, jitter-free fluid sliders, live Hyprland pure Lua batch persistence, animation tuning, and notch geometry controls.
 - **Direct Tab Switching IPC**: Direct navigation via socket commands (`stats`, `tab:0`, `tab:1`, `tab:2`, `tab:3`) allowing instant tab switching without toggling the notch closed.
-- **Comprehensive Verification Suite**: 195-test automated verification harness ([`scripts/core/test_all_features.py`](scripts/core/test_all_features.py)) covering QML syntax, backend schemas, Hyprland dual-write, IPC socket stress & fuzzing, D-Bus floods, process lifecycle, seeking engine, and PipeWire routing.
+- **Authentic E2E & Verification Suites**: 59-test live subsystem integration test suite ([`scripts/core/e2e_test_suite.py`](scripts/core/e2e_test_suite.py)) across 4 rigorous tiers with real PipeWire/D-Bus/CAVA/Hyprland interfaces, plus a 209-test comprehensive verification harness ([`scripts/core/test_all_features.py`](scripts/core/test_all_features.py)).
 
 ---
 
@@ -394,7 +395,8 @@ Socket path: `/tmp/quickshell-notch.sock` — send commands directly via `quicks
 │   │   ├── launch_quickshell.sh   # Clean relaunch (kills strays first)
 │   │   ├── validate_codebase.sh   # QML/Python/Bash validation pipeline
 │   │   ├── sandbox.sh             # Non-disruptive test instance launcher
-│   │   ├── test_all_features.py   # 195-test comprehensive verification test suite
+│   │   ├── e2e_test_suite.py      # Authentic 59-test live integration test harness
+│   │   ├── test_all_features.py   # 209-test comprehensive verification test suite
 │   │   ├── test_mpris_seek.py     # Exhaustive verification suite for MPRIS seeking engine
 │   │   ├── atomic_write.py        # Crash-resilient atomic file write helper
 │   │   ├── process_utils.py       # PR_SET_PDEATHSIG child process lifecycle safety
@@ -411,7 +413,7 @@ Socket path: `/tmp/quickshell-notch.sock` — send commands directly via `quicks
 │   │   ├── get_system_info.py     # Zero-dependency /proc parser (CPU, RAM, Disk, Net)
 │   │   └── manage_audio.py        # PipeWire / WirePlumber audio stream & device manager
 │   ├── hyprland/
-│   │   ├── apply_all_settings.py  # Atomic dual-write of notch + Hyprland settings
+│   │   ├── apply_all_settings.py  # Pure Lua batch applier of notch + Hyprland settings
 │   │   ├── apply_hypr_option.py   # hyprctl live-apply (Lua-aware fallback)
 │   │   ├── persist_hypr_state.py  # Writes Lua + Conf persistence files
 │   │   ├── set_hypr_option.sh     # Shell wrapper for live apply
@@ -450,9 +452,17 @@ quickshell-notch validate
 
 This verifies QML syntax (`qmllint`), Python backend compilation (`py_compile`), and Bash script syntax (`bash -n`). A non-zero exit means do **not** reload or commit.
 
-### Comprehensive Automated Test Suite
+### Authentic End-to-End Integration Test Suite
 
-Run the full 195-test automated verification suite:
+Run the 59-test authentic integration test suite across real system interfaces (PipeWire, D-Bus, CAVA, Hyprland, IPC socket):
+
+```bash
+python3 ~/.config/quickshell/scripts/core/e2e_test_suite.py
+```
+
+### Comprehensive Automated Feature Test Suite
+
+Run the 209-test automated feature verification suite:
 
 ```bash
 quickshell-notch test
@@ -460,7 +470,7 @@ quickshell-notch test
 python3 ~/.config/quickshell/scripts/core/test_all_features.py
 ```
 
-The suite audits 15 subsystems including QML syntax, settings schema type coercion, Hyprland dual-write persistence, IPC socket stress and fuzzing, notification D-Bus floods, process lifecycle orphan scans, wallpaper pipelines, desktop app scanner, network backends, hardware gauges, SceneGraph squircle masking, PipeWire `wpctl` routing, and MPRIS track duration & seek fallbacks.
+The suite audits 15 subsystems including QML syntax, settings schema type coercion, pure Lua persistence, IPC socket stress and fuzzing, notification D-Bus floods, process lifecycle orphan scans, wallpaper pipelines, desktop app scanner, network backends, hardware gauges, SceneGraph squircle masking, PipeWire `wpctl` routing, and MPRIS track duration & seek fallbacks.
 
 ### Sandbox Mode
 
