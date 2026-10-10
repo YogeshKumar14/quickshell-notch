@@ -27,6 +27,11 @@ Item {
     /** Whether button scale micro-animations are enabled */
     property bool buttonAnims: true
 
+    /** Whether the notch is currently expanded */
+    property bool isExpanded: false
+    /** Whether hardware camera is currently active */
+    property bool cameraActive: false
+
     /** Current battery percentage (0..100) */
     property int batteryLevel: 100
     /** Current battery status string ("Charging", "Discharging", "Full") */
@@ -77,17 +82,25 @@ Item {
 
     // Center Hardware Camera Privacy Indicator Dot (Exact Mathematical Center of Notch)
     Rectangle {
+        id: cameraIndicator
         anchors.centerIn: parent
         width: 4; height: 4; radius: 2
         color: "#22C55E"
-        opacity: 0.95
+        visible: root.isExpanded && root.cameraActive
+        opacity: visible ? 0.95 : 0.0
         z: 10
 
-        SequentialAnimation on opacity {
+        SequentialAnimation {
+            id: cameraPulseAnim
             loops: Animation.Infinite
-            running: true
-            NumberAnimation { from: 0.95; to: 0.4; duration: 1200; easing.type: Easing.InOutQuad }
-            NumberAnimation { from: 0.4; to: 0.95; duration: 1200; easing.type: Easing.InOutQuad }
+            running: root.isExpanded && root.cameraActive
+            NumberAnimation { target: cameraIndicator; property: "opacity"; from: 0.95; to: 0.4; duration: 1200; easing.type: Easing.InOutQuad }
+            NumberAnimation { target: cameraIndicator; property: "opacity"; from: 0.4; to: 0.95; duration: 1200; easing.type: Easing.InOutQuad }
+            onRunningChanged: {
+                if (!running) {
+                    cameraIndicator.opacity = (root.isExpanded && root.cameraActive) ? 0.95 : 0.0;
+                }
+            }
         }
     }
 
