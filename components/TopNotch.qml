@@ -181,6 +181,9 @@ FocusScope {
     function toggleTab(page) {
         dismissOsd();
         if (root.isExpanded && root.currentPage === page && !root.isNotifMenuOpen && !root.isPowerMenuOpen && !root.isWifiMenuOpen && !root.isBluetoothMenuOpen && !root.isAudioMenuOpen) {
+            if (page === 0 && root.isPlaying) {
+                return;
+            }
             root.isExpanded = false;
             return;
         }
@@ -683,7 +686,11 @@ FocusScope {
         repeat: false
         onTriggered: {
             if (root.visualizerEnabledVal && !root.isExpanded && !root.isOsdActive && !root.isNotifMenuOpen && !root.isWorkspaceActive && root.isPlaying) {
-                visualizerProc.running = true;
+                visualizerProc.running = Qt.binding(function() {
+                    return root.visualizerEnabledVal && !root.isExpanded && !root.isOsdActive && !root.isNotifMenuOpen && !root.isWorkspaceActive && root.isPlaying;
+                });
+            } else {
+                visualizerProc.running = false;
             }
         }
     }
@@ -1047,11 +1054,13 @@ FocusScope {
     property bool isPlaying: activePlayer ? (activePlayer.playbackState === MprisPlaybackState.Playing) : false
     onIsPlayingChanged: {
         if (!root.isPlaying) {
+            visRestartTimer.stop();
+            visualizerProc.running = false;
             root.isAudioActive = false;
             root.isVisualizerActive = false;
             root.visualizerBars = [];
             root.visualizerFrame = [];
-        } else if (root.visualizerEnabledVal && !root.isExpanded && !root.isOsdActive && !root.isWorkspaceActive) {
+        } else if (root.visualizerEnabledVal && !root.isExpanded && !root.isOsdActive && !root.isNotifMenuOpen && !root.isWorkspaceActive) {
             visRestartTimer.restart();
         }
     }
@@ -1073,7 +1082,6 @@ FocusScope {
     }
 
     onActivePlayerChanged: {
-        root._mprisTrigger++;
         if (activePlayer) {
             root.trackPosition = activePlayer.position;
         } else {
