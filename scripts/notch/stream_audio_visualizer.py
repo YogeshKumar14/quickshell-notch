@@ -100,15 +100,31 @@ def get_monitor():
         pass
     return "auto"
 
-def get_bar_count():
-    if os.path.isfile(NOTCH_CONFIG_FILE):
-        try:
-            with open(NOTCH_CONFIG_FILE, "r", encoding="utf-8") as fp:
-                data = json.load(fp)
-                return int(data.get("visualizer_bar_count", DEFAULT_BAR_COUNT))
-        except Exception:
-            pass
-    return DEFAULT_BAR_COUNT
+_cached_bar_count = DEFAULT_BAR_COUNT
+_cached_config_mtime = 0.0
+
+def reload_config_signal(signum, frame):
+    global _cached_config_mtime
+    _cached_config_mtime = 0.0
+
+try:
+    signal.signal(signal.SIGHUP, reload_config_signal)
+except Exception:
+    pass
+
+def get_bar_count(force=False):
+    global _cached_bar_count, _cached_config_mtime
+    try:
+        if os.path.isfile(NOTCH_CONFIG_FILE):
+            st = os.stat(NOTCH_CONFIG_FILE)
+            if force or st.st_mtime != _cached_config_mtime:
+                with open(NOTCH_CONFIG_FILE, "r", encoding="utf-8") as fp:
+                    data = json.load(fp)
+                    _cached_bar_count = int(data.get("visualizer_bar_count", DEFAULT_BAR_COUNT))
+                _cached_config_mtime = st.st_mtime
+    except Exception:
+        pass
+    return _cached_bar_count
 
 def write_cava_config(bar_count, monitor_source):
     bar_count = max(2, min(64, int(bar_count)))
@@ -141,6 +157,7 @@ noise_reduction = 35
 
 def main():
     global proc
+    set_pdeathsig()
     sweep_stale_configs()
     cava_bin = shutil.which("cava")
     if not cava_bin:
@@ -157,6 +174,8 @@ def main():
         monitor = get_monitor()
         write_cava_config(bar_count, monitor)
         produced_output = False
+        zero_bars = [0] * bar_count
+        silent_frame_payload = json.dumps({"bars": zero_bars, "active": False})
 
         try:
             proc = subprocess.Popen(
@@ -195,28 +214,38 @@ def main():
                         # Apply noise floor deadband (< 6% amplitude filtered to 0)
                         cleaned_vals = [0 if v < 6 else v for v in raw_vals]
 
-                        # Apply independent per-bar physics: fast attack + organic frequency-dependent decay
-                        for i in range(bar_count):
-                            target = min(100.0, cleaned_vals[i] * eq_weights[i]) if cleaned_vals[i] > 0 else 0.0
-                            prev = phys_bars[i]
-                            if target >= prev:
-                                phys_bars[i] = 0.85 * target + 0.15 * prev
-                            else:
-                                decayed = prev * decay_rates[i]
-                                phys_bars[i] = 0.0 if decayed < 2.0 else decayed
+                        # Fast path: zero input and zero existing physics -> silent frame without math allocations
+                        all_silent_input = not any(cleaned_vals)
+                        all_phys_zero = not any(phys_bars)
 
-                        vals = [int(round(v)) for v in phys_bars]
-                        is_act = any(v > ACTIVITY_THRESHOLD for v in vals)
-
-                        if is_act:
-                            silent_frames = 0
-                            last_was_active = True
-                            print(json.dumps({"bars": vals, "active": True}), flush=True)
-                        else:
+                        if all_silent_input and all_phys_zero:
                             silent_frames += 1
                             if last_was_active or silent_frames == 1:
-                                print(json.dumps({"bars": [0] * bar_count, "active": False}), flush=True)
+                                print(silent_frame_payload, flush=True)
                                 last_was_active = False
+                        else:
+                            # Apply independent per-bar physics: fast attack + organic frequency-dependent decay
+                            for i in range(bar_count):
+                                target = min(100.0, cleaned_vals[i] * eq_weights[i]) if cleaned_vals[i] > 0 else 0.0
+                                prev = phys_bars[i]
+                                if target >= prev:
+                                    phys_bars[i] = 0.85 * target + 0.15 * prev
+                                else:
+                                    decayed = prev * decay_rates[i]
+                                    phys_bars[i] = 0.0 if decayed < 2.0 else decayed
+
+                            vals = [int(round(v)) for v in phys_bars]
+                            is_act = any(v > ACTIVITY_THRESHOLD for v in vals)
+
+                            if is_act:
+                                silent_frames = 0
+                                last_was_active = True
+                                print(json.dumps({"bars": vals, "active": True}), flush=True)
+                            else:
+                                silent_frames += 1
+                                if last_was_active or silent_frames == 1:
+                                    print(silent_frame_payload, flush=True)
+                                    last_was_active = False
 
                         produced_output = True
 
