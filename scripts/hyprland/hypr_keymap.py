@@ -10,27 +10,12 @@ from typing import Any, Callable, Dict, List, Tuple
 from apply_hypr_option import normalize_color
 from persist_hypr_state import (
     validate_layout,
+    to_bool,
     clamp_int,
     clamp_float,
     LIMITS_INT,
     LIMITS_FLOAT,
 )
-
-
-def to_bool(v: Any) -> bool:
-    """Convert string or boolean value to boolean."""
-    if isinstance(v, bool):
-        return v
-    if isinstance(v, str):
-        s = v.strip().lower()
-        if s in ("true", "1", "yes", "on"):
-            return True
-        if s in ("false", "0", "no", "off"):
-            return False
-        raise ValueError(f"Invalid boolean string: {v!r}")
-    if isinstance(v, int):
-        return bool(v)
-    raise TypeError(f"Invalid boolean value: {v!r}")
 
 
 # Canonical mapping: short_key -> (hyprctl_key, converter_callable)

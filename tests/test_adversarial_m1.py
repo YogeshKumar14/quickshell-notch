@@ -50,6 +50,8 @@ CACHE_CONFIG_FILE = Path(os.path.expanduser("~/.cache/quickshell/hypr_state.json
 
 
 class TestResult:
+    __test__ = False
+
     def __init__(self, name):
         self.name = name
         self.passed = False
@@ -302,6 +304,7 @@ def test_apply_settings_extreme_boundary_values():
     boundaries = [
         {"hyprland": {"gaps_in": 0, "gaps_out": 0, "border_size": 0, "rounding": 0}},
         {"hyprland": {"gaps_in": 9999, "gaps_out": 9999, "border_size": 100, "rounding": 500}},
+        {"hyprland": {"gaps_in": -50, "gaps_out": -100, "border_size": -5, "rounding": -10, "active_opacity": -0.5, "master_ratio": 5.0}},
         {"notch": {"compact_width": 50, "expanded_height": 2000, "expand_tension": 0.01, "expand_damping": 1.0}},
     ]
     try:
@@ -315,11 +318,14 @@ def test_apply_settings_extreme_boundary_values():
             out = json.loads(res.stdout)
             assert out.get("status") in ("ok", "partial"), f"Unexpected status: {out}"
 
-        # Crucial security verification: gaps must be clamped to safe limits, NEVER 9999
+        # Crucial security verification: gaps and sizes must be clamped to safe limits, NEVER negative or 9999
         if HYPR_CONFIG_FILE.exists():
             content = HYPR_CONFIG_FILE.read_text()
             assert "gaps_in = 9999" not in content, "gaps_in was not clamped!"
             assert "gaps_out = 9999" not in content, "gaps_out was not clamped!"
+            assert "gaps_in = -50" not in content, "negative gaps_in was not clamped!"
+            assert "gaps_out = -100" not in content, "negative gaps_out was not clamped!"
+            assert "active_opacity = -0.5" not in content, "negative opacity was not clamped!"
     finally:
         if orig_notch:
             NOTCH_CONFIG_FILE.write_text(orig_notch)

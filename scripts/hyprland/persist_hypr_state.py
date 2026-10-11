@@ -53,6 +53,20 @@ def validate_layout(val):
         raise ValueError(f"Invalid layout: {val!r}")
     return s
 
+def to_bool(v):
+    if isinstance(v, bool):
+        return v
+    if isinstance(v, str):
+        s = v.strip().lower()
+        if s in ("true", "1", "yes", "on"):
+            return True
+        if s in ("false", "0", "no", "off"):
+            return False
+        raise ValueError(f"Invalid boolean string: {v!r}")
+    if isinstance(v, int):
+        return bool(v)
+    raise TypeError(f"Invalid boolean value: {v!r}")
+
 def clamp_int(v, min_v, max_v):
     if v is None or isinstance(v, bool):
         raise TypeError(f"Invalid integer value: {v!r}")
@@ -89,7 +103,7 @@ def convert_type(t, v):
             low, high = LIMITS_FLOAT[t]
             return clamp_float(v, low, high)
         elif t in ["blur", "animations", "shadow", "dim_inactive", "input_tap_to_click", "input_natural_scroll"]:
-            return str(v).lower() == "true"
+            return to_bool(v)
         elif t in ["active_border", "inactive_border"]:
             return normalize_color(v)
         elif t == "layout":

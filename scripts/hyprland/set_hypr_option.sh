@@ -40,20 +40,20 @@ case "$TYPE" in
     blur_passes)        KEY="decoration:blur:passes" ;;
     blur_size)          KEY="decoration:blur:size" ;;
     reset_defaults)
-        rm -f "$HOME/.config/hypr/quickshell_hypr.lua"
-        PYTHONPATH="$HOME/.config/quickshell/scripts/notch:$HOME/.config/quickshell/scripts/core" \
+        PYTHONPATH="$HOME/.config/quickshell/scripts/notch:$HOME/.config/quickshell/scripts/core:$HOME/.config/quickshell/scripts/hyprland" \
         python3 - <<'PY'
-import json, os
+import json, os, subprocess, sys
+from get_notch_settings import DEFAULTS as NOTCH_DEFAULTS
+from persist_hypr_state import DEFAULTS as HYPR_DEFAULTS
 
-from get_notch_settings import DEFAULTS
-from atomic_write import atomic_write
-
-cfg = os.path.expanduser('~/.config/quickshell/notch_settings.json')
-atomic_write(cfg, json.dumps(DEFAULTS, indent=4))
+payload = json.dumps({"hyprland": HYPR_DEFAULTS, "notch": NOTCH_DEFAULTS})
+apply_script = os.path.expanduser('~/.config/quickshell/scripts/hyprland/apply_all_settings.py')
+res = subprocess.run([sys.executable, apply_script, payload], capture_output=True, text=True)
+if res.returncode != 0:
+    print(f"Error resetting defaults: {res.stderr or res.stdout}", file=sys.stderr)
+    sys.exit(1)
 PY
-        rm -f "$HOME/.cache/quickshell/hypr_state.json"
-        hyprctl reload
-        exit 0
+        exit $?
         ;;
     *)
         echo "Unknown option type: $TYPE"

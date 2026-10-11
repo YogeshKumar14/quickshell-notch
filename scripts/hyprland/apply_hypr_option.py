@@ -56,9 +56,27 @@ OPTION_LIMITS = {
 }
 
 
+SHORT_TO_HYPRCTL_KEY = {
+    "gaps_in": "general:gaps_in",
+    "gaps_out": "general:gaps_out",
+    "border_size": "general:border_size",
+    "rounding": "decoration:rounding",
+    "active_opacity": "decoration:active_opacity",
+    "inactive_opacity": "decoration:inactive_opacity",
+    "shadow_range": "decoration:shadow:range",
+    "blur_passes": "decoration:blur:passes",
+    "blur_size": "decoration:blur:size",
+    "master_ratio": "master:mfact",
+    "input_sensitivity": "input:sensitivity",
+}
+
+
 def clamp_option_value(key, val):
-    if key in OPTION_LIMITS:
-        min_v, max_v = OPTION_LIMITS[key]
+    if isinstance(val, bool) or val is None:
+        return val
+    canonical_key = SHORT_TO_HYPRCTL_KEY.get(key, key)
+    if canonical_key in OPTION_LIMITS:
+        min_v, max_v = OPTION_LIMITS[canonical_key]
         if isinstance(min_v, int):
             try:
                 return max(min_v, min(max_v, int(val)))
