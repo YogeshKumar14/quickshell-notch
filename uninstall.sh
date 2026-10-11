@@ -254,7 +254,11 @@ else
 fi
 
 # Clean lock files
-rm -f /tmp/quickshell_wallpaper_*.lock 2>/dev/null || true
+if [ "$DRY_RUN" = true ]; then
+    log_dry "Would clean lock files in /tmp"
+else
+    rm -f /tmp/quickshell_wallpaper_*.lock 2>/dev/null || true
+fi
 
 # ==============================================================================
 # Step 5: Clean Configuration

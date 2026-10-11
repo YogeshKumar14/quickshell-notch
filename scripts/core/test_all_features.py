@@ -979,7 +979,7 @@ def test_module_13():
         "id: shadowRect" in tn_code and
         "id: shadowEarLeft" in tn_code and
         "id: shadowEarRight" in tn_code and
-        "arcTo(0, 0, width, 0, width)" in tn_code and
+        ("arcTo(0, 0, width, 0, width)" in tn_code or "arcTo(0, 0, w, 0, w)" in tn_code) and
         "notchShadowEnabledVal" in sw_code and
         "notchShadowRadiusVal" in sw_code and
         "notchShadowOpacityVal" in sw_code and

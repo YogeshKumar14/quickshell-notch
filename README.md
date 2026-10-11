@@ -1,8 +1,8 @@
 # QuickShell Top Notch
 
-[![Release](https://img.shields.io/badge/release-v2.4.0-blue.svg?style=flat-square)](https://github.com/YogeshKumar14/quickshell-notch/releases)
+[![Release](https://img.shields.io/badge/release-v2.6.1-blue.svg?style=flat-square)](https://github.com/YogeshKumar14/quickshell-notch/releases)
 [![License](https://img.shields.io/badge/license-MIT-green.svg?style=flat-square)](LICENSE)
-[![Tests](https://img.shields.io/badge/tests-209%20passed-brightgreen.svg?style=flat-square)](scripts/core/test_all_features.py)
+[![Tests](https://img.shields.io/badge/tests-73%20passed-brightgreen.svg?style=flat-square)](tests/)
 [![E2E Tests](https://img.shields.io/badge/e2e-59%20passed-brightgreen.svg?style=flat-square)](scripts/core/e2e_test_suite.py)
 [![Arch Linux](https://img.shields.io/badge/Arch%20Linux-supported-1793D1.svg?style=flat-square&logo=arch-linux&logoColor=white)](install.sh)
 [![Hyprland](https://img.shields.io/badge/Hyprland-%E2%89%A50.49-00A86B.svg?style=flat-square)](https://hyprland.org)
@@ -16,14 +16,27 @@ Top Notch morphs dynamically between a compact top-center status pill and an exp
 
 ## Showcase
 
-### Dynamic Dashboard
-![Notch Expanded Dashboard](assets/2026-07-28-132607_hyprshot.png)
-
-### Widget Integrations
-![Notch Widgets](assets/2026-07-27-223516_hyprshot.png)
-
-### Video Demo
+### Video Demonstration
 <video src="assets/notch_demo.mp4" width="100%" controls="controls"></video>
+
+### Media Controller & Expanded Dashboard (Tab 0)
+| Active Media Playback & Scrubber | Expanded Standby Dashboard |
+| :---: | :---: |
+| ![Media Controller](assets/showcase1.png)<br><sub>Tab 0: MPRIS media controls, squircle album art, timeline scrubber & 7-day calendar</sub> | ![Expanded Dashboard](assets/showcase3.png)<br><sub>Expanded standby dashboard with full status bar header</sub> |
+
+### App Launcher & Wallpaper Selector (Tabs 1 & 2)
+| Fast App Launcher | Dynamic Wallpaper Selector |
+| :---: | :---: |
+| ![App Launcher](assets/showcase4.png)<br><sub>Tab 1: Search-filtered application grid with cached matching</sub> | ![Wallpaper Selector](assets/showcase5.png)<br><sub>Tab 2: Wallpaper thumbnail grid with Matugen CAM16 palette generation</sub> |
+
+### Hardware Monitoring & System Controls (Tab 3 & OSD)
+| Hardware Stats Dashboard | Interactive Hardware OSD |
+| :---: | :---: |
+| ![Hardware Stats](assets/showcase6.png)<br><sub>Tab 3: Anti-aliased CPU/RAM/Net sparklines and disk storage gauge</sub> | ![Hardware OSD](assets/showcase7.png)<br><sub>Top-center volume & brightness OSD overlay with rotating impulse icon</sub> |
+
+### Compact Status Pill & Ambient Elevation
+![Compact Status Pill](assets/showcase2.png)
+*Compact pill featuring active workspace indicators (dot 4 active), clock readout, and hardware-accelerated ambient drop shadow.*
 
 ---
 
@@ -31,6 +44,11 @@ Top Notch morphs dynamically between a compact top-center status pill and an exp
 
 - **Unified Single-Body Spring Scaling**: Re-anchored viewport container where media controls, 7-day calendar timeline, and header bar scale organically as an indivisible unified body with notch physical spring physics ($4.5 / 0.30$ spring, `springPageEpsilon: 0.0005`, zero end-of-transition snap).
 - **Synchronized Visualizer & Compact Pill Dynamics**: Real-time spring scaling (`pillSpringScale`) and vertical bounce follow-through (`bounceCenterY`) across all compact pill states (audio visualizer spectrum, clock readout, and workspace indicators). A seamless visualizer expansion handshake (`wasVisualizerActive`, 350ms settling timer) completely eliminates visualizer crushing, premature pill narrowing, and clock flashing during expansion.
+- **Hardware-Accelerated Configurable Drop Shadow Engine**: Multi-component ambient elevation engine (`DropShadow` with unified `shadowProxy` bridging the solid notch container and dripping ear canvases) featuring 5 presets (Subtle, Soft, Intense, Wallust Glow, Custom) with real-time blur radius, opacity, vertical elevation, and spread tuning, zero-clipped via expanded LayerShell surface margins.
+- **Anti-Aliased Concave Ear Squircles**: Dynamic 1:1 canvas sizing and reactive geometry listeners for seamless inverted dripping ears (`TopNotch.qml`), eliminating rectangular clipping block artifacts and rendering pixel-perfect organic squircle curves into the display bezel.
+- **Pure Lua Hyprland Modular Architecture**: 100% pure Lua Hyprland integration (`hyprland.lua` and `quickshell_hypr.lua`) with complete elimination of legacy `.conf` files, native `rgba(...)` color byte ordering, atomic persistence, and seamless modular Lua loading (`~/.config/hypr/lua/`).
+- **Multi-Window Layout Safeguards & Boundary Clamping**: Strict mathematical boundary protection across all Hyprland sizing parameters (`gaps_in` [0, 60], `gaps_out` [0, 100], `border_size` [0, 10], `rounding` [0, 50]), preventing off-screen window collapse and layout disintegration during smart-gap transitions.
+- **Multi-Instance File Manager Keybind**: Hyprland `SUPER + E` binding configured with `--new-window` flag for Nautilus, bypassing single-instance focus stealing to allow opening multiple tiled file manager windows seamlessly.
 - **Workspace Overlay**: Real-time workspace indicators on the compact pill — occupied workspaces are highlighted, clicking a dot jumps to that workspace, and clicking anywhere expands the notch.
 - **Tab 0 — MPRIS Media Controller**: Modern 3-column landscape architecture with dynamic album art, hardware-accelerated anti-aliased squircle corner clipping (`OpacityMask`), circular audio visualizer, multi-tier track duration resolver ([`mpris_duration.py`](scripts/notch/mpris_duration.py)), atomic seeking engine with $-10\text{s}$ rewind button ([`mpris_seek.py`](scripts/notch/mpris_seek.py)), jitter-free fluid sliders (`Easing.OutQuad`), and native `Quickshell.Services.Mpris`.
 - **Tab 1 — Fast App Launcher**: Desktop application scanner with icon path matching, search filtering, and flatpak walk-pruning. Caches results and automatically re-scans when packages change.
@@ -46,7 +64,7 @@ Top Notch morphs dynamically between a compact top-center status pill and an exp
 - **Matugen 4.2.0 Dynamic Theming**: High-speed zero-cache CAM16 palette generation pipeline with 11 custom Material You templates ([`templates/matugen/`](templates/matugen/)) for Hyprland, SwayNC, Cava, Waybar, Kitty, Rofi, etc., with backward-compatible Wallust support.
 - **Settings Controller**: 4-card grouped Settings window with Matugen/Wallust gliding pills, jitter-free fluid sliders, live Hyprland pure Lua batch persistence, animation tuning, and notch geometry controls.
 - **Direct Tab Switching IPC**: Direct navigation via socket commands (`stats`, `tab:0`, `tab:1`, `tab:2`, `tab:3`) allowing instant tab switching without toggling the notch closed.
-- **Authentic E2E & Verification Suites**: 59-test live subsystem integration test suite ([`scripts/core/e2e_test_suite.py`](scripts/core/e2e_test_suite.py)) across 4 rigorous tiers with real PipeWire/D-Bus/CAVA/Hyprland interfaces, plus a 209-test comprehensive verification harness ([`scripts/core/test_all_features.py`](scripts/core/test_all_features.py)).
+- **Authentic E2E & Verification Suites**: 73-test automated test suite ([`tests/`](tests/)) including 59-test live subsystem integration suite ([`scripts/core/e2e_test_suite.py`](scripts/core/e2e_test_suite.py)) across 4 rigorous tiers with real PipeWire/D-Bus/CAVA/Hyprland interfaces, plus a 209-test comprehensive verification harness ([`scripts/core/test_all_features.py`](scripts/core/test_all_features.py)).
 
 ---
 
@@ -89,13 +107,15 @@ bash <(curl -fsSL https://raw.githubusercontent.com/YogeshKumar14/quickshell-not
 | `--no-fonts` | Skip Apple SF Pro / SF Mono font installation |
 | `--link` | Symlink repository to `~/.config/quickshell` (default when cloned outside) |
 | `--copy` | Copy repository files to `~/.config/quickshell` instead of symlinking |
+| `--force` | Bypass OS verification checks |
+| `--no-launch` | Skip automatic QuickShell launch in active Hyprland session |
 | `-h`, `--help` | Display full help and options |
 
 ---
 
 ### Method 2: Arch Linux PKGBUILD / AUR
 
-A standard Arch Linux compliant [`PKGBUILD`](PKGBUILD) is included in the repository root and [`packaging/`](packaging/) directory.
+A standard Arch Linux compliant [`PKGBUILD`](PKGBUILD) adhering to `v2.6.0` release packaging standards is included in the repository root and [`packaging/`](packaging/) directory.
 
 #### Using an AUR Helper (e.g. `paru` or `yay`):
 ```bash
@@ -124,9 +144,25 @@ quickshell-notch init
 
 ### Method 3: Manual Installation & Dependency Reference
 
-If you prefer to install dependencies manually:
+If you prefer to install dependencies and configure everything manually from source:
 
-#### Official Repositories (Arch `[extra]`):
+#### Step 1: Clone Repository & Setup CLI Utility
+```bash
+# Clone repository directly to user configuration directory:
+git clone https://github.com/YogeshKumar14/quickshell-notch.git ~/.config/quickshell
+cd ~/.config/quickshell
+
+# Symlink unified CLI utility into your PATH:
+mkdir -p ~/.local/bin
+ln -sf ~/.config/quickshell/bin/quickshell-notch ~/.local/bin/quickshell-notch
+
+# Initialize required runtime and thumbnail cache directories:
+mkdir -p ~/.cache/quickshell/thumbs ~/.cache/wal ~/.config/hypr
+```
+
+#### Step 2: Install Package Dependencies
+
+##### Official Repositories (Arch `[extra]`):
 ```bash
 sudo pacman -S --needed \
   hyprland \
@@ -155,7 +191,7 @@ sudo pacman -S --needed \
   ttf-jetbrains-mono-nerd
 ```
 
-#### AUR Packages (via `paru` or `yay`):
+##### AUR Packages (via `paru` or `yay`):
 ```bash
 paru -S --needed quickshell matugen awww
 # or:
@@ -163,7 +199,7 @@ yay -S --needed quickshell matugen awww
 ```
 *(Note: on distributions where `quickshell`, `matugen`, or `awww` are packaged in official repos, `pacman -S` may be used directly).*
 
-#### Dependency Breakdown
+##### Dependency Breakdown
 | Package | Why it's needed |
 |---------|-----------------|
 | `quickshell` | QML runtime and desktop shell engine |
@@ -182,12 +218,12 @@ yay -S --needed quickshell matugen awww
 | `qt6-svg` | Vector SVG icon rendering |
 | SF Pro & SF Mono Fonts | macOS system typography (automatically registered by `install.sh`) |
 
-#### Fonts Setup
+#### Step 3: Fonts Setup
 ```bash
 bash ~/.config/quickshell/scripts/core/download_macos_fonts.sh
 ```
 
-#### Matugen Accent Colors Setup
+#### Step 4: Matugen Accent Colors Setup
 The notch uses Matugen (with Wallust compatibility) to generate colors dynamically from your wallpaper. Bootstrapping templates:
 ```bash
 mkdir -p ~/.config/matugen
@@ -259,7 +295,7 @@ quickshell-notch osd bri 80              # Set/display brightness level (0..100)
 
 # Codebase Validation & Automated Testing
 quickshell-notch validate      # Run QML, Python, and Bash validation pipeline
-quickshell-notch test          # Run full 195-test automated verification suite
+quickshell-notch test          # Run comprehensive feature verification suite
 ```
 
 Runtime logs live at `/run/user/$UID/quickshell/by-id/*/log.qslog` — check there if something looks broken.
@@ -268,27 +304,30 @@ Runtime logs live at `/run/user/$UID/quickshell/by-id/*/log.qslog` — check the
 
 ### Hyprland Keybinds
 
-Control the notch dynamically using `quickshell-notch` or direct IPC commands:
+Control the notch dynamically using `quickshell-notch` or direct IPC commands. Add these bindings to `~/.config/hypr/lua/keybinds.lua` (or `hyprland.lua`):
 
-```ini
-# Toggle expand/collapse
-bind = SUPER, N, exec, quickshell-notch toggle
+```lua
+-- Toggle expand/collapse
+hl.bind("SUPER + N", hl.dsp.exec_cmd("quickshell-notch toggle"))
 
-# Quick tab switches
-bind = SUPER, M, exec, quickshell-notch nook
-bind = SUPER, SPACE, exec, quickshell-notch apps
-bind = SUPER, W, exec, quickshell-notch walls
-bind = SUPER, S, exec, quickshell-notch stats
+-- Direct tab switches
+hl.bind("SUPER + M", hl.dsp.exec_cmd("quickshell-notch nook"))
+hl.bind("SUPER + SPACE", hl.dsp.exec_cmd("quickshell-notch apps"))
+hl.bind("SUPER + W", hl.dsp.exec_cmd("quickshell-notch walls"))
+hl.bind("SUPER + S", hl.dsp.exec_cmd("quickshell-notch stats"))
 
-# Drawers
-bind = SUPER, A, exec, quickshell-notch audio
-bind = SUPER, COMMA, exec, quickshell-notch notifs
+-- Overlay drawers
+hl.bind("SUPER + A", hl.dsp.exec_cmd("quickshell-notch audio"))
+hl.bind("SUPER + comma", hl.dsp.exec_cmd("quickshell-notch notifs"))
 
-# Volume & Brightness OSD
-bind = , XF86AudioRaiseVolume, exec, quickshell-notch osd volume up
-bind = , XF86AudioLowerVolume, exec, quickshell-notch osd volume down
-bind = , XF86MonBrightnessUp, exec, quickshell-notch osd brightness up
-bind = , XF86MonBrightnessDown, exec, quickshell-notch osd brightness down
+-- Multi-instance file manager (bypasses single-instance focus stealing)
+hl.bind("SUPER + E", hl.dsp.exec_cmd("nautilus --new-window"))
+
+-- Hardware OSD controls
+hl.bind("XF86AudioRaiseVolume", hl.dsp.exec_cmd("quickshell-notch osd volume up"), { locked = true, repeating = true })
+hl.bind("XF86AudioLowerVolume", hl.dsp.exec_cmd("quickshell-notch osd volume down"), { locked = true, repeating = true })
+hl.bind("XF86MonBrightnessUp", hl.dsp.exec_cmd("quickshell-notch osd brightness up"), { locked = true, repeating = true })
+hl.bind("XF86MonBrightnessDown", hl.dsp.exec_cmd("quickshell-notch osd brightness down"), { locked = true, repeating = true })
 ```
 
 ---
@@ -333,7 +372,7 @@ Socket path: `/tmp/quickshell-notch.sock` — send commands directly via `quicks
 | `toggle` | Expand or collapse notch |
 | `close` | Collapse expanded notch |
 | `nook` | Toggle Media Controller tab (Tab 0) |
-| `apps` / `tray` | Toggle App Launcher tab (Tab 1) |
+| `apps` / `tray` | Toggle App Launcher tab (Tab 1; `tray` is an alias) |
 | `walls` | Toggle Wallpaper Selector tab (Tab 2) |
 | `stats` | Toggle Hardware Stats tab (Tab 3) |
 | `tab:<0-3>` | Direct switch to tab index (0: Media, 1: Apps, 2: Wallpapers, 3: Stats) |
@@ -341,12 +380,12 @@ Socket path: `/tmp/quickshell-notch.sock` — send commands directly via `quicks
 | `notifs` | Toggle Notification history drawer |
 | `notifs:clear` | Clear active notifications with staggered 180ms card dismissal |
 | `wifi` | Toggle Wi-Fi network selector drawer |
-| `bluetooth` / `bt` | Toggle Bluetooth device drawer |
+| `bluetooth` / `bt` | Toggle Bluetooth device drawer (`bt` is an alias) |
 | `settings` | Toggle Notch Settings window |
 | `settings:tab:<0-3>` | Open Settings window directly to tab index (0: Hyprland, 1: Notch Island, 2: Visualizer, 3: System & Apps) |
-| `osd:vol:<0-150>` | Display Volume OSD with percentage |
-| `osd:bri:<0-100>` | Display Brightness OSD with percentage |
-| `reload_settings` | Reload notch and Hyprland configuration from disk |
+| `osd:vol:<0-150>` | Display Volume OSD with percentage (clamped 0..150) |
+| `osd:bri:<0-100>` | Display Brightness OSD with percentage (clamped 0..100) |
+| `reload_settings` | Reload notch preferences from disk without restarting daemon |
 
 ---
 
@@ -390,6 +429,10 @@ Socket path: `/tmp/quickshell-notch.sock` — send commands directly via `quicks
 │   └── matugen/
 │       ├── config.toml            # Matugen configuration definition
 │       └── templates/             # 11 Material You templates (Hyprland, CAVA, SwayNC, etc.)
+├── tests/                         # Pytest automated test suite (73 tests passed)
+│   ├── test_adversarial_m1.py     # Extreme boundary & stress test suite (12 tests)
+│   ├── test_challenger_m1.py      # Regression & state machine verification (2 tests)
+│   └── test_e2e.py                # 4-tier authentic end-to-end integration tests (59 tests)
 ├── scripts/
 │   ├── core/
 │   │   ├── launch_quickshell.sh   # Clean relaunch (kills strays first)
@@ -415,7 +458,7 @@ Socket path: `/tmp/quickshell-notch.sock` — send commands directly via `quicks
 │   ├── hyprland/
 │   │   ├── apply_all_settings.py  # Pure Lua batch applier of notch + Hyprland settings
 │   │   ├── apply_hypr_option.py   # hyprctl live-apply (Lua-aware fallback)
-│   │   ├── persist_hypr_state.py  # Writes Lua + Conf persistence files
+│   │   ├── persist_hypr_state.py  # Pure Lua Hyprland config generator (quickshell_hypr.lua)
 │   │   ├── set_hypr_option.sh     # Shell wrapper for live apply
 │   │   ├── get_hypr_options.py    # Reads active Hyprland options
 │   │   └── hypr_keymap.py         # Hyprland option keys and type converters
@@ -452,17 +495,24 @@ quickshell-notch validate
 
 This verifies QML syntax (`qmllint`), Python backend compilation (`py_compile`), and Bash script syntax (`bash -n`). A non-zero exit means do **not** reload or commit.
 
-### Authentic End-to-End Integration Test Suite
+### Automated Test Suites
 
-Run the 59-test authentic integration test suite across real system interfaces (PipeWire, D-Bus, CAVA, Hyprland, IPC socket):
+#### 1. Pytest Test Suite (73 Tests Passed)
+Run the authoritative test suite covering adversarial boundary analysis, state regressions, and E2E system integration:
+
+```bash
+pytest tests/
+```
+
+#### 2. Authentic End-to-End Integration Test Suite (59 Tests Passed)
+Run the authentic integration test suite across real system interfaces (PipeWire, D-Bus, CAVA, Hyprland, IPC socket):
 
 ```bash
 python3 ~/.config/quickshell/scripts/core/e2e_test_suite.py
 ```
 
-### Comprehensive Automated Feature Test Suite
-
-Run the 209-test automated feature verification suite:
+#### 3. Comprehensive Feature Verification Harness (209 Tests)
+Run the comprehensive verification harness auditing all 15 subsystems:
 
 ```bash
 quickshell-notch test

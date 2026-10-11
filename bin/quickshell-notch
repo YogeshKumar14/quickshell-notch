@@ -69,7 +69,7 @@ Core Commands:
   init [--symlink|--copy]
                         Initialize ~/.config/quickshell and Matugen templates
   validate              Run codebase validation pipeline (qmllint, py_compile, bash -n)
-  test                  Run full 195-test automated verification suite
+  test                  Run automated verification suite (pytest 73 / feature 209 tests)
 
 Notch Controls:
   toggle                Expand or collapse the Notch
@@ -96,10 +96,10 @@ OSD Controls:
 Advanced:
   ipc <command>         Send arbitrary raw command to /tmp/quickshell-notch.sock
 
-Hyprland Keybind Example (~/.config/hypr/hyprland.conf):
-  bind = SUPER, N, exec, quickshell-notch toggle
-  bind = SUPER, V, exec, quickshell-notch osd volume up
-  bind = SUPER, B, exec, quickshell-notch osd brightness up
+Hyprland Pure Lua Keybind Example (~/.config/hypr/lua/keybinds.lua):
+  hl.bind("SUPER + N", hl.dsp.exec_cmd("quickshell-notch toggle"))
+  hl.bind("XF86AudioRaiseVolume", hl.dsp.exec_cmd("quickshell-notch osd volume up"), { locked = true, repeating = true })
+  hl.bind("XF86MonBrightnessUp",  hl.dsp.exec_cmd("quickshell-notch osd brightness up"), { locked = true, repeating = true })
 EOF
 }
 
@@ -208,6 +208,10 @@ cmd_init() {
     mkdir -p "${HOME}/.cache/quickshell/thumbs"
     mkdir -p "${HOME}/.cache/wal"
     mkdir -p "${HOME}/.config/hypr"
+
+    # Ensure backend scripts and helper are executable
+    find "${USER_CONFIG_DIR}/scripts" -type f \( -name "*.sh" -o -name "*.py" \) -exec chmod +x {} + 2>/dev/null || true
+    chmod +x "${USER_CONFIG_DIR}/bin/quickshell-notch" 2>/dev/null || true
 
     echo "Initialization complete."
 }

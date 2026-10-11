@@ -14,6 +14,7 @@
 #   --no-fonts         Skip font installation and cache update
 #   --hyprland         Automatically append launch & persistence lines to Hyprland config
 #   --force            Bypass non-Arch Linux OS check warning
+#   --no-launch        Skip automatic QuickShell launch in active Hyprland session
 #   -h, --help         Show this help message
 #
 
@@ -66,6 +67,7 @@ SKIP_DEPS=false
 SKIP_FONTS=false
 AUTO_HYPRLAND=false
 FORCE_OS=false
+NO_LAUNCH=false
 
 show_help() {
     echo -e "${C_BOLD}QuickShell Top Notch — Arch Linux Installer${C_RESET}
@@ -82,6 +84,7 @@ ${C_BOLD}OPTIONS:${C_RESET}
     --no-fonts         Skip SF Pro / SF Mono font installation & fc-cache
     --hyprland         Automatically append startup & persistence imports to Hyprland config
     --force            Bypass OS verification checks
+    --no-launch        Skip automatic QuickShell launch in active Hyprland session
     -h, --help         Show this help message and exit
 
 ${C_BOLD}EXAMPLES:${C_RESET}
@@ -120,6 +123,9 @@ while [ $# -gt 0 ]; do
             ;;
         --force)
             FORCE_OS=true
+            ;;
+        --no-launch)
+            NO_LAUNCH=true
             ;;
         -h|--help)
             show_help
@@ -468,6 +474,25 @@ else
     fi
 fi
 
+copy_sanitized_repo() {
+    local src="$1"
+    local dst="$2"
+    mkdir -p "$dst"
+    if command -v rsync >/dev/null 2>&1; then
+        rsync -a \
+            --exclude='.git' \
+            --exclude='.agents' \
+            --exclude='.pytest_cache' \
+            --exclude='scratch_*.qml' \
+            --exclude='test_*.qml' \
+            "$src/" "$dst/"
+    else
+        cp -a "$src/." "$dst/" 2>/dev/null || cp -r "$src/." "$dst/"
+        rm -rf "$dst/.git" "$dst/.agents" "$dst/.pytest_cache"
+        rm -f "$dst"/scratch_*.qml "$dst"/test_*.qml
+    fi
+}
+
 # ==============================================================================
 # Step 4: Configuration & Templates Setup
 # ==============================================================================
@@ -481,39 +506,59 @@ if [ "$DRY_RUN" = true ]; then
     log_dry "Would install quickshell-notch manager to ~/.local/bin/quickshell-notch"
 else
     mkdir -p "${HOME}/.config"
-    if [ "$REPO_DIR" = "$USER_CONFIG_DIR" ]; then
-        log_info "Repository is already located at ~/.config/quickshell."
-    elif [ -L "$USER_CONFIG_DIR" ]; then
-        target="$(readlink -f "$USER_CONFIG_DIR")"
-        if [ "$target" = "$REPO_DIR" ]; then
-            log_info "~/.config/quickshell is already correctly symlinked to this repository."
-        else
-            log_info "Updating existing symlink ~/.config/quickshell -> $REPO_DIR"
+    if [ "$INSTALL_MODE" = "copy" ]; then
+        if [ -L "$USER_CONFIG_DIR" ]; then
+            log_info "Replacing symlink ~/.config/quickshell with direct copy..."
+            source_dir="$REPO_DIR"
+            if [ "$REPO_DIR" = "$USER_CONFIG_DIR" ]; then
+                source_dir="$(readlink -f "$USER_CONFIG_DIR")"
+            fi
             rm -f "$USER_CONFIG_DIR"
-            ln -s "$REPO_DIR" "$USER_CONFIG_DIR"
-        fi
-    elif [ -d "$USER_CONFIG_DIR" ]; then
-        BACKUP_DIR="${USER_CONFIG_DIR}.bak.$(date +%Y%m%d_%H%M%S)"
-        log_warn "Existing ~/.config/quickshell directory detected."
-        action_name="linking"
-        [ "$INSTALL_MODE" = "copy" ] && action_name="copying"
-        if prompt_confirm "Back up existing directory to $(basename "$BACKUP_DIR") before ${action_name}?" "Y"; then
-            mv "$USER_CONFIG_DIR" "$BACKUP_DIR"
-            log_info "Backup created at $BACKUP_DIR"
-            if [ "$INSTALL_MODE" = "copy" ]; then
-                log_info "Copying files to ~/.config/quickshell..."
-                cp -r "$REPO_DIR" "$USER_CONFIG_DIR"
+            log_info "Copying files to ~/.config/quickshell..."
+            copy_sanitized_repo "$source_dir" "$USER_CONFIG_DIR"
+        elif [ -d "$USER_CONFIG_DIR" ]; then
+            if [ "$REPO_DIR" = "$USER_CONFIG_DIR" ]; then
+                log_info "Repository is already located at ~/.config/quickshell."
             else
-                log_info "Creating symlink ~/.config/quickshell -> $REPO_DIR"
-                ln -s "$REPO_DIR" "$USER_CONFIG_DIR"
+                BACKUP_DIR="${USER_CONFIG_DIR}.bak.$(date +%Y%m%d_%H%M%S)"
+                log_warn "Existing ~/.config/quickshell directory detected."
+                if prompt_confirm "Back up existing directory to $(basename "$BACKUP_DIR") before copying?" "Y"; then
+                    mv "$USER_CONFIG_DIR" "$BACKUP_DIR"
+                    log_info "Backup created at $BACKUP_DIR"
+                    log_info "Copying files to ~/.config/quickshell..."
+                    copy_sanitized_repo "$REPO_DIR" "$USER_CONFIG_DIR"
+                else
+                    log_info "Keeping existing ~/.config/quickshell as-is."
+                fi
             fi
         else
-            log_info "Keeping existing ~/.config/quickshell as-is."
+            log_info "Copying files to ~/.config/quickshell..."
+            copy_sanitized_repo "$REPO_DIR" "$USER_CONFIG_DIR"
         fi
     else
-        if [ "$INSTALL_MODE" = "copy" ]; then
-            log_info "Copying files to ~/.config/quickshell..."
-            cp -r "$REPO_DIR" "$USER_CONFIG_DIR"
+        # Symlink mode
+        if [ "$REPO_DIR" = "$USER_CONFIG_DIR" ]; then
+            log_info "Repository is already located at ~/.config/quickshell."
+        elif [ -L "$USER_CONFIG_DIR" ]; then
+            target="$(readlink -f "$USER_CONFIG_DIR")"
+            if [ "$target" = "$REPO_DIR" ]; then
+                log_info "~/.config/quickshell is already correctly symlinked to this repository."
+            else
+                log_info "Updating existing symlink ~/.config/quickshell -> $REPO_DIR"
+                rm -f "$USER_CONFIG_DIR"
+                ln -s "$REPO_DIR" "$USER_CONFIG_DIR"
+            fi
+        elif [ -d "$USER_CONFIG_DIR" ]; then
+            BACKUP_DIR="${USER_CONFIG_DIR}.bak.$(date +%Y%m%d_%H%M%S)"
+            log_warn "Existing ~/.config/quickshell directory detected."
+            if prompt_confirm "Back up existing directory to $(basename "$BACKUP_DIR") before linking?" "Y"; then
+                mv "$USER_CONFIG_DIR" "$BACKUP_DIR"
+                log_info "Backup created at $BACKUP_DIR"
+                log_info "Creating symlink ~/.config/quickshell -> $REPO_DIR"
+                ln -s "$REPO_DIR" "$USER_CONFIG_DIR"
+            else
+                log_info "Keeping existing ~/.config/quickshell as-is."
+            fi
         else
             log_info "Creating symlink ~/.config/quickshell -> $REPO_DIR"
             ln -s "$REPO_DIR" "$USER_CONFIG_DIR"
@@ -540,9 +585,7 @@ else
     mkdir -p "${HOME}/.config/hypr"
 
     # 4. Permissions on scripts
-    chmod +x "${USER_CONFIG_DIR}/scripts/core/"*.sh 2>/dev/null || true
-    chmod +x "${USER_CONFIG_DIR}/scripts/desktop/"*.sh 2>/dev/null || true
-    chmod +x "${USER_CONFIG_DIR}/scripts/hyprland/"*.sh 2>/dev/null || true
+    find "${USER_CONFIG_DIR}/scripts" -type f \( -name "*.sh" -o -name "*.py" \) -exec chmod +x {} + 2>/dev/null || true
     chmod +x "${USER_CONFIG_DIR}/bin/quickshell-notch" 2>/dev/null || true
     chmod +x "${USER_CONFIG_DIR}/install.sh" "${USER_CONFIG_DIR}/uninstall.sh" 2>/dev/null || true
 
@@ -578,27 +621,25 @@ end)
 pcall(dofile, os.getenv(\"HOME\") .. \"/.config/hypr/quickshell_hypr.lua\")
 "
 
-if [ -f "$HYPR_LUA" ]; then
-    if grep -q "quickshell-notch launch" "$HYPR_LUA" 2>/dev/null || grep -q "launch_quickshell.sh" "$HYPR_LUA" 2>/dev/null; then
-        log_success "Hyprland Lua configuration (${HYPR_LUA}) already includes QuickShell launch entry."
-    else
-        if [ "$AUTO_HYPRLAND" = true ]; then
-            if [ "$DRY_RUN" = true ]; then
-                log_dry "Would append QuickShell startup lines to ${HYPR_LUA}"
-            else
-                echo "$LUA_SNIPPET" >> "$HYPR_LUA"
-                log_success "Appended startup and persistence lines to ${HYPR_LUA}"
-            fi
+if [ -d "${HOME}/.config/hypr" ] && grep -rqE --exclude-dir='.git' "quickshell-notch launch|launch_quickshell\.sh" "${HOME}/.config/hypr/" 2>/dev/null; then
+    log_success "Hyprland configuration (${HOME}/.config/hypr/) already includes QuickShell launch entry."
+elif [ -f "$HYPR_LUA" ]; then
+    if [ "$AUTO_HYPRLAND" = true ]; then
+        if [ "$DRY_RUN" = true ]; then
+            log_dry "Would append QuickShell startup lines to ${HYPR_LUA}"
         else
-            if [ "$DRY_RUN" = true ]; then
-                log_dry "Would offer to append startup & persistence snippet to ${HYPR_LUA}"
-            else
-                echo -e "\n${C_BOLD}Hyprland Lua integration snippet for ${HYPR_LUA}:${C_RESET}"
-                echo -e "${C_CYAN}${LUA_SNIPPET}${C_RESET}"
-                if prompt_confirm "Automatically append these lines to ${HYPR_LUA}?" "Y"; then
-                    echo "$LUA_SNIPPET" >> "$HYPR_LUA"
-                    log_success "Added to ${HYPR_LUA}"
-                fi
+            echo "$LUA_SNIPPET" >> "$HYPR_LUA"
+            log_success "Appended startup and persistence lines to ${HYPR_LUA}"
+        fi
+    else
+        if [ "$DRY_RUN" = true ]; then
+            log_dry "Would offer to append startup & persistence snippet to ${HYPR_LUA}"
+        else
+            echo -e "\n${C_BOLD}Hyprland Lua integration snippet for ${HYPR_LUA}:${C_RESET}"
+            echo -e "${C_CYAN}${LUA_SNIPPET}${C_RESET}"
+            if prompt_confirm "Automatically append these lines to ${HYPR_LUA}?" "Y"; then
+                echo "$LUA_SNIPPET" >> "$HYPR_LUA"
+                log_success "Added to ${HYPR_LUA}"
             fi
         fi
     fi
@@ -619,7 +660,7 @@ if [[ ":$PATH:" != *":${USER_BIN_DIR}:"* ]]; then
     echo -e "  Add ${C_BOLD}export PATH=\"\$HOME/.local/bin:\$PATH\"${C_RESET} to your ~/.bashrc or ~/.zshrc to use the 'quickshell-notch' command directly.\n"
 fi
 
-if [ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ] && [ "$DRY_RUN" = false ]; then
+if [ -n "${HYPRLAND_INSTANCE_SIGNATURE:-}" ] && [ "$DRY_RUN" = false ] && [ "$NO_LAUNCH" = false ]; then
     if prompt_confirm "You are in an active Hyprland session. Launch QuickShell Notch now?" "Y"; then
         log_info "Launching QuickShell Top Notch..."
         bash "${USER_CONFIG_DIR}/scripts/core/launch_quickshell.sh" >/dev/null 2>&1 &

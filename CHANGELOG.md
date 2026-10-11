@@ -4,6 +4,15 @@ All notable changes to QuickShell Top Notch are documented here.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.6.1] - 2026-10-11
+
+### Added
+- **Showcase Media & Interactive Demo Video**: Integrated full HTML5 interactive video demo (`assets/notch_demo.mp4`) and 7 side-by-side comparative layout cards (`assets/showcase1.png` - `assets/showcase7.png`) detailing active media playback, standby dashboard, app launcher, Matugen wallpaper selector, hardware stats, OSD overlays, and compact pill elevation.
+- **Installer Script Hardening & Verification**: Added `--no-launch` and `--force` flags, non-interactive CI/sandbox capability, sanitized `--copy` staging (strictly excluding `.git`, `.agents`, and dev scratch files), recursive Hyprland autostart detection across `~/.config/hypr/`, recursive script executable permissions, and zero-mutation dry-run execution.
+
+### Changed
+- **Documentation & Installation Guide Currency**: Complete overhaul of `README.md` to release standards, including verified test badges (73 pytest, 59 e2e), audited 17-command IPC Socket reference table, pure Lua `hl.bind(...)` keybindings, and structured 4-step manual installation workflow.
+
 ## [2.6.0] - 2026-10-11
 
 ### Added
