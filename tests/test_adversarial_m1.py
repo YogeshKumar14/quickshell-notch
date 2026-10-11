@@ -46,6 +46,7 @@ APPLY_SETTINGS_SCRIPT = SCRIPTS_HYPR / "apply_all_settings.py"
 IPC_SCRIPT = SCRIPTS_NOTCH / "notch_ipc.py"
 NOTCH_CONFIG_FILE = Path(os.path.expanduser("~/.config/quickshell/notch_settings.json"))
 HYPR_CONFIG_FILE = Path(os.path.expanduser("~/.config/hypr/quickshell_hypr.lua"))
+CACHE_CONFIG_FILE = Path(os.path.expanduser("~/.cache/quickshell/hypr_state.json"))
 
 
 class TestResult:
@@ -259,6 +260,10 @@ def test_apply_settings_invalid_types_and_schema():
 
 def test_apply_settings_lua_injection_resilience():
     """Verify payload with potential Lua code injection characters does not execute arbitrary Lua."""
+    orig_notch = NOTCH_CONFIG_FILE.read_text() if NOTCH_CONFIG_FILE.exists() else "{}"
+    orig_hypr = HYPR_CONFIG_FILE.read_text() if HYPR_CONFIG_FILE.exists() else ""
+    orig_cache = CACHE_CONFIG_FILE.read_text() if CACHE_CONFIG_FILE.exists() else ""
+
     injection_payload = {
         "hyprland": {
             "active_border": "rgba(ff0000ff); os.execute('touch /tmp/qs_injected.txt'); --",
@@ -270,20 +275,30 @@ def test_apply_settings_lua_injection_resilience():
     if test_artifact.exists():
         test_artifact.unlink()
 
-    res = subprocess.run(
-        [sys.executable, str(APPLY_SETTINGS_SCRIPT), json.dumps(injection_payload)],
-        capture_output=True,
-        text=True
-    )
-    # The active_border value converter should either reject or normalize
-    # And critical: the injection file MUST NOT exist!
-    assert not test_artifact.exists(), "CRITICAL VULNERABILITY: Lua injection executed arbitrary OS command!"
+    try:
+        res = subprocess.run(
+            [sys.executable, str(APPLY_SETTINGS_SCRIPT), json.dumps(injection_payload)],
+            capture_output=True,
+            text=True
+        )
+        # The active_border value converter should either reject or normalize
+        # And critical: the injection file MUST NOT exist!
+        assert not test_artifact.exists(), "CRITICAL VULNERABILITY: Lua injection executed arbitrary OS command!"
+    finally:
+        if orig_notch:
+            NOTCH_CONFIG_FILE.write_text(orig_notch)
+        if orig_hypr:
+            HYPR_CONFIG_FILE.write_text(orig_hypr)
+        if orig_cache:
+            CACHE_CONFIG_FILE.write_text(orig_cache)
 
 
 def test_apply_settings_extreme_boundary_values():
-    """Verify extreme boundary values (huge numbers, negative, 0) don't crash the script."""
+    """Verify extreme boundary values (huge numbers, negative, 0) don't crash the script and are safely clamped."""
     orig_notch = NOTCH_CONFIG_FILE.read_text() if NOTCH_CONFIG_FILE.exists() else "{}"
     orig_hypr = HYPR_CONFIG_FILE.read_text() if HYPR_CONFIG_FILE.exists() else ""
+    orig_cache = CACHE_CONFIG_FILE.read_text() if CACHE_CONFIG_FILE.exists() else ""
+
     boundaries = [
         {"hyprland": {"gaps_in": 0, "gaps_out": 0, "border_size": 0, "rounding": 0}},
         {"hyprland": {"gaps_in": 9999, "gaps_out": 9999, "border_size": 100, "rounding": 500}},
@@ -299,11 +314,28 @@ def test_apply_settings_extreme_boundary_values():
             assert res.returncode == 0, f"Extreme boundary failed with returncode {res.returncode}: {res.stdout} {res.stderr}"
             out = json.loads(res.stdout)
             assert out.get("status") in ("ok", "partial"), f"Unexpected status: {out}"
+
+        # Crucial security verification: gaps must be clamped to safe limits, NEVER 9999
+        if HYPR_CONFIG_FILE.exists():
+            content = HYPR_CONFIG_FILE.read_text()
+            assert "gaps_in = 9999" not in content, "gaps_in was not clamped!"
+            assert "gaps_out = 9999" not in content, "gaps_out was not clamped!"
     finally:
         if orig_notch:
             NOTCH_CONFIG_FILE.write_text(orig_notch)
         if orig_hypr:
             HYPR_CONFIG_FILE.write_text(orig_hypr)
+        if orig_cache:
+            CACHE_CONFIG_FILE.write_text(orig_cache)
+            try:
+                state = json.loads(orig_cache)
+                subprocess.run(
+                    [sys.executable, str(APPLY_SETTINGS_SCRIPT), json.dumps({"hyprland": state})],
+                    capture_output=True,
+                    timeout=3
+                )
+            except Exception:
+                pass
 
 
 
@@ -312,6 +344,7 @@ def test_apply_settings_atomic_rollback_on_error():
     # Backup current configs
     orig_notch = NOTCH_CONFIG_FILE.read_text() if NOTCH_CONFIG_FILE.exists() else "{}"
     orig_hypr = HYPR_CONFIG_FILE.read_text() if HYPR_CONFIG_FILE.exists() else ""
+    orig_cache = CACHE_CONFIG_FILE.read_text() if CACHE_CONFIG_FILE.exists() else ""
 
     try:
         corrupt_payload = {
@@ -335,6 +368,8 @@ def test_apply_settings_atomic_rollback_on_error():
             NOTCH_CONFIG_FILE.write_text(orig_notch)
         if orig_hypr:
             HYPR_CONFIG_FILE.write_text(orig_hypr)
+        if orig_cache:
+            CACHE_CONFIG_FILE.write_text(orig_cache)
 
 
 # ==============================================================================

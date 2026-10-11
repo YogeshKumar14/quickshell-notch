@@ -53,12 +53,41 @@ def validate_layout(val):
         raise ValueError(f"Invalid layout: {val!r}")
     return s
 
+def clamp_int(v, min_v, max_v):
+    if v is None or isinstance(v, bool):
+        raise TypeError(f"Invalid integer value: {v!r}")
+    return max(min_v, min(max_v, int(v)))
+
+def clamp_float(v, min_v, max_v):
+    if v is None or isinstance(v, bool):
+        raise TypeError(f"Invalid float value: {v!r}")
+    return max(min_v, min(max_v, float(v)))
+
+LIMITS_INT = {
+    "gaps_in": (0, 60),
+    "gaps_out": (0, 100),
+    "rounding": (0, 50),
+    "border_size": (0, 20),
+    "shadow_range": (0, 100),
+    "blur_passes": (1, 10),
+    "blur_size": (1, 30),
+}
+
+LIMITS_FLOAT = {
+    "active_opacity": (0.1, 1.0),
+    "inactive_opacity": (0.1, 1.0),
+    "master_ratio": (0.1, 0.9),
+    "input_sensitivity": (-1.0, 1.0),
+}
+
 def convert_type(t, v):
     try:
-        if t in ["gaps_in", "gaps_out", "rounding", "border_size", "shadow_range", "blur_passes", "blur_size"]:
-            return int(v)
-        elif t in ["active_opacity", "inactive_opacity", "master_ratio", "input_sensitivity"]:
-            return float(v)
+        if t in LIMITS_INT:
+            low, high = LIMITS_INT[t]
+            return clamp_int(v, low, high)
+        elif t in LIMITS_FLOAT:
+            low, high = LIMITS_FLOAT[t]
+            return clamp_float(v, low, high)
         elif t in ["blur", "animations", "shadow", "dim_inactive", "input_tap_to_click", "input_natural_scroll"]:
             return str(v).lower() == "true"
         elif t in ["active_border", "inactive_border"]:
@@ -66,7 +95,7 @@ def convert_type(t, v):
         elif t == "layout":
             return validate_layout(v)
         return v
-    except ValueError as e:
+    except (ValueError, TypeError) as e:
         print(f"Invalid value for {t}: {v} ({e})", file=sys.stderr)
         sys.exit(1)
 
