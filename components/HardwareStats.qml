@@ -79,6 +79,7 @@ Item {
                 SparklineCanvas {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
+                    active: root.isActiveTab
                     hist: root.cpuHistory
                     currentVal: root.cpuUsage
                     thresholdColors: true
@@ -112,6 +113,7 @@ Item {
                 SparklineCanvas {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
+                    active: root.isActiveTab
                     hist: root.ramHistory
                     currentVal: root.ramUsage
                     thresholdColors: true
@@ -151,6 +153,7 @@ Item {
                 SparklineCanvas {
                     Layout.fillWidth: true
                     Layout.fillHeight: true
+                    active: root.isActiveTab
                     hist: root.netHistory
                 }
             }

@@ -322,6 +322,7 @@ FocusScope {
                             anchors.fill: parent
                             source: wallImg
                             maskSource: wallMask
+                            cached: true
                             visible: model.path !== "random" && wallImg.status === Image.Ready
                         }
 
@@ -364,26 +365,16 @@ FocusScope {
                             visible: model.path !== "random"
 
                             Rectangle {
-                                id: vignetteShape
                                 anchors.fill: parent
+                                bottomLeftRadius: 12
+                                bottomRightRadius: 12
+                                topLeftRadius: 0
+                                topRightRadius: 0
+                                color: "transparent"
                                 gradient: Gradient {
                                     GradientStop { position: 0.0; color: "transparent" }
                                     GradientStop { position: 1.0; color: "#D9000000" }
                                 }
-                                visible: false
-                            }
-
-                            Rectangle {
-                                id: bottomMask
-                                anchors.fill: parent
-                                radius: 12
-                                visible: false
-                            }
-
-                            OpacityMask {
-                                anchors.fill: parent
-                                source: vignetteShape
-                                maskSource: bottomMask
                             }
 
                             Text {

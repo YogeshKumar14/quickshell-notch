@@ -46,9 +46,7 @@ FocusScope {
             if (root.currentPage === 1 || root.currentPage === 2) {
                 focusTabSearchTimer.restart();
             }
-            tabPreloadTimer.restart();
         } else {
-            tabPreloadTimer.stop();
             appsUnloadTimer.restart();
             wallsUnloadTimer.restart();
             if (root.visualizerEnabledVal && root.isPlaying) {
@@ -113,7 +111,8 @@ FocusScope {
     function showOsd(type, value) {
         var num = Math.round(Number(value));
         if (isNaN(num)) num = 0;
-        root.osdValue = Math.max(0, Math.min(100, num));
+        var maxLimit = (type === "vol" || type === "volume") ? 150 : 100;
+        root.osdValue = Math.max(0, Math.min(maxLimit, num));
 
         if (!root.isOsdActive) {
             root.wasExpandedBeforeOsd = root.isExpanded;
@@ -183,6 +182,9 @@ FocusScope {
     function toggleTab(page) {
         dismissOsd();
         if (root.isExpanded && root.currentPage === page && !root.isNotifMenuOpen && !root.isPowerMenuOpen && !root.isWifiMenuOpen && !root.isBluetoothMenuOpen && !root.isAudioMenuOpen) {
+            if (page === 0 && root.isPlaying) {
+                return;
+            }
             root.isExpanded = false;
             return;
         }
@@ -685,7 +687,11 @@ FocusScope {
         repeat: false
         onTriggered: {
             if (root.visualizerEnabledVal && !root.isExpanded && !root.isOsdActive && !root.isNotifMenuOpen && !root.isWorkspaceActive && root.isPlaying) {
-                visualizerProc.running = true;
+                visualizerProc.running = Qt.binding(function() {
+                    return root.visualizerEnabledVal && !root.isExpanded && !root.isOsdActive && !root.isNotifMenuOpen && !root.isWorkspaceActive && root.isPlaying;
+                });
+            } else {
+                visualizerProc.running = false;
             }
         }
     }
@@ -903,18 +909,6 @@ FocusScope {
         onTriggered: root.appsTabAlive = false
     }
 
-    Timer {
-        id: tabPreloadTimer
-        interval: 350
-        repeat: false
-        onTriggered: {
-            if (root.isExpanded) {
-                root.appsTabAlive = true;
-                root.wallsTabAlive = true;
-            }
-        }
-    }
-
     // =========================================================================
     // 8. WALLUST COLOR INTEGRATION & WALLPAPER APPLICATION
     // =========================================================================
@@ -1002,13 +996,21 @@ FocusScope {
 
     // MPRIS Media properties
     property int _mprisTrigger: 0
+    property bool cameraActive: false
 
     function refreshActivePlayer() {
         root._mprisTrigger++;
     }
 
     Instantiator {
+        id: mprisInstantiator
         model: Mpris.players
+        onObjectAdded: function(index, object) {
+            root._mprisTrigger++;
+        }
+        onObjectRemoved: function(index, object) {
+            root._mprisTrigger++;
+        }
         delegate: Connections {
             target: modelData
             function onPlaybackStateChanged() {
@@ -1028,7 +1030,9 @@ FocusScope {
 
     property var activePlayer: {
         var _trigger = root._mprisTrigger;
+        var _count = mprisInstantiator.count;
         var players = Mpris.players.values;
+        if (!players || players.length === 0) return null;
         for (var i = 0; i < players.length; i++) {
             if (players[i] && players[i].playbackState === MprisPlaybackState.Playing) return players[i];
         }
@@ -1039,11 +1043,13 @@ FocusScope {
     property bool isPlaying: activePlayer ? (activePlayer.playbackState === MprisPlaybackState.Playing) : false
     onIsPlayingChanged: {
         if (!root.isPlaying) {
+            visRestartTimer.stop();
+            visualizerProc.running = false;
             root.isAudioActive = false;
             root.isVisualizerActive = false;
             root.visualizerBars = [];
             root.visualizerFrame = [];
-        } else if (root.visualizerEnabledVal && !root.isExpanded && !root.isOsdActive && !root.isWorkspaceActive) {
+        } else if (root.visualizerEnabledVal && !root.isExpanded && !root.isOsdActive && !root.isNotifMenuOpen && !root.isWorkspaceActive) {
             visRestartTimer.restart();
         }
     }
@@ -1065,7 +1071,6 @@ FocusScope {
     }
 
     onActivePlayerChanged: {
-        root._mprisTrigger++;
         if (activePlayer) {
             root.trackPosition = activePlayer.position;
         } else {
@@ -1182,19 +1187,22 @@ FocusScope {
             id: shadowEarLeft
             width: Math.max(1, Math.round(root.effectiveEarSize))
             height: Math.max(1, Math.round(root.effectiveEarSize))
+            canvasSize: Qt.size(width, height)
             anchors.top: parent.top
             anchors.right: shadowRect.left
             visible: root.drippingEarsVal && root.effectiveEarSize > 0
 
             onPaint: {
                 var ctx = getContext("2d");
-                ctx.clearRect(0, 0, width, height);
+                var w = width;
+                var h = height;
+                ctx.clearRect(0, 0, w, h);
                 ctx.fillStyle = "#000000";
                 ctx.beginPath();
                 ctx.moveTo(0, 0);
-                ctx.lineTo(width, 0);
-                ctx.lineTo(width, height);
-                ctx.arcTo(width, 0, 0, 0, width);
+                ctx.lineTo(w, 0);
+                ctx.lineTo(w, h);
+                ctx.arcTo(w, 0, 0, 0, w);
                 ctx.closePath();
                 ctx.fill();
             }
@@ -1216,19 +1224,22 @@ FocusScope {
             id: shadowEarRight
             width: Math.max(1, Math.round(root.effectiveEarSize))
             height: Math.max(1, Math.round(root.effectiveEarSize))
+            canvasSize: Qt.size(width, height)
             anchors.top: parent.top
             anchors.left: shadowRect.right
             visible: root.drippingEarsVal && root.effectiveEarSize > 0
 
             onPaint: {
                 var ctx = getContext("2d");
-                ctx.clearRect(0, 0, width, height);
+                var w = width;
+                var h = height;
+                ctx.clearRect(0, 0, w, h);
                 ctx.fillStyle = "#000000";
                 ctx.beginPath();
-                ctx.moveTo(width, 0);
+                ctx.moveTo(w, 0);
                 ctx.lineTo(0, 0);
-                ctx.lineTo(0, height);
-                ctx.arcTo(0, 0, width, 0, width);
+                ctx.lineTo(0, h);
+                ctx.arcTo(0, 0, w, 0, w);
                 ctx.closePath();
                 ctx.fill();
             }
@@ -1293,19 +1304,22 @@ FocusScope {
         z: 10
         width: Math.max(1, Math.round(root.effectiveEarSize))
         height: Math.max(1, Math.round(root.effectiveEarSize))
+        canvasSize: Qt.size(width, height)
         anchors.top: notchBox.top
         anchors.right: notchBox.left
         visible: root.drippingEarsVal && root.effectiveEarSize > 0
 
         onPaint: {
             var ctx = getContext("2d");
-            ctx.clearRect(0, 0, width, height);
+            var w = width;
+            var h = height;
+            ctx.clearRect(0, 0, w, h);
             ctx.fillStyle = "#000000";
             ctx.beginPath();
             ctx.moveTo(0, 0);
-            ctx.lineTo(width, 0);
-            ctx.lineTo(width, height);
-            ctx.arcTo(width, 0, 0, 0, width);
+            ctx.lineTo(w, 0);
+            ctx.lineTo(w, h);
+            ctx.arcTo(w, 0, 0, 0, w);
             ctx.closePath();
             ctx.fill();
         }
@@ -1328,19 +1342,22 @@ FocusScope {
         z: 10
         width: Math.max(1, Math.round(root.effectiveEarSize))
         height: Math.max(1, Math.round(root.effectiveEarSize))
+        canvasSize: Qt.size(width, height)
         anchors.top: notchBox.top
         anchors.left: notchBox.right
         visible: root.drippingEarsVal && root.effectiveEarSize > 0
 
         onPaint: {
             var ctx = getContext("2d");
-            ctx.clearRect(0, 0, width, height);
+            var w = width;
+            var h = height;
+            ctx.clearRect(0, 0, w, h);
             ctx.fillStyle = "#000000";
             ctx.beginPath();
-            ctx.moveTo(width, 0);
+            ctx.moveTo(w, 0);
             ctx.lineTo(0, 0);
-            ctx.lineTo(0, height);
-            ctx.arcTo(0, 0, width, 0, width);
+            ctx.lineTo(0, h);
+            ctx.arcTo(0, 0, w, 0, w);
             ctx.closePath();
             ctx.fill();
         }
@@ -1628,6 +1645,8 @@ FocusScope {
                 tabSpringDamping: root.tabSpringDamping
                 buttonSpeed: root.buttonSpeedVal
                 buttonAnims: root.buttonAnimsVal
+                isExpanded: root.isExpanded
+                cameraActive: root.cameraActive
 
                 batteryLevel: root.batteryLevel
                 batteryStatus: root.batteryStatus
@@ -1699,6 +1718,8 @@ FocusScope {
                         isPlaying: root.isPlaying
                         trackTitle: root.trackTitle
                         trackArtist: root.trackArtist
+                        isExpanded: root.isExpanded
+                        activeTab: root.currentPage
                         trackPosition: root.trackPosition
                         externalTrackLength: root.trackLength
                         volumeLevel: root.volumeLevel

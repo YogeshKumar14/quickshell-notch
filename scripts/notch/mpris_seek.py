@@ -156,7 +156,7 @@ def seek_via_playerctl(target_player, value, is_relative=True, current_pos_hint=
     if is_relative:
         arg = f"{abs(value):.2f}-" if value < 0 else f"{value:.2f}+"
         res = subprocess.run(cmd_prefix + ["position", arg], capture_output=True, text=True)
-        if res.returncode == 0:
+        if res.returncode == 0 and not res.stderr.strip():
             return True
 
         # Fallback: query current position and compute absolute position
@@ -169,13 +169,14 @@ def seek_via_playerctl(target_player, value, is_relative=True, current_pos_hint=
 
         if curr_sec is not None:
             target_sec = max(0.0, curr_sec + value)
-            res2 = subprocess.run(cmd_prefix + ["position", f"{target_sec:.2f}"], capture_output=True)
-            if res2.returncode == 0:
+            res2 = subprocess.run(cmd_prefix + ["position", f"{target_sec:.2f}"], capture_output=True, text=True)
+            if res2.returncode == 0 and not res2.stderr.strip():
                 return True
         return False
     else:
-        res = subprocess.run(cmd_prefix + ["position", f"{value:.2f}"], capture_output=True, text=True)
-        if res.returncode == 0:
+        clamped_val = max(0.0, float(value))
+        res = subprocess.run(cmd_prefix + ["position", f"{clamped_val:.2f}"], capture_output=True, text=True)
+        if res.returncode == 0 and not res.stderr.strip():
             return True
 
         # Fallback: query current position and compute relative delta
@@ -187,10 +188,10 @@ def seek_via_playerctl(target_player, value, is_relative=True, current_pos_hint=
             curr_sec = current_pos_hint
 
         if curr_sec is not None:
-            delta = value - curr_sec
+            delta = clamped_val - curr_sec
             arg = f"{abs(delta):.2f}-" if delta < 0 else f"{delta:.2f}+"
-            res2 = subprocess.run(cmd_prefix + ["position", arg], capture_output=True)
-            if res2.returncode == 0:
+            res2 = subprocess.run(cmd_prefix + ["position", arg], capture_output=True, text=True)
+            if res2.returncode == 0 and not res2.stderr.strip():
                 return True
         return False
 
@@ -208,10 +209,20 @@ def main():
     target_player = args.player.strip()
     success = False
 
-    # Step 1: Try direct D-Bus communication
+    # Check if any active media players exist on D-Bus
+    has_players = False
+    bus = None
     if dbus is not None:
         try:
             bus = dbus.SessionBus()
+            names = [n for n in bus.list_names() if n.startswith("org.mpris.MediaPlayer2.") and not n.endswith(".playerctld")]
+            has_players = bool(names)
+        except Exception:
+            has_players = False
+
+    # Step 1: Try direct D-Bus communication
+    if bus is not None:
+        try:
             bus_name = find_mpris_player(bus, target_player)
             if bus_name:
                 success = seek_via_dbus(bus, bus_name, args.value, is_relative=is_relative, current_pos_hint=args.current_pos)
@@ -219,14 +230,18 @@ def main():
             success = False
 
     # Step 2: Fallback to playerctl if D-Bus attempt did not succeed
-    if not success:
+    if not success and (has_players or target_player):
         try:
             success = seek_via_playerctl(target_player, args.value, is_relative=is_relative, current_pos_hint=args.current_pos)
         except Exception as e:
             print(f"Error seeking media: {e}", file=sys.stderr)
             sys.exit(1)
 
-    sys.exit(0 if success else 0)
+    # When no player is targeted and no players exist on the system, treat as a safe no-op
+    if not success and not target_player and not has_players:
+        success = True
+
+    sys.exit(0 if success else 1)
 
 
 if __name__ == "__main__":

@@ -32,15 +32,48 @@ ACTIVITY_THRESHOLD = 5
 MAX_BACKOFF = 30
 
 proc = None
+_active_procs = set()
+_cleaning_up = False
+
+def _child_preexec():
+    set_pdeathsig()
+    try:
+        os.setpgrp()
+    except Exception:
+        pass
+
+def _terminate_proc_group(p):
+    if not p or not p.pid:
+        return
+    try:
+        pgid = os.getpgid(p.pid)
+        os.killpg(pgid, signal.SIGTERM)
+    except (ProcessLookupError, OSError):
+        pass
+    try:
+        p.wait(timeout=0.2)
+    except (subprocess.TimeoutExpired, Exception):
+        try:
+            os.killpg(os.getpgid(p.pid), signal.SIGKILL)
+            p.wait(timeout=0.2)
+        except (ProcessLookupError, OSError, Exception):
+            pass
 
 def cleanup():
-    global proc
-    if proc:
-        try:
-            proc.kill()
-            proc.wait(timeout=0.5)
-        except Exception:
-            pass
+    global proc, _active_procs, _cleaning_up
+    if _cleaning_up:
+        return
+    _cleaning_up = True
+    try:
+        procs = list(_active_procs)
+        if proc and proc not in procs:
+            procs.append(proc)
+        for p in procs:
+            _terminate_proc_group(p)
+        _active_procs.clear()
+        proc = None
+    finally:
+        _cleaning_up = False
     try:
         if os.path.exists(CAVA_CONFIG_FILE):
             os.unlink(CAVA_CONFIG_FILE)
@@ -100,15 +133,31 @@ def get_monitor():
         pass
     return "auto"
 
-def get_bar_count():
-    if os.path.isfile(NOTCH_CONFIG_FILE):
-        try:
-            with open(NOTCH_CONFIG_FILE, "r", encoding="utf-8") as fp:
-                data = json.load(fp)
-                return int(data.get("visualizer_bar_count", DEFAULT_BAR_COUNT))
-        except Exception:
-            pass
-    return DEFAULT_BAR_COUNT
+_cached_bar_count = DEFAULT_BAR_COUNT
+_cached_config_mtime = 0.0
+
+def reload_config_signal(signum, frame):
+    global _cached_config_mtime
+    _cached_config_mtime = 0.0
+
+try:
+    signal.signal(signal.SIGHUP, reload_config_signal)
+except Exception:
+    pass
+
+def get_bar_count(force=False):
+    global _cached_bar_count, _cached_config_mtime
+    try:
+        if os.path.isfile(NOTCH_CONFIG_FILE):
+            st = os.stat(NOTCH_CONFIG_FILE)
+            if force or st.st_mtime != _cached_config_mtime:
+                with open(NOTCH_CONFIG_FILE, "r", encoding="utf-8") as fp:
+                    data = json.load(fp)
+                    _cached_bar_count = int(data.get("visualizer_bar_count", DEFAULT_BAR_COUNT))
+                _cached_config_mtime = st.st_mtime
+    except Exception:
+        pass
+    return _cached_bar_count
 
 def write_cava_config(bar_count, monitor_source):
     bar_count = max(2, min(64, int(bar_count)))
@@ -141,6 +190,7 @@ noise_reduction = 35
 
 def main():
     global proc
+    set_pdeathsig()
     sweep_stale_configs()
     cava_bin = shutil.which("cava")
     if not cava_bin:
@@ -153,10 +203,14 @@ def main():
     consecutive_failures = 0
 
     while True:
+        silent_frames = 0
+        last_was_active = True
         bar_count = get_bar_count()
         monitor = get_monitor()
         write_cava_config(bar_count, monitor)
         produced_output = False
+        zero_bars = [0] * bar_count
+        silent_frame_payload = json.dumps({"bars": zero_bars, "active": False})
 
         try:
             proc = subprocess.Popen(
@@ -165,8 +219,9 @@ def main():
                 stderr=subprocess.DEVNULL,
                 text=True,
                 bufsize=1,
-                preexec_fn=set_pdeathsig
+                preexec_fn=_child_preexec
             )
+            _active_procs.add(proc)
 
             # Pre-compute logarithmic EQ weights and per-bar decay rates
             eq_weights = [
@@ -195,28 +250,38 @@ def main():
                         # Apply noise floor deadband (< 6% amplitude filtered to 0)
                         cleaned_vals = [0 if v < 6 else v for v in raw_vals]
 
-                        # Apply independent per-bar physics: fast attack + organic frequency-dependent decay
-                        for i in range(bar_count):
-                            target = min(100.0, cleaned_vals[i] * eq_weights[i]) if cleaned_vals[i] > 0 else 0.0
-                            prev = phys_bars[i]
-                            if target >= prev:
-                                phys_bars[i] = 0.85 * target + 0.15 * prev
-                            else:
-                                decayed = prev * decay_rates[i]
-                                phys_bars[i] = 0.0 if decayed < 2.0 else decayed
+                        # Fast path: zero input and zero existing physics -> silent frame without math allocations
+                        all_silent_input = not any(cleaned_vals)
+                        all_phys_zero = not any(phys_bars)
 
-                        vals = [int(round(v)) for v in phys_bars]
-                        is_act = any(v > ACTIVITY_THRESHOLD for v in vals)
-
-                        if is_act:
-                            silent_frames = 0
-                            last_was_active = True
-                            print(json.dumps({"bars": vals, "active": True}), flush=True)
-                        else:
+                        if all_silent_input and all_phys_zero:
                             silent_frames += 1
                             if last_was_active or silent_frames == 1:
-                                print(json.dumps({"bars": [0] * bar_count, "active": False}), flush=True)
+                                print(silent_frame_payload, flush=True)
                                 last_was_active = False
+                        else:
+                            # Apply independent per-bar physics: fast attack + organic frequency-dependent decay
+                            for i in range(bar_count):
+                                target = min(100.0, cleaned_vals[i] * eq_weights[i]) if cleaned_vals[i] > 0 else 0.0
+                                prev = phys_bars[i]
+                                if target >= prev:
+                                    phys_bars[i] = 0.85 * target + 0.15 * prev
+                                else:
+                                    decayed = prev * decay_rates[i]
+                                    phys_bars[i] = 0.0 if decayed < 2.0 else decayed
+
+                            vals = [int(round(v)) for v in phys_bars]
+                            is_act = any(v > ACTIVITY_THRESHOLD for v in vals)
+
+                            if is_act:
+                                silent_frames = 0
+                                last_was_active = True
+                                print(json.dumps({"bars": vals, "active": True}), flush=True)
+                            else:
+                                silent_frames += 1
+                                if last_was_active or silent_frames == 1:
+                                    print(silent_frame_payload, flush=True)
+                                    last_was_active = False
 
                         produced_output = True
 
@@ -238,17 +303,17 @@ def main():
             time.sleep(delay)
             continue
         finally:
+            last_rc = None
             if proc:
-                try:
-                    proc.kill()
-                    proc.wait(timeout=0.5)
-                except Exception:
-                    pass
+                last_rc = proc.poll()
+                _active_procs.discard(proc)
+                _terminate_proc_group(proc)
+                proc = None
 
         # A clean exit — we streamed frames, or cava terminated on its own with
         # code 0 (e.g. monitor source vanished) — is not a failure. Only real
         # spawn failures or crashes should grow the backoff.
-        if produced_output or (proc is not None and proc.returncode == 0):
+        if produced_output or last_rc == 0:
             consecutive_failures = 0
             backoff = 1.0
             time.sleep(0.5)

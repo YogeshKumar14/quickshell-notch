@@ -27,6 +27,11 @@ Item {
     /** Whether button scale micro-animations are enabled */
     property bool buttonAnims: true
 
+    /** Whether the notch is currently expanded */
+    property bool isExpanded: false
+    /** Whether hardware camera is currently active */
+    property bool cameraActive: false
+
     /** Current battery percentage (0..100) */
     property int batteryLevel: 100
     /** Current battery status string ("Charging", "Discharging", "Full") */
@@ -77,17 +82,25 @@ Item {
 
     // Center Hardware Camera Privacy Indicator Dot (Exact Mathematical Center of Notch)
     Rectangle {
+        id: cameraIndicator
         anchors.centerIn: parent
         width: 4; height: 4; radius: 2
         color: "#22C55E"
-        opacity: 0.95
+        visible: root.isExpanded && root.cameraActive
+        opacity: visible ? 0.95 : 0.0
         z: 10
 
-        SequentialAnimation on opacity {
+        SequentialAnimation {
+            id: cameraPulseAnim
             loops: Animation.Infinite
-            running: true
-            NumberAnimation { from: 0.95; to: 0.4; duration: 1200; easing.type: Easing.InOutQuad }
-            NumberAnimation { from: 0.4; to: 0.95; duration: 1200; easing.type: Easing.InOutQuad }
+            running: root.isExpanded && root.cameraActive
+            NumberAnimation { target: cameraIndicator; property: "opacity"; from: 0.95; to: 0.4; duration: 1200; easing.type: Easing.InOutQuad }
+            NumberAnimation { target: cameraIndicator; property: "opacity"; from: 0.4; to: 0.95; duration: 1200; easing.type: Easing.InOutQuad }
+            onRunningChanged: {
+                if (!running) {
+                    cameraIndicator.opacity = (root.isExpanded && root.cameraActive) ? 0.95 : 0.0;
+                }
+            }
         }
     }
 
@@ -283,6 +296,7 @@ Item {
 
             // macOS Battery Display (Matching Reference: [43%] [Battery Pill] at far right)
             RowLayout {
+                id: batteryDisplayRow
                 spacing: 4
                 Layout.alignment: Qt.AlignVCenter
 
@@ -313,7 +327,7 @@ Item {
                         anchors.left: parent.left
                         anchors.verticalCenter: parent.verticalCenter
                         color: "transparent"
-                        border.color: parent.parent.batColor
+                        border.color: batteryDisplayRow.batColor
                         border.width: 1.0
 
                         Behavior on border.color { ColorAnimation { duration: Style.animNormal; easing.type: Easing.OutQuad } }
@@ -326,7 +340,7 @@ Item {
                             height: parent.height - 2
                             width: Math.max(0, Math.min(parent.width - 2, Math.round((parent.width - 2) * (root.batteryLevel / 100.0))))
                             radius: 2
-                            color: parent.parent.parent.batColor
+                            color: batteryDisplayRow.batColor
                             opacity: 0.92
 
                             Behavior on width { NumberAnimation { duration: 300; easing.type: Easing.OutQuad } }
@@ -352,7 +366,7 @@ Item {
                         width: 1.2
                         height: 3.5
                         radius: 0.6
-                        color: parent.parent.batColor
+                        color: batteryDisplayRow.batColor
 
                         Behavior on color { ColorAnimation { duration: Style.animNormal; easing.type: Easing.OutQuad } }
                     }

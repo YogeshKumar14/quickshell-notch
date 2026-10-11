@@ -41,11 +41,61 @@ def is_color_key(key):
     return "col." in key or key in COLOR_KEYS
 
 
+OPTION_LIMITS = {
+    "general:gaps_in": (0, 60),
+    "general:gaps_out": (0, 100),
+    "general:border_size": (0, 20),
+    "decoration:rounding": (0, 50),
+    "decoration:active_opacity": (0.1, 1.0),
+    "decoration:inactive_opacity": (0.1, 1.0),
+    "decoration:shadow:range": (0, 100),
+    "decoration:blur:passes": (1, 10),
+    "decoration:blur:size": (1, 30),
+    "master:mfact": (0.1, 0.9),
+    "input:sensitivity": (-1.0, 1.0),
+}
+
+
+SHORT_TO_HYPRCTL_KEY = {
+    "gaps_in": "general:gaps_in",
+    "gaps_out": "general:gaps_out",
+    "border_size": "general:border_size",
+    "rounding": "decoration:rounding",
+    "active_opacity": "decoration:active_opacity",
+    "inactive_opacity": "decoration:inactive_opacity",
+    "shadow_range": "decoration:shadow:range",
+    "blur_passes": "decoration:blur:passes",
+    "blur_size": "decoration:blur:size",
+    "master_ratio": "master:mfact",
+    "input_sensitivity": "input:sensitivity",
+}
+
+
+def clamp_option_value(key, val):
+    if isinstance(val, bool) or val is None:
+        return val
+    canonical_key = SHORT_TO_HYPRCTL_KEY.get(key, key)
+    if canonical_key in OPTION_LIMITS:
+        min_v, max_v = OPTION_LIMITS[canonical_key]
+        if isinstance(min_v, int):
+            try:
+                return max(min_v, min(max_v, int(val)))
+            except (ValueError, TypeError):
+                pass
+        else:
+            try:
+                return max(min_v, min(max_v, float(val)))
+            except (ValueError, TypeError):
+                pass
+    return val
+
+
 def _lua_value(key_or_v, v=_UNSET):
     if v is _UNSET:
         key, v = "", key_or_v
     else:
         key = key_or_v
+        v = clamp_option_value(key, v)
     if is_color_key(key):
         return '"rgba(%s)"' % swap_color(normalize_color(v))
     if isinstance(v, bool):
@@ -75,6 +125,7 @@ def _lua_value(key_or_v, v=_UNSET):
 
 
 def lua_assign(key, val):
+    val = clamp_option_value(key, val)
     parts = [p for seg in key.split(":") for p in seg.split(".")]
     expr = _lua_value(key, val)
     for p in reversed(parts):
@@ -83,6 +134,7 @@ def lua_assign(key, val):
 
 
 def apply(key, val):
+    val = clamp_option_value(key, val)
     try:
         result = subprocess.run(
             ["hyprctl", "keyword", key, str(val)],

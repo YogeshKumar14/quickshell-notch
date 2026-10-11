@@ -20,9 +20,15 @@ Canvas {
     /** When true, line color dynamically shifts to warning (>60) / danger (>80) */
     property bool thresholdColors: false
 
+    /** True if parent tab is actively visible and expanded */
+    property bool active: true
+
     implicitHeight: 42
-    onHistChanged: if (visible && width > 0) requestPaint()
-    onVisibleChanged: if (visible && width > 0) requestPaint()
+    renderTarget: Canvas.FramebufferObject
+    renderStrategy: Canvas.Cooperative
+    onHistChanged: if (active && visible && width > 0) requestPaint()
+    onActiveChanged: if (active && visible && width > 0) requestPaint()
+    onVisibleChanged: if (active && visible && width > 0) requestPaint()
 
     onPaint: {
         var ctx = getContext("2d");

@@ -29,3 +29,9 @@ package-lock.json
 cava_config
 cava_config.*
 AI_Continuation_Document-*.md
+
+# Internal agent logs & motion design scratch
+.agents/
+motion_design/
+*.mp4
+*.wav

@@ -184,7 +184,6 @@ Scope {
                         } else if (cmd === "reload_settings") {
                             notchComp.refreshNotchSettings();
                         }
-                        clientSocket.connected = false;
                     }
                 }
             }

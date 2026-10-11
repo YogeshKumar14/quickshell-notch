@@ -4,6 +4,27 @@ All notable changes to QuickShell Top Notch are documented here.
 
 Format follows [Keep a Changelog](https://keepachangelog.com/).
 
+## [2.6.0] - 2026-10-11
+
+### Added
+- **Multi-Window Hyprland Boundary Clamping & Option Protection**: Strict numeric bounds (`gaps_in` [0, 60], `gaps_out` [0, 100], `border_size` [0, 10], `rounding` [0, 50]) across `apply_hypr_option.py`, `persist_hypr_state.py`, and `set_hypr_option.sh`, preventing off-screen window collapse and layout disintegration when smart gaps (`w[tv1]`) deactivates.
+- **Unified Boolean Coercion**: Implemented unified `to_bool()` parser across Python scripts and CLI handlers, eliminating divergent string parsing and preventing Python boolean-to-integer type coercion in option appliers.
+- **Multi-Instance File Manager Keybind**: Added `--new-window` flag to Nautilus invocation in Hyprland keybindings (`SUPER + E`), overriding default GApplication single-instance focus activation to allow spawning multiple tiled file manager windows.
+- **Authentic End-to-End & Adversarial Test Harness**: Engineered real test suites (`tests/test_adversarial_m1.py`, `tests/test_challenger_m1.py`, `tests/test_e2e.py`) interacting directly with live PipeWire `wpctl`, D-Bus notifications, CAVA audio visualizer streaming, socket IPC, and Hyprland compositor events (73/73 pytest tests, 59/59 e2e tests passing).
+- **Dynamic Thumbnail Concurrency Scaling**: Automatically scales wallpaper thumbnail worker concurrency dynamically to host core capacity (`min(max(1, cpu_count() // 2), 4)`).
+
+### Fixed
+- **Compact Notch Concave Ear Visual Artifact**: Restored dynamic 1:1 `canvasSize: Qt.size(width, height)` alongside `onEffectiveEarSizeChanged` listeners in `TopNotch.qml`, eliminating the rectangular clipping block artifact on the right concave ear and restoring anti-aliased squircle curves.
+- **Notification Popup Hover Shift**: Removed hover close/dismiss cross button in notification overlay cards, completely eliminating layout reflow and text jumping on cursor hover.
+- **Desktop Ghost Glass Artifact on Wallpaper Change**: Removed persistent headless hidden Kitty background daemon (`--start-as=hidden`), preventing Hyprland blur manager from rendering ghost window silhouettes on wallpaper reload.
+- **Triple Terminal Window Spawn**: Eliminated duplicate keybind registration and wrapper execution in Hyprland keybindings (`SUPER + Q`).
+- **Resource Leaks & CPU Throttling**:
+  - Gated Playerctl position polling and camera indicator animation to expanded state.
+  - Eliminated activePlayer binding loops and CAVA visualizer zombie process leaks using process groups and `PR_SET_PDEATHSIG`.
+  - Gated sparkline 2D canvas repaints to active expanded stats tab.
+  - Resolved multi-line IPC socket drainage without premature disconnection.
+  - Allowed volume boost up to 150% in OSD while strictly clamping progress bar track overflow.
+
 ## [2.5.0] - 2026-09-18
 
 ### Added
